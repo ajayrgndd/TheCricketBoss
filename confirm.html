@@ -1,0 +1,20 @@
+<!-- confirm.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Email Confirmation</title>
+</head>
+<body>
+  <h2>Email confirmed! Redirecting...</h2>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabase = createClient('https://ejcutfzguoqnkrparcox.supabase.co', 'YOUR-KEY');
+
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN") {
+        window.location.href = "squad.html";
+      }
+    });
+  </script>
+</body>
+</html>
