@@ -3,6 +3,16 @@
 <head>
   <title>TheCricketBoss - Home</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script type="module">
+  import { supabase } from './supabaseClient.js';
+
+  // Redirect if not logged in
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!session) {
+      window.location.href = 'login.html'; // change to your actual login page
+    }
+  });
+</script>
   <style>
     body { font-family: Arial; background: #0e1621; color: white; text-align: center; margin-top: 100px; }
     button { background: red; color: white; padding: 10px 20px; border: none; margin-top: 20px; cursor: pointer; }
