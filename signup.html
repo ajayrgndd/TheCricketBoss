@@ -17,13 +17,23 @@
   <p>Already have an account? <a href="login.html">Login</a></p>
 
   <script>
-    const supabase = supabase.createClient("https://ejcutfzguoqnkrparcox.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw");
+    const client = supabase.createClient(
+      "https://ejcutfzguoqnkrparcox.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw"
+    );
+
     async function signup() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) alert(error.message);
-      else alert("Signup successful! You can now login.");
+
+      const { error } = await client.auth.signUp({ email, password });
+
+      if (error) {
+        alert("❌ " + error.message);
+      } else {
+        alert("✅ Signup successful! You can now login.");
+        window.location.href = "login.html";
+      }
     }
   </script>
 </body>
