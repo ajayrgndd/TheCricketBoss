@@ -1,44 +1,75 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Email Confirmed - TheCricketBoss</title>
+  <title>Email Confirming...</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
-    body {
-      background-color: #0e1621;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 100px;
-    }
-    h2 {
-      color: lightgreen;
-    }
+    body { background-color: #0e1621; color: white; font-family: Arial; text-align: center; margin-top: 100px; }
   </style>
 </head>
 <body>
-  <h1>✅ Email Confirmed!</h1>
-  <h2>Redirecting to your Squad...</h2>
+  <h2>Confirming your email... 🔄</h2>
 
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
     const supabase = createClient(
-      'https://ejcutfzguoqnkrparcox.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
+      "https://ejcutfzguoqnkrparcox.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw"
     );
 
-    // Listen for auth state change and redirect
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        console.log("✅ Session restored after confirmation");
-        window.location.href = 'squad.html';
-      }
-    });
-
-    // Try to recover session automatically
     const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      window.location.href = 'squad.html';
+
+    if (!session) {
+      document.body.innerHTML = "<h2>❌ Email not confirmed yet. Try again later.</h2>";
+    } else {
+      const user = session.user;
+
+      // Check if this user already has players
+      const { data: existing, error: checkError } = await supabase
+        .from("players")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (!existing || existing.length === 0) {
+        // No players: Generate squad
+        const roles = [
+          { role: "Wicket Keeper", count: 1 },
+          { role: "Bowler", count: 5 },
+          { role: "Batsman", count: 5 }
+        ];
+
+        const squad = [];
+        const names = ["Anil Kumar", "Vijay Nair", "Gokul Pillai", "Siddharth Yadav", "Ramesh Iyer", "Mohd Rizwan", "Rajat Mehta", "Aslam Shaikh", "Chris John", "Arun Dev", "Faheem Khan"];
+
+        let nameIndex = 0;
+        for (let group of roles) {
+          for (let i = 0; i < group.count; i++) {
+            const age = group.role === "Wicket Keeper" ? 24 : 17 + Math.floor(Math.random() * 13);
+            const skill = 20 + Math.floor(Math.random() * 60);
+            const avatar = `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(names[nameIndex])}`;
+            squad.push({
+              user_id: user.id,
+              name: names[nameIndex],
+              age,
+              skill,
+              role: group.role,
+              avatar_url: avatar
+            });
+            nameIndex++;
+          }
+        }
+
+        const { error: insertError } = await supabase.from("players").insert(squad);
+        if (insertError) {
+          console.error("Insert error:", insertError.message);
+          document.body.innerHTML = "<h2>❌ Error generating players. Please contact support.</h2>";
+          return;
+        }
+      }
+
+      // Redirect to squad page
+      window.location.href = "squad.html";
     }
   </script>
 </body>
