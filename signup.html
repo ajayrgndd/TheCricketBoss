@@ -2,7 +2,6 @@
 <html>
 <head>
   <title>Signup - TheCricketBoss</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     body { font-family: Arial; background: #0e1621; color: white; text-align: center; margin-top: 100px; }
     input, button { margin: 10px; padding: 10px; width: 250px; }
@@ -16,31 +15,30 @@
   <button onclick="signup()">Register</button>
   <p>Already have an account? <a href="login.html">Login</a></p>
 
-  <script>
-    const client = supabase.createClient(
+  <!-- ✅ ESM Supabase SDK -->
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    const supabase = createClient(
       "https://ejcutfzguoqnkrparcox.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw"
     );
 
-    async function signup() {
+    window.signup = async function () {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
 
-      const { error } = await supabase.auth.signUp({
-  email,
-  password
-}, {
-  emailRedirectTo: 'https://thecricketboss.netlify.app/confirm.html'
-});
-
+      const { error } = await supabase.auth.signUp(
+        { email, password },
+        { emailRedirectTo: 'https://thecricketboss.netlify.app/confirm.html' }
+      );
 
       if (error) {
         alert("❌ " + error.message);
       } else {
-        alert("✅ Signup successful! You can now login.");
-        window.location.href = "login.html";
+        alert("✅ Signup successful! Please check your email to confirm.");
       }
-    }
+    };
   </script>
 </body>
 </html>
