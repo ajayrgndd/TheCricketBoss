@@ -46,6 +46,51 @@
       skill_level: selectedSkill
     };
   }
+<script type="module">
+  import { supabase } from './supabaseClient.js';
+
+  async function loadSquad() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: players, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error loading squad:', error);
+      return;
+    }
+
+    const container = document.getElementById('squadContainer');
+    container.innerHTML = '';
+
+    players.forEach(player => {
+      const card = document.createElement('div');
+      card.style.width = '160px';
+      card.style.padding = '15px';
+      card.style.border = '1px solid #ccc';
+      card.style.borderRadius = '10px';
+      card.style.backgroundColor = '#222';
+      card.style.color = 'white';
+      card.style.textAlign = 'center';
+
+      card.innerHTML = `
+        <img src="${player.photo || 'https://placehold.co/100x100'}" style="border-radius: 50%; width: 80px; height: 80px;" />
+        <h4>${player.name}</h4>
+        <p>Age: ${player.age}</p>
+        <p>Role: ${player.role}</p>
+        <p>Skill: ${player.skill}</p>
+        <p>Level: ${player.level}</p>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  loadSquad();
+</script>
 
   // Call this only after user is logged in
   const user = await supabase.auth.getUser();
