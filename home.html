@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TheCricketBoss - Home</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: Arial; background: #0e1621; color: white; text-align: center; margin-top: 100px; }
+    button { background: red; color: white; padding: 10px 20px; border: none; margin-top: 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to TheCricketBoss 🏏</h1>
+  <button onclick="logout()">Logout</button>
+
+  <script>
+    const supabase = supabase.createClient("https://ejcutfzguoqnkrparcox.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw");
+    supabase.auth.getSession().then(({
+      data
+    }) => {
+      if (!data.session) window.location.href = "login.html";
+    });
+    async function logout() {
+      await supabase.auth.signOut();
+      window.location.href = "login.html";
+    }
+  </script>
+</body>
+</html>
