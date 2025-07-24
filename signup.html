@@ -26,7 +26,13 @@
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
 
-      const { error } = await client.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({
+  email,
+  password
+}, {
+  emailRedirectTo: 'https://thecricketboss.netlify.app/confirm.html'
+});
+
 
       if (error) {
         alert("❌ " + error.message);
