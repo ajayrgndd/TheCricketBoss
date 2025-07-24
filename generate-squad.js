@@ -1,9 +1,10 @@
 <script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-  const supabaseUrl = 'https://ejcutfzguoqnkrparcox.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw';
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient(
+    'https://ejcutfzguoqnkrparcox.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
+  );
 
   const roles = ['Wicket Keeper', 'Bowler', 'Batsman'];
   const skillLevels = ['Newbie', 'Trainee', 'Professional', 'National'];
@@ -13,6 +14,17 @@
     if (skill === 'Trainee') return 17 + Math.floor(Math.random() * 3);
     if (skill === 'National') return 30;
     return 18 + Math.floor(Math.random() * 12);
+  }
+
+  function generatePlayer(role = 'Batsman', skill = null) {
+    const selectedSkill = skill || skillLevels[Math.floor(Math.random() * skillLevels.length)];
+    return {
+      name: `Player_${Math.floor(Math.random() * 10000)}`,
+      age: getRandomAge(selectedSkill),
+      role: role,
+      skill_level: selectedSkill,
+      photo: `https://api.dicebear.com/7.x/miniavs/svg?seed=${Math.floor(Math.random() * 10000)}`
+    };
   }
 
   async function generateInitialSquad(userId) {
@@ -37,39 +49,35 @@
     alert("Squad Generated!");
   }
 
-  function generatePlayer(role = 'Batsman', skill = null) {
-    const selectedSkill = skill || skillLevels[Math.floor(Math.random() * skillLevels.length)];
-    return {
-      name: `Player_${Math.floor(Math.random() * 10000)}`,
-      age: getRandomAge(selectedSkill),
-      role: role,
-      skill_level: selectedSkill
-    };
-  }
-<script type="module">
-  import { supabase } from './supabaseClient.js';
-
   async function loadSquad() {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data: players, error } = await supabase
-      .from('players')
-      .select('*')
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Error loading squad:', error);
+    if (!user) {
+      console.log("Not logged in");
       return;
+    }
+
+    const userId = user.id;
+
+    const { data: existing, error: err1 } = await supabase.from('players').select('*').eq('user_id', userId);
+    if (err1) {
+      console.error('Error fetching squad:', err1.message);
+      return;
+    }
+
+    if (existing.length === 0) {
+      await generateInitialSquad(userId);
+    } else {
+      console.log("Squad already exists");
     }
 
     const container = document.getElementById('squadContainer');
     container.innerHTML = '';
 
-    players.forEach(player => {
+    existing.forEach(player => {
       const card = document.createElement('div');
       card.style.width = '160px';
       card.style.padding = '15px';
+      card.style.margin = '10px';
       card.style.border = '1px solid #ccc';
       card.style.borderRadius = '10px';
       card.style.backgroundColor = '#222';
@@ -81,30 +89,13 @@
         <h4>${player.name}</h4>
         <p>Age: ${player.age}</p>
         <p>Role: ${player.role}</p>
-        <p>Skill: ${player.skill}</p>
-        <p>Level: ${player.level}</p>
+        <p>Skill Level: ${player.skill_level}</p>
       `;
 
       container.appendChild(card);
     });
   }
 
-  loadSquad();
-</script>
-
-  // Call this only after user is logged in
-  const user = await supabase.auth.getUser();
-  const userId = user?.data?.user?.id;
-
-  if (userId) {
-    // Optional: Check if squad already exists
-    const { data: existing } = await supabase.from('players').select('*').eq('user_id', userId);
-    if (existing.length === 0) {
-      await generateInitialSquad(userId);
-    } else {
-      console.log("Squad already exists");
-    }
-  } else {
-    console.log("User not logged in");
-  }
+  // Auto-run on load
+  window.addEventListener('DOMContentLoaded', loadSquad);
 </script>
