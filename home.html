@@ -9,6 +9,30 @@
   </style>
 </head>
 <body>
+  home.html to check login status
+If your homepage file is index.html or home.html, insert this script at the bottom of the <body> tag:
+
+html
+Copy
+Edit
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  
+  const supabase = createClient(
+    'https://ejcutfzguoqnkrparcox.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
+  );
+
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!session) {
+      // Not logged in: go to login page
+      window.location.href = 'login.html';
+    } else {
+      // Logged in: go to squad page or stay on home
+      window.location.href = 'squad.html';
+    }
+  });
+</script>
   <h1>Welcome to TheCricketBoss 🏏</h1>
   <div id="squadContainer" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-top: 30px;"></div>
   <button onclick="logout()">Logout</button>
