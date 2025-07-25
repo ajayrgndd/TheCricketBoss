@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Squad - TheCricketBoss</title>
   <style>
     body {
@@ -30,6 +32,11 @@
       border-radius: 12px;
       box-shadow: 0 0 10px #0006;
       text-align: left;
+      transition: transform 0.2s;
+    }
+
+    .player-card:hover {
+      transform: scale(1.02);
     }
 
     .player-card img {
@@ -53,6 +60,7 @@
 
     #status {
       margin: 20px;
+      font-size: 18px;
     }
   </style>
 </head>
@@ -96,7 +104,7 @@
       return {
         name: `Player_${Math.floor(Math.random() * 10000)}`,
         age: getRandomAge(selectedSkill),
-        role: role,
+        role,
         skill_level: selectedSkill,
         photo_url: samplePhotos[index % samplePhotos.length]
       };
@@ -122,33 +130,7 @@
       }
     }
 
-    async function loadSquad() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-
-      if (!userId) {
-        document.getElementById('status').innerText = "Not logged in. Please log in first.";
-        return;
-      }
-
-      const { data: squad, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('user_id', userId);
-
-      if (error) {
-        document.getElementById('status').innerText = "Error loading squad.";
-        console.error(error);
-        return;
-      }
-
-      if (!squad || squad.length === 0) {
-        document.getElementById('status').innerText = "Generating your squad...";
-        await generateInitialSquad(userId);
-        return loadSquad(); // reload squad
-      }
-
-      document.getElementById('status').innerText = "🎉 Your Initial Squad:";
+    function renderSquad(squad) {
       const squadList = document.getElementById('squadList');
       squadList.innerHTML = "";
 
@@ -164,6 +146,49 @@
         `;
         squadList.appendChild(div);
       });
+    }
+
+    async function loadSquad() {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+
+      if (!userId) {
+        document.getElementById('status').innerText = "⚠️ Not logged in. Please log in first.";
+        return;
+      }
+
+      let { data: squad, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) {
+        document.getElementById('status').innerText = "⚠️ Error loading squad.";
+        console.error(error);
+        return;
+      }
+
+      if (!squad || squad.length === 0) {
+        document.getElementById('status').innerText = "🛠️ Generating your squad...";
+        await generateInitialSquad(userId);
+
+        // Re-fetch after generation
+        const { data: newSquad, error: newError } = await supabase
+          .from('players')
+          .select('*')
+          .eq('user_id', userId);
+
+        if (newError || !newSquad) {
+          document.getElementById('status').innerText = "⚠️ Failed to generate squad.";
+          return;
+        }
+
+        document.getElementById('status').innerText = "🎉 Your Initial Squad:";
+        renderSquad(newSquad);
+      } else {
+        document.getElementById('status').innerText = "🎉 Your Initial Squad:";
+        renderSquad(squad);
+      }
     }
 
     loadSquad();
