@@ -1,47 +1,150 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Signup - TheCricketBoss</title>
-  <style>
-    body { font-family: Arial; background: #0e1621; color: white; text-align: center; margin-top: 100px; }
-    input, button { margin: 10px; padding: 10px; width: 250px; }
-    button { background: red; color: white; border: none; cursor: pointer; }
-  </style>
+  <title>TheCricketBoss - Signup</title>
 </head>
 <body>
-  <h1>Sign Up</h1>
-  <input type="email" id="email" placeholder="Email"><br>
-  <input type="password" id="password" placeholder="Password"><br>
-  <button onclick="signup()">Register</button>
-  <p>Already have an account? <a href="login.html">Login</a></p>
+  <h2>Register to TheCricketBoss</h2>
 
-  <!-- ✅ ESM Supabase SDK -->
+  <form id="signup-form">
+    <input type="text" id="managerName" placeholder="Manager Name (unchangeable)" required /><br><br>
+    <input type="text" id="teamName" placeholder="Team Name (unchangeable & unique)" required /><br><br>
+    <label for="dob">Date of Birth:</label><br>
+    <input type="date" id="dob" required /><br><br>
+
+    <label for="region">Select Region:</label><br>
+    <select id="region" required>
+      <option value="">-- Select Region --</option>
+      <optgroup label="India - States">
+        <option>Andhra Pradesh</option>
+        <option>Arunachal Pradesh</option>
+        <option>Assam</option>
+        <option>Bihar</option>
+        <option>Chhattisgarh</option>
+        <option>Goa</option>
+        <option>Gujarat</option>
+        <option>Haryana</option>
+        <option>Himachal Pradesh</option>
+        <option>Jharkhand</option>
+        <option>Karnataka</option>
+        <option>Kerala</option>
+        <option>Madhya Pradesh</option>
+        <option>Maharashtra</option>
+        <option>Manipur</option>
+        <option>Meghalaya</option>
+        <option>Mizoram</option>
+        <option>Nagaland</option>
+        <option>Odisha</option>
+        <option>Punjab</option>
+        <option>Rajasthan</option>
+        <option>Sikkim</option>
+        <option>Tamil Nadu</option>
+        <option>Telangana</option>
+        <option>Tripura</option>
+        <option>Uttar Pradesh</option>
+        <option>Uttarakhand</option>
+        <option>West Bengal</option>
+      </optgroup>
+      <optgroup label="India - Union Territories">
+        <option>Andaman and Nicobar Islands</option>
+        <option>Chandigarh</option>
+        <option>Dadra and Nagar Haveli and Daman and Diu</option>
+        <option>Delhi</option>
+        <option>Jammu and Kashmir</option>
+        <option>Ladakh</option>
+        <option>Lakshadweep</option>
+        <option>Puducherry</option>
+      </optgroup>
+      <optgroup label="Top Cricket Nations (excluding India)">
+        <option>Australia</option>
+        <option>Bangladesh</option>
+        <option>England</option>
+        <option>New Zealand</option>
+        <option>Pakistan</option>
+        <option>South Africa</option>
+        <option>Sri Lanka</option>
+        <option>Afghanistan</option>
+        <option>West Indies</option>
+        <option>Zimbabwe</option>
+        <option>Ireland</option>
+        <option>Netherlands</option>
+        <option>Scotland</option>
+        <option>Namibia</option>
+        <option>UAE</option>
+        <option>USA</option>
+        <option>Oman</option>
+        <option>Nepal</option>
+      </optgroup>
+    </select><br><br>
+
+    <input type="email" id="email" placeholder="Email" required /><br><br>
+    <input type="password" id="password" placeholder="Password" required /><br><br>
+
+    <button type="submit">Sign Up</button>
+  </form>
+
+  <p id="status"></p>
+
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
     const supabase = createClient(
-      "https://ejcutfzguoqnkrparcox.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw"
+      'https://ejcutfzguoqnkrparcox.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDEyODc3NzgsImV4cCI6MTczMjgyMzc3OH0.kmqbM7T8RyZmSBhv50U9MyUVbixgYfVRg4sctVwcbMk'
     );
 
-    window.signup = async function () {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+    const form = document.getElementById("signup-form");
+    const status = document.getElementById("status");
 
-      const { error } = await supabase.auth.signUp({
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const managerName = document.getElementById("managerName").value.trim();
+      const teamName = document.getElementById("teamName").value.trim();
+      const dob = document.getElementById("dob").value;
+      const region = document.getElementById("region").value;
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!managerName || !teamName || !dob || !region || !email || !password) {
+        status.textContent = "Please fill all fields.";
+        return;
+      }
+
+      // Check if team name is already taken
+      const { data: existingTeam, error: teamError } = await supabase
+        .from("users")
+        .select("team_name")
+        .eq("team_name", teamName);
+
+      if (existingTeam && existingTeam.length > 0) {
+        status.textContent = "Team name already exists. Choose a different name.";
+        return;
+      }
+
+      // Proceed with signup
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: 'https://thecricketboss.netlify.app/confirm.html'
+          data: {
+            manager_name: managerName,
+            team_name: teamName,
+            dob,
+            region,
+            manager_level: "Beginner"
+          },
+          emailRedirectTo: "https://thecricketboss.netlify.app/confirm.html"
         }
       });
 
-      if (error) {
-        alert("❌ " + error.message);
+      if (signUpError) {
+        status.textContent = "Signup failed: " + signUpError.message;
       } else {
-        alert("✅ Signup successful! Please check your email to confirm.");
+        status.textContent = "Check your email to confirm your account.";
+        form.reset();
       }
-    };
+    });
   </script>
 </body>
 </html>
