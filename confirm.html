@@ -1,20 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Confirming...</title>
+  <title>Confirming Email...</title>
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
     const supabase = createClient(
       'https://ejcutfzguoqnkrparcox.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
+      'your-anon-key-here'
     );
 
-    async function checkUserAndRedirect() {
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
+    async function checkOrRedirect() {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        window.location.href = "login.html";
+        window.location.href = '/login.html';
         return;
       }
 
@@ -24,17 +23,17 @@
         .eq('id', user.id)
         .single();
 
-      if (!profile || !profile.manager_name || !profile.team_name) {
-        window.location.href = "profile-setup.html";
+      if (profile && !profile.manager_name) {
+        window.location.href = '/profile-setup.html';
       } else {
-        window.location.href = "home.html";
+        window.location.href = '/home.html';
       }
     }
 
-    checkUserAndRedirect();
+    checkOrRedirect();
   </script>
 </head>
 <body>
-  <h2 style="text-align: center;">🔄 Redirecting...</h2>
+  <p>Confirming your email and redirecting...</p>
 </body>
 </html>
