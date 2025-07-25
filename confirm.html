@@ -3,47 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <title>Confirming...</title>
-</head>
-<body>
-  <h2>Confirming your email...</h2>
-
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
     const supabase = createClient(
       'https://ejcutfzguoqnkrparcox.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
+      'your-anon-key-here'
     );
 
-    async function handleConfirmation() {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) {
-        alert('Not logged in or error getting user.');
-        window.location.href = 'login.html';
+    async function checkUserAndRedirect() {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user) {
+        window.location.href = "login.html";
         return;
       }
 
-      const { data: squad, error: squadError } = await supabase
-        .from('players')
-        .select('id')
-        .eq('user_id', user.id);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-      if (squadError) {
-        alert('Error checking squad.');
-        console.error(squadError);
-        return;
-      }
-
-      if (squad && squad.length > 0) {
-        console.log('Profile already exists. Redirecting...');
-        window.location.href = 'home.html';
+      if (!profile || !profile.manager_name || !profile.team_name) {
+        window.location.href = "profile-setup.html";
       } else {
-        console.log('No squad found. Redirecting to squad creation...');
-        window.location.href = 'squad.html';
+        window.location.href = "home.html";
       }
     }
 
-    handleConfirmation();
+    checkUserAndRedirect();
   </script>
+</head>
+<body>
+  <h2 style="text-align: center;">🔄 Redirecting...</h2>
 </body>
 </html>
