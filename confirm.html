@@ -1,129 +1,119 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Confirming Email - TheCricketBoss</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Confirming...</title>
+  <meta charset="UTF-8" />
 </head>
-<body>
-  <div class="container">
-    <h2 id="status">Confirming your Email...</h2>
-    <form id="profileForm" style="display:none;">
-      <label>Manager Name:</label>
-      <input type="text" id="managerName" required>
-      
-      <label>Date of Birth (DD/MM/YYYY):</label>
-      <input type="text" id="dob" required placeholder="DD/MM/YYYY">
-      
-      <label>Team Name:</label>
-      <input type="text" id="teamName" required>
-      
-      <label>Region:</label>
-      <select id="region" required></select>
-      
-      <button type="submit">Create Profile</button>
-    </form>
-  </div>
+<body style="background:#0e1621; color:white; font-family:sans-serif; text-align:center; padding:40px;">
+  <h2>🔄 Finalizing Your Account...</h2>
+  <p id="status">Please wait while we finish setting up your squad.</p>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    const supabaseUrl = 'https://ejcutfzguoqnkrparcox.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw';
+    const supabase = createClient(
+      'https://ejcutfzguoqnkrparcox.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
+    );
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    const statusText = document.getElementById("status");
-    const profileForm = document.getElementById("profileForm");
-    const regionSelect = document.getElementById("region");
-
-    // Populate regions
-    const regions = [
-      "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
-      "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
-      "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
-      "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
-      "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi",
-      "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry",
-      "Australia", "Bangladesh", "England", "New Zealand", "Pakistan", "South Africa", "Sri Lanka", "West Indies",
-      "Afghanistan", "Ireland", "Zimbabwe", "Netherlands", "Scotland", "Nepal", "UAE", "USA", "Canada", "Namibia"
+    const roles = ['Wicket Keeper', 'Bowler', 'Batsman'];
+    const skillLevels = ['Newbie', 'Trainee', 'Professional', 'National'];
+    const samplePhotos = [
+      "https://randomuser.me/api/portraits/men/32.jpg",
+      "https://randomuser.me/api/portraits/women/45.jpg",
+      "https://randomuser.me/api/portraits/men/14.jpg",
+      "https://randomuser.me/api/portraits/men/67.jpg",
+      "https://randomuser.me/api/portraits/women/23.jpg",
+      "https://randomuser.me/api/portraits/men/88.jpg",
+      "https://randomuser.me/api/portraits/women/54.jpg",
+      "https://randomuser.me/api/portraits/men/76.jpg",
+      "https://randomuser.me/api/portraits/women/12.jpg",
+      "https://randomuser.me/api/portraits/men/33.jpg"
     ];
 
-    regions.forEach(region => {
-      const option = document.createElement("option");
-      option.value = region;
-      option.textContent = region;
-      regionSelect.appendChild(option);
-    });
+    function getRandomAge(skill) {
+      if (skill === 'Newbie') return 16;
+      if (skill === 'Trainee') return 17 + Math.floor(Math.random() * 3);
+      if (skill === 'National') return 30;
+      return 18 + Math.floor(Math.random() * 12);
+    }
 
-    async function checkSessionAndShowForm() {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (!session || !session.user) {
-        statusText.textContent = "Session expired or not found.";
-        return;
+    function generatePlayer(role = 'Batsman', skill = null, index = 0) {
+      const selectedSkill = skill || skillLevels[Math.floor(Math.random() * skillLevels.length)];
+      return {
+        name: `Player_${Math.floor(Math.random() * 10000)}`,
+        age: getRandomAge(selectedSkill),
+        role: role,
+        skill_level: selectedSkill,
+        photo_url: samplePhotos[index % samplePhotos.length]
+      };
+    }
+
+    async function generateInitialSquad(userId) {
+      const squad = [];
+
+      squad.push(generatePlayer('Wicket Keeper', 'Newbie', 0));
+      squad.push(generatePlayer('Batsman', 'Trainee', 1));
+      squad.push(generatePlayer('Batsman', 'National', 2));
+      squad.push(generatePlayer('Batsman', 'National', 3));
+      squad.push(generatePlayer('Bowler', 'Professional', 4));
+      squad.push(generatePlayer('Bowler', 'Professional', 5));
+
+      for (let i = 0; i < 5; i++) {
+        const role = i % 2 === 0 ? 'Bowler' : 'Batsman';
+        squad.push(generatePlayer(role, null, i + 6));
       }
 
-      const user = session.user;
-
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .single();
-
-      if (existingProfile) {
-        statusText.textContent = "Profile already exists. Redirecting...";
-        setTimeout(() => window.location.href = "/", 1500);
-      } else {
-        statusText.textContent = "Email confirmed. Please complete your profile:";
-        profileForm.style.display = "block";
+      for (const player of squad) {
+        await supabase.from('players').insert([{ ...player, user_id: userId }]);
       }
     }
 
-    // Submit handler
-    profileForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const user = session?.user;
+    async function finalizeProfileAndSquad() {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
 
       if (!user) {
-        statusText.textContent = "Session expired.";
+        document.getElementById('status').innerText = "❌ User not logged in.";
         return;
       }
 
-      const { error: insertError } = await supabase.from("profiles").insert([{
-        id: user.id,
-        email: user.email,
-        manager_name: document.getElementById("managerName").value,
-        dob: document.getElementById("dob").value,
-        team_name: document.getElementById("teamName").value,
-        region: document.getElementById("region").value,
-        manager_level: "Beginner"
-      }]);
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-      if (insertError) {
-        statusText.textContent = "Error saving profile.";
-        console.error(insertError);
+      if (profileError || !profile) {
+        document.getElementById('status').innerText = "❌ Profile not found.";
+        console.error(profileError);
         return;
       }
 
-      statusText.textContent = "Profile saved! Generating squad...";
-
-      const { error: squadError } = await supabase.functions.invoke("generate_squad", {
-        body: { user_id: user.id }
-      });
+      // ✅ Check if squad already exists
+      const { data: squad, error: squadError } = await supabase
+        .from('players')
+        .select('*')
+        .eq('user_id', user.id);
 
       if (squadError) {
-        statusText.textContent = "Error generating squad.";
+        document.getElementById('status').innerText = "❌ Error loading squad.";
         console.error(squadError);
-      } else {
-        statusText.textContent = "Squad ready! Redirecting...";
-        setTimeout(() => window.location.href = "/", 2000);
+        return;
       }
-    });
 
-    checkSessionAndShowForm();
+      if (!squad || squad.length === 0) {
+        document.getElementById('status').innerText = "🛠️ Creating your initial squad...";
+        await generateInitialSquad(user.id);
+        document.getElementById('status').innerText = "✅ Squad created! Redirecting...";
+        window.location.href = 'squad.html';
+      } else {
+        document.getElementById('status').innerText = "✅ Profile already exists. Redirecting...";
+        window.location.href = 'home.html';
+      }
+    }
+
+    finalizeProfileAndSquad();
   </script>
 </body>
 </html>
