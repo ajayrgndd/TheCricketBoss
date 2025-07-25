@@ -30,6 +30,7 @@
   async function generateInitialSquad(userId) {
     const squad = [];
 
+    // Ensure basic team composition
     squad.push(generatePlayer('Wicket Keeper', 'Newbie'));
     squad.push(generatePlayer('Batsman', 'Trainee'));
     squad.push(generatePlayer('Batsman', 'National'));
@@ -37,6 +38,7 @@
     squad.push(generatePlayer('Bowler', 'Professional'));
     squad.push(generatePlayer('Bowler', 'Professional'));
 
+    // Add remaining 5 random players
     for (let i = 0; i < 5; i++) {
       const role = i % 2 === 0 ? 'Bowler' : 'Batsman';
       squad.push(generatePlayer(role));
@@ -46,34 +48,14 @@
       await supabase.from('players').insert([{ ...player, user_id: userId }]);
     }
 
-    alert("Squad Generated!");
+    console.log("Squad Generated!");
   }
 
-  async function loadSquad() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.log("Not logged in");
-      return;
-    }
-
-    const userId = user.id;
-
-    const { data: existing, error: err1 } = await supabase.from('players').select('*').eq('user_id', userId);
-    if (err1) {
-      console.error('Error fetching squad:', err1.message);
-      return;
-    }
-
-    if (existing.length === 0) {
-      await generateInitialSquad(userId);
-    } else {
-      console.log("Squad already exists");
-    }
-
+  function displaySquad(players) {
     const container = document.getElementById('squadContainer');
     container.innerHTML = '';
 
-    existing.forEach(player => {
+    players.forEach(player => {
       const card = document.createElement('div');
       card.style.width = '160px';
       card.style.padding = '15px';
@@ -83,6 +65,7 @@
       card.style.backgroundColor = '#222';
       card.style.color = 'white';
       card.style.textAlign = 'center';
+      card.style.display = 'inline-block';
 
       card.innerHTML = `
         <img src="${player.photo || 'https://placehold.co/100x100'}" style="border-radius: 50%; width: 80px; height: 80px;" />
@@ -96,6 +79,44 @@
     });
   }
 
-  // Auto-run on load
+  async function loadSquad() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log("Not logged in");
+      return;
+    }
+
+    const userId = user.id;
+
+    const { data: existing, error: fetchError } = await supabase
+      .from('players')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (fetchError) {
+      console.error('Error fetching squad:', fetchError.message);
+      return;
+    }
+
+    if (!existing || existing.length === 0) {
+      await generateInitialSquad(userId);
+
+      // Fetch again after generating
+      const { data: newSquad, error: refetchError } = await supabase
+        .from('players')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (refetchError) {
+        console.error('Error after generating squad:', refetchError.message);
+        return;
+      }
+
+      displaySquad(newSquad);
+    } else {
+      displaySquad(existing);
+    }
+  }
+
   window.addEventListener('DOMContentLoaded', loadSquad);
 </script>
