@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Confirming...</title>
-  <meta charset="UTF-8" />
 </head>
-<body style="background:#0e1621; color:white; font-family:sans-serif; text-align:center; padding:40px;">
-  <h2>🔄 Finalizing Your Account...</h2>
-  <p id="status">Please wait while we finish setting up your squad.</p>
+<body>
+  <h2>Confirming your email...</h2>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -16,106 +15,35 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
     );
 
-    const skillLevels = ['Newbie', 'Trainee', 'Professional', 'National'];
-    const samplePhotos = [
-      "https://randomuser.me/api/portraits/men/32.jpg",
-      "https://randomuser.me/api/portraits/women/45.jpg",
-      "https://randomuser.me/api/portraits/men/14.jpg",
-      "https://randomuser.me/api/portraits/men/67.jpg",
-      "https://randomuser.me/api/portraits/women/23.jpg",
-      "https://randomuser.me/api/portraits/men/88.jpg",
-      "https://randomuser.me/api/portraits/women/54.jpg",
-      "https://randomuser.me/api/portraits/men/76.jpg",
-      "https://randomuser.me/api/portraits/women/12.jpg",
-      "https://randomuser.me/api/portraits/men/33.jpg"
-    ];
-
-    function getRandomAge(skill) {
-      if (skill === 'Newbie') return 16;
-      if (skill === 'Trainee') return 17 + Math.floor(Math.random() * 3);
-      if (skill === 'National') return 30;
-      return 18 + Math.floor(Math.random() * 12);
-    }
-
-    function generatePlayer(role = 'Batsman', skill = null, index = 0) {
-      const selectedSkill = skill || skillLevels[Math.floor(Math.random() * skillLevels.length)];
-      return {
-        name: `Player_${Math.floor(Math.random() * 10000)}`,
-        age: getRandomAge(selectedSkill),
-        role: role,
-        skill_level: selectedSkill,
-        photo_url: samplePhotos[index % samplePhotos.length]
-      };
-    }
-
-    async function generateInitialSquad(userId) {
-      const squad = [];
-
-      squad.push(generatePlayer('Wicket Keeper', 'Newbie', 0));
-      squad.push(generatePlayer('Batsman', 'Trainee', 1));
-      squad.push(generatePlayer('Batsman', 'National', 2));
-      squad.push(generatePlayer('Batsman', 'National', 3));
-      squad.push(generatePlayer('Bowler', 'Professional', 4));
-      squad.push(generatePlayer('Bowler', 'Professional', 5));
-
-      for (let i = 0; i < 5; i++) {
-        const role = i % 2 === 0 ? 'Bowler' : 'Batsman';
-        squad.push(generatePlayer(role, null, i + 6));
-      }
-
-      for (const player of squad) {
-        const { error } = await supabase.from('players').insert([{ ...player, user_id: userId }]);
-        if (error) {
-          console.error('Insert failed:', error);
-        }
-      }
-    }
-
-    async function finalizeProfileAndSquad() {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      const user = session?.user;
-
-      if (!user) {
-        document.getElementById('status').innerText = "❌ User not logged in.";
+    async function handleConfirmation() {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) {
+        alert('Not logged in or error getting user.');
+        window.location.href = 'login.html';
         return;
       }
 
-      // Optional: confirm profile exists
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError || !profile) {
-        document.getElementById('status').innerText = "❌ Profile not found.";
-        console.error(profileError);
-        return;
-      }
-
-      const { data: players, error: playersError } = await supabase
+      const { data: squad, error: squadError } = await supabase
         .from('players')
         .select('id')
         .eq('user_id', user.id);
 
-      if (playersError) {
-        document.getElementById('status').innerText = "❌ Error checking players.";
-        console.error(playersError);
+      if (squadError) {
+        alert('Error checking squad.');
+        console.error(squadError);
         return;
       }
 
-      if (players.length === 0) {
-        document.getElementById('status').innerText = "🎯 Creating your initial squad...";
-        await generateInitialSquad(user.id);
-        document.getElementById('status').innerText = "🎉 Squad created! Redirecting...";
-        setTimeout(() => window.location.href = 'squad.html', 2000);
+      if (squad && squad.length > 0) {
+        console.log('Profile already exists. Redirecting...');
+        window.location.href = 'home.html';
       } else {
-        document.getElementById('status').innerText = "📦 Profile already exists. Redirecting...";
-        setTimeout(() => window.location.href = 'home.html', 1500);
+        console.log('No squad found. Redirecting to squad creation...');
+        window.location.href = 'squad.html';
       }
     }
 
-    finalizeProfileAndSquad();
+    handleConfirmation();
   </script>
 </body>
 </html>
