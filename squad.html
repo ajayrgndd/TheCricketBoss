@@ -3,19 +3,61 @@
 <head>
   <title>Your Squad - TheCricketBoss</title>
   <style>
-    body { font-family: Arial; background: #0e1621; color: white; text-align: center; padding: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0e1621;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #ffcc00;
+    }
+
+    #squadList {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
+    }
+
     .player-card {
       background: #1f2a38;
-      margin: 10px auto;
       padding: 15px;
       border-radius: 12px;
-      width: 280px;
       box-shadow: 0 0 10px #0006;
+      text-align: left;
+    }
+
+    .player-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .player-card h3 {
+      margin: 5px 0;
+      font-size: 20px;
+      color: #4db8ff;
+    }
+
+    .player-card p {
+      margin: 3px 0;
+      font-size: 15px;
+    }
+
+    #status {
+      margin: 20px;
     }
   </style>
 </head>
 <body>
-  <h1>Welcome to TheCricketBoss!</h1>
+  <h1>🎖️ Welcome to TheCricketBoss!</h1>
   <p id="status">Loading your squad...</p>
   <div id="squadList"></div>
 
@@ -29,6 +71,18 @@
 
     const roles = ['Wicket Keeper', 'Bowler', 'Batsman'];
     const skillLevels = ['Newbie', 'Trainee', 'Professional', 'National'];
+    const samplePhotos = [
+      "https://randomuser.me/api/portraits/men/32.jpg",
+      "https://randomuser.me/api/portraits/women/45.jpg",
+      "https://randomuser.me/api/portraits/men/14.jpg",
+      "https://randomuser.me/api/portraits/men/67.jpg",
+      "https://randomuser.me/api/portraits/women/23.jpg",
+      "https://randomuser.me/api/portraits/men/88.jpg",
+      "https://randomuser.me/api/portraits/women/54.jpg",
+      "https://randomuser.me/api/portraits/men/76.jpg",
+      "https://randomuser.me/api/portraits/women/12.jpg",
+      "https://randomuser.me/api/portraits/men/33.jpg"
+    ];
 
     function getRandomAge(skill) {
       if (skill === 'Newbie') return 16;
@@ -37,29 +91,30 @@
       return 18 + Math.floor(Math.random() * 12);
     }
 
-    function generatePlayer(role = 'Batsman', skill = null) {
+    function generatePlayer(role = 'Batsman', skill = null, index = 0) {
       const selectedSkill = skill || skillLevels[Math.floor(Math.random() * skillLevels.length)];
       return {
         name: `Player_${Math.floor(Math.random() * 10000)}`,
         age: getRandomAge(selectedSkill),
         role: role,
-        skill_level: selectedSkill
+        skill_level: selectedSkill,
+        photo_url: samplePhotos[index % samplePhotos.length]
       };
     }
 
     async function generateInitialSquad(userId) {
       const squad = [];
 
-      squad.push(generatePlayer('Wicket Keeper', 'Newbie'));
-      squad.push(generatePlayer('Batsman', 'Trainee'));
-      squad.push(generatePlayer('Batsman', 'National'));
-      squad.push(generatePlayer('Batsman', 'National'));
-      squad.push(generatePlayer('Bowler', 'Professional'));
-      squad.push(generatePlayer('Bowler', 'Professional'));
+      squad.push(generatePlayer('Wicket Keeper', 'Newbie', 0));
+      squad.push(generatePlayer('Batsman', 'Trainee', 1));
+      squad.push(generatePlayer('Batsman', 'National', 2));
+      squad.push(generatePlayer('Batsman', 'National', 3));
+      squad.push(generatePlayer('Bowler', 'Professional', 4));
+      squad.push(generatePlayer('Bowler', 'Professional', 5));
 
       for (let i = 0; i < 5; i++) {
         const role = i % 2 === 0 ? 'Bowler' : 'Batsman';
-        squad.push(generatePlayer(role));
+        squad.push(generatePlayer(role, null, i + 6));
       }
 
       for (const player of squad) {
@@ -72,11 +127,10 @@
       const userId = sessionData?.session?.user?.id;
 
       if (!userId) {
-        document.getElementById('status').innerText = "Not logged in.";
+        document.getElementById('status').innerText = "Not logged in. Please log in first.";
         return;
       }
 
-      // check if squad already exists
       const { data: squad, error } = await supabase
         .from('players')
         .select('*')
@@ -88,22 +142,25 @@
         return;
       }
 
-      if (squad.length === 0) {
-        document.getElementById('status').innerText = "Generating squad...";
+      if (!squad || squad.length === 0) {
+        document.getElementById('status').innerText = "Generating your squad...";
         await generateInitialSquad(userId);
-        return loadSquad(); // call again to show newly created squad
+        return loadSquad(); // reload squad
       }
 
-      document.getElementById('status').innerText = "🎉 Your Squad:";
+      document.getElementById('status').innerText = "🎉 Your Initial Squad:";
       const squadList = document.getElementById('squadList');
+      squadList.innerHTML = "";
+
       squad.forEach(player => {
         const div = document.createElement('div');
         div.className = 'player-card';
         div.innerHTML = `
+          <img src="${player.photo_url || 'https://via.placeholder.com/300x180?text=Player'}" alt="Player Avatar" />
           <h3>${player.name}</h3>
-          <p>Role: ${player.role}</p>
-          <p>Skill: ${player.skill_level}</p>
-          <p>Age: ${player.age}</p>
+          <p><strong>Role:</strong> ${player.role}</p>
+          <p><strong>Skill:</strong> ${player.skill_level}</p>
+          <p><strong>Age:</strong> ${player.age}</p>
         `;
         squadList.appendChild(div);
       });
