@@ -16,7 +16,6 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
     );
 
-    const roles = ['Wicket Keeper', 'Bowler', 'Batsman'];
     const skillLevels = ['Newbie', 'Trainee', 'Professional', 'National'];
     const samplePhotos = [
       "https://randomuser.me/api/portraits/men/32.jpg",
@@ -65,22 +64,26 @@
       }
 
       for (const player of squad) {
-        await supabase.from('players').insert([{ ...player, user_id: userId }]);
+        const { error } = await supabase.from('players').insert([{ ...player, user_id: userId }]);
+        if (error) {
+          console.error('Insert failed:', error);
+        }
       }
     }
 
     async function finalizeProfileAndSquad() {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const user = session?.user;
 
       if (!user) {
         document.getElementById('status').innerText = "❌ User not logged in.";
         return;
       }
 
+      // Optional: confirm profile exists
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id')
         .eq('id', user.id)
         .single();
 
@@ -90,26 +93,25 @@
         return;
       }
 
-      // ✅ Check if squad already exists
-      const { data: squad, error: squadError } = await supabase
+      const { data: players, error: playersError } = await supabase
         .from('players')
-        .select('*')
+        .select('id')
         .eq('user_id', user.id);
 
-      if (squadError) {
-        document.getElementById('status').innerText = "❌ Error loading squad.";
-        console.error(squadError);
+      if (playersError) {
+        document.getElementById('status').innerText = "❌ Error checking players.";
+        console.error(playersError);
         return;
       }
 
-      if (!squad || squad.length === 0) {
-        document.getElementById('status').innerText = "🛠️ Creating your initial squad...";
+      if (players.length === 0) {
+        document.getElementById('status').innerText = "🎯 Creating your initial squad...";
         await generateInitialSquad(user.id);
-        document.getElementById('status').innerText = "✅ Squad created! Redirecting...";
-        window.location.href = 'squad.html';
+        document.getElementById('status').innerText = "🎉 Squad created! Redirecting...";
+        setTimeout(() => window.location.href = 'squad.html', 2000);
       } else {
-        document.getElementById('status').innerText = "✅ Profile already exists. Redirecting...";
-        window.location.href = 'home.html';
+        document.getElementById('status').innerText = "📦 Profile already exists. Redirecting...";
+        setTimeout(() => window.location.href = 'home.html', 1500);
       }
     }
 
