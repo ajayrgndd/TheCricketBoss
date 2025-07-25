@@ -1,89 +1,130 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>TheCricketBoss - Signup</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to bottom right, #1a1a40, #00274d);
+      color: white;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background-color: #111;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      width: 90%;
+      max-width: 420px;
+    }
+
+    h2 {
+      color: #ff3333;
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 6px;
+      background-color: #222;
+      color: white;
+      font-size: 15px;
+    }
+
+    input[type="date"] {
+      color-scheme: dark;
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      background-color: #ff3333;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #cc0000;
+    }
+
+    #status {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+      color: #ffcc00;
+    }
+  </style>
 </head>
 <body>
-  <h2>Register to TheCricketBoss</h2>
+  <div class="card">
+    <h2>Sign Up to TheCricketBoss</h2>
+    <form id="signup-form">
+      <input type="text" id="managerName" placeholder="Manager Name (unchangeable)" required />
+      <input type="text" id="teamName" placeholder="Team Name (unchangeable & unique)" required />
+      <label for="dob">Date of Birth</label>
+      <input type="date" id="dob" required />
 
-  <form id="signup-form">
-    <input type="text" id="managerName" placeholder="Manager Name (unchangeable)" required /><br><br>
-    <input type="text" id="teamName" placeholder="Team Name (unchangeable & unique)" required /><br><br>
-    <label for="dob">Date of Birth:</label><br>
-    <input type="date" id="dob" required /><br><br>
+      <label for="region">Select Region</label>
+      <select id="region" required>
+        <option value="">-- Select Region --</option>
+        <optgroup label="India - States">
+          <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+          <option>Bihar</option><option>Chhattisgarh</option><option>Goa</option>
+          <option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option>
+          <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+          <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
+          <option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option>
+          <option>Odisha</option><option>Punjab</option><option>Rajasthan</option>
+          <option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+          <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
+          <option>West Bengal</option>
+        </optgroup>
+        <optgroup label="India - Union Territories">
+          <option>Andaman and Nicobar Islands</option><option>Chandigarh</option>
+          <option>Dadra and Nagar Haveli and Daman and Diu</option><option>Delhi</option>
+          <option>Jammu and Kashmir</option><option>Ladakh</option>
+          <option>Lakshadweep</option><option>Puducherry</option>
+        </optgroup>
+        <optgroup label="Top Cricket Nations">
+          <option>Australia</option><option>Bangladesh</option><option>England</option>
+          <option>New Zealand</option><option>Pakistan</option><option>South Africa</option>
+          <option>Sri Lanka</option><option>Afghanistan</option><option>West Indies</option>
+          <option>Zimbabwe</option><option>Ireland</option><option>Netherlands</option>
+          <option>Scotland</option><option>Namibia</option><option>UAE</option>
+          <option>USA</option><option>Oman</option><option>Nepal</option>
+        </optgroup>
+      </select>
 
-    <label for="region">Select Region:</label><br>
-    <select id="region" required>
-      <option value="">-- Select Region --</option>
-      <optgroup label="India - States">
-        <option>Andhra Pradesh</option>
-        <option>Arunachal Pradesh</option>
-        <option>Assam</option>
-        <option>Bihar</option>
-        <option>Chhattisgarh</option>
-        <option>Goa</option>
-        <option>Gujarat</option>
-        <option>Haryana</option>
-        <option>Himachal Pradesh</option>
-        <option>Jharkhand</option>
-        <option>Karnataka</option>
-        <option>Kerala</option>
-        <option>Madhya Pradesh</option>
-        <option>Maharashtra</option>
-        <option>Manipur</option>
-        <option>Meghalaya</option>
-        <option>Mizoram</option>
-        <option>Nagaland</option>
-        <option>Odisha</option>
-        <option>Punjab</option>
-        <option>Rajasthan</option>
-        <option>Sikkim</option>
-        <option>Tamil Nadu</option>
-        <option>Telangana</option>
-        <option>Tripura</option>
-        <option>Uttar Pradesh</option>
-        <option>Uttarakhand</option>
-        <option>West Bengal</option>
-      </optgroup>
-      <optgroup label="India - Union Territories">
-        <option>Andaman and Nicobar Islands</option>
-        <option>Chandigarh</option>
-        <option>Dadra and Nagar Haveli and Daman and Diu</option>
-        <option>Delhi</option>
-        <option>Jammu and Kashmir</option>
-        <option>Ladakh</option>
-        <option>Lakshadweep</option>
-        <option>Puducherry</option>
-      </optgroup>
-      <optgroup label="Top Cricket Nations (excluding India)">
-        <option>Australia</option>
-        <option>Bangladesh</option>
-        <option>England</option>
-        <option>New Zealand</option>
-        <option>Pakistan</option>
-        <option>South Africa</option>
-        <option>Sri Lanka</option>
-        <option>Afghanistan</option>
-        <option>West Indies</option>
-        <option>Zimbabwe</option>
-        <option>Ireland</option>
-        <option>Netherlands</option>
-        <option>Scotland</option>
-        <option>Namibia</option>
-        <option>UAE</option>
-        <option>USA</option>
-        <option>Oman</option>
-        <option>Nepal</option>
-      </optgroup>
-    </select><br><br>
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
 
-    <input type="email" id="email" placeholder="Email" required /><br><br>
-    <input type="password" id="password" placeholder="Password" required /><br><br>
-
-    <button type="submit">Sign Up</button>
-  </form>
-
-  <p id="status"></p>
+      <button type="submit">Sign Up</button>
+    </form>
+    <p id="status"></p>
+  </div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -111,7 +152,7 @@
         return;
       }
 
-      // Check if team name is already taken
+      // Check for unique team name
       const { data: existingTeam, error: teamError } = await supabase
         .from("users")
         .select("team_name")
@@ -122,7 +163,7 @@
         return;
       }
 
-      // Proceed with signup
+      // Signup user
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
