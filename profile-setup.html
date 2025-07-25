@@ -1,85 +1,112 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
   <title>Profile Setup</title>
-  <style>
-    body {
-      background: #0e1621; color: white; font-family: Arial; padding: 30px;
-    }
-    form {
-      max-width: 500px; margin: auto; display: flex; flex-direction: column; gap: 15px;
-      background: #1e2a38; padding: 25px; border-radius: 10px;
-    }
-    label { font-weight: bold; }
-    input, select, button {
-      padding: 10px; border: none; border-radius: 5px;
-    }
-    button { background: #ffcc00; color: #000; font-weight: bold; cursor: pointer; }
-  </style>
 </head>
 <body>
-  <h2 style="text-align:center;">👤 Complete Your Profile</h2>
+  <h2>🎯 Setup Your Cricket Manager Profile</h2>
   <form id="profileForm">
-    <label>Manager Name</label>
-    <input type="text" id="managerName" required />
+    <input type="text" placeholder="Manager Name" id="manager_name" required><br>
+    <input type="text" placeholder="Team Name" id="team_name" required><br>
+    <input type="date" id="dob" required><br>
 
-    <label>Team Name</label>
-    <input type="text" id="teamName" required />
-
-    <label>Date of Birth</label>
-    <input type="date" id="dob" required />
-
-    <label>Region (State/UT/Country)</label>
     <select id="region" required>
-      <optgroup label="India - States">
-        <option>Andhra Pradesh</option> <option>Arunachal Pradesh</option> <option>Assam</option> <option>Bihar</option>
-        <option>Chhattisgarh</option> <option>Goa</option> <option>Gujarat</option> <option>Haryana</option>
-        <option>Himachal Pradesh</option> <option>Jharkhand</option> <option>Karnataka</option> <option>Kerala</option>
-        <option>Madhya Pradesh</option> <option>Maharashtra</option> <option>Manipur</option> <option>Meghalaya</option>
-        <option>Mizoram</option> <option>Nagaland</option> <option>Odisha</option> <option>Punjab</option>
-        <option>Rajasthan</option> <option>Sikkim</option> <option>Tamil Nadu</option> <option>Telangana</option>
-        <option>Tripura</option> <option>Uttar Pradesh</option> <option>Uttarakhand</option> <option>West Bengal</option>
+      <optgroup label="Indian States">
+        <option>Andhra Pradesh</option>
+        <option>Arunachal Pradesh</option>
+        <option>Assam</option>
+        <option>Bihar</option>
+        <option>Chhattisgarh</option>
+        <option>Goa</option>
+        <option>Gujarat</option>
+        <option>Haryana</option>
+        <option>Himachal Pradesh</option>
+        <option>Jharkhand</option>
+        <option>Karnataka</option>
+        <option>Kerala</option>
+        <option>Madhya Pradesh</option>
+        <option>Maharashtra</option>
+        <option>Manipur</option>
+        <option>Meghalaya</option>
+        <option>Mizoram</option>
+        <option>Nagaland</option>
+        <option>Odisha</option>
+        <option>Punjab</option>
+        <option>Rajasthan</option>
+        <option>Sikkim</option>
+        <option>Tamil Nadu</option>
+        <option>Telangana</option>
+        <option>Tripura</option>
+        <option>Uttar Pradesh</option>
+        <option>Uttarakhand</option>
+        <option>West Bengal</option>
       </optgroup>
-      <optgroup label="India - Union Territories">
-        <option>Delhi</option> <option>Chandigarh</option> <option>Jammu & Kashmir</option> <option>Ladakh</option>
-        <option>Puducherry</option> <option>Andaman & Nicobar</option> <option>Dadra & Nagar Haveli and Daman & Diu</option> <option>Lakshadweep</option>
+      <optgroup label="Union Territories">
+        <option>Andaman and Nicobar Islands</option>
+        <option>Chandigarh</option>
+        <option>Dadra and Nagar Haveli</option>
+        <option>Daman and Diu</option>
+        <option>Delhi</option>
+        <option>Lakshadweep</option>
+        <option>Puducherry</option>
+        <option>Jammu and Kashmir</option>
+        <option>Ladakh</option>
       </optgroup>
       <optgroup label="Top Cricket Nations">
-        <option>India</option> <option>Australia</option> <option>England</option> <option>Pakistan</option>
-        <option>New Zealand</option> <option>South Africa</option> <option>West Indies</option> <option>Sri Lanka</option>
-        <option>Bangladesh</option> <option>Afghanistan</option> <option>Netherlands</option> <option>Ireland</option>
-        <option>Zimbabwe</option> <option>Scotland</option> <option>UAE</option> <option>USA</option>
-        <option>Namibia</option> <option>Nepal</option>
+        <option>India</option>
+        <option>Australia</option>
+        <option>England</option>
+        <option>Pakistan</option>
+        <option>New Zealand</option>
+        <option>South Africa</option>
+        <option>West Indies</option>
+        <option>Sri Lanka</option>
+        <option>Bangladesh</option>
+        <option>Afghanistan</option>
+        <option>Netherlands</option>
+        <option>Ireland</option>
+        <option>Zimbabwe</option>
+        <option>Scotland</option>
+        <option>Namibia</option>
+        <option>UAE</option>
+        <option>USA</option>
+        <option>Oman</option>
       </optgroup>
-    </select>
+    </select><br><br>
 
-    <button type="submit">✅ View Your Squad</button>
+    <button type="submit">Submit & View Your Squad</button>
   </form>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient('https://ejcutfzguoqnkrparcox.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw');
 
-    const form = document.getElementById('profileForm');
-    form.addEventListener('submit', async (e) => {
+    const supabase = createClient(
+      'https://ejcutfzguoqnkrparcox.supabase.co',
+      'your-anon-key-here'
+    );
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return alert("Not logged in");
 
-      const profile = {
+      const updates = {
         id: user.id,
-        manager_name: document.getElementById('managerName').value,
-        team_name: document.getElementById('teamName').value,
+        manager_name: document.getElementById('manager_name').value,
+        team_name: document.getElementById('team_name').value,
         dob: document.getElementById('dob').value,
         region: document.getElementById('region').value,
         xp: 0,
-        level: "Beginner"
+        manager_level: 'Beginner'
       };
 
-      await supabase.from('profiles').upsert(profile);
-      window.location.href = "squad.html";
+      const { error } = await supabase.from('profiles').upsert(updates, { onConflict: ['id'] });
+
+      if (error) {
+        alert('Error saving profile: ' + error.message);
+      } else {
+        window.location.href = '/squad.html';
+      }
     });
   </script>
 </body>
