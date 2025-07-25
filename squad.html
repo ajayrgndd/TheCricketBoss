@@ -3,195 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Squad - TheCricketBoss</title>
+  <title>Your Squad</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #0e1621;
+      font-family: sans-serif;
+      background-color: #121212;
       color: white;
-      text-align: center;
       padding: 20px;
+      text-align: center;
     }
 
     h1 {
-      color: #ffcc00;
+      color: #FFD700;
     }
 
-    #squadList {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    #squadContainer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       gap: 20px;
-      padding: 20px;
-      max-width: 1200px;
-      margin: auto;
+      margin-top: 30px;
     }
 
-    .player-card {
-      background: #1f2a38;
+    .card {
+      background: #1e1e1e;
       padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px #0006;
-      text-align: left;
-      transition: transform 0.2s;
+      border-radius: 10px;
+      width: 160px;
+      box-shadow: 0 0 8px #000;
     }
 
-    .player-card:hover {
-      transform: scale(1.02);
-    }
-
-    .player-card img {
-      width: 100%;
-      height: 180px;
-      object-fit: cover;
-      border-radius: 8px;
+    .card img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
       margin-bottom: 10px;
     }
 
-    .player-card h3 {
+    .card p {
       margin: 5px 0;
-      font-size: 20px;
-      color: #4db8ff;
-    }
-
-    .player-card p {
-      margin: 3px 0;
-      font-size: 15px;
-    }
-
-    #status {
-      margin: 20px;
-      font-size: 18px;
     }
   </style>
 </head>
 <body>
   <h1>🎖️ Welcome to TheCricketBoss!</h1>
   <p id="status">Loading your squad...</p>
-  <div id="squadList"></div>
+  <div id="squadContainer"></div>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-    const supabase = createClient(
-      'https://ejcutfzguoqnkrparcox.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
-    );
-
-    const roles = ['Wicket Keeper', 'Bowler', 'Batsman'];
-    const skillLevels = ['Newbie', 'Trainee', 'Professional', 'National'];
-    const samplePhotos = [
-      "https://randomuser.me/api/portraits/men/32.jpg",
-      "https://randomuser.me/api/portraits/women/45.jpg",
-      "https://randomuser.me/api/portraits/men/14.jpg",
-      "https://randomuser.me/api/portraits/men/67.jpg",
-      "https://randomuser.me/api/portraits/women/23.jpg",
-      "https://randomuser.me/api/portraits/men/88.jpg",
-      "https://randomuser.me/api/portraits/women/54.jpg",
-      "https://randomuser.me/api/portraits/men/76.jpg",
-      "https://randomuser.me/api/portraits/women/12.jpg",
-      "https://randomuser.me/api/portraits/men/33.jpg"
-    ];
-
-    function getRandomAge(skill) {
-      if (skill === 'Newbie') return 16;
-      if (skill === 'Trainee') return 17 + Math.floor(Math.random() * 3);
-      if (skill === 'National') return 30;
-      return 18 + Math.floor(Math.random() * 12);
-    }
-
-    function generatePlayer(role = 'Batsman', skill = null, index = 0) {
-      const selectedSkill = skill || skillLevels[Math.floor(Math.random() * skillLevels.length)];
-      return {
-        name: `Player_${Math.floor(Math.random() * 10000)}`,
-        age: getRandomAge(selectedSkill),
-        role,
-        skill_level: selectedSkill,
-        photo_url: samplePhotos[index % samplePhotos.length]
-      };
-    }
-
-    async function generateInitialSquad(userId) {
-      const squad = [];
-
-      squad.push(generatePlayer('Wicket Keeper', 'Newbie', 0));
-      squad.push(generatePlayer('Batsman', 'Trainee', 1));
-      squad.push(generatePlayer('Batsman', 'National', 2));
-      squad.push(generatePlayer('Batsman', 'National', 3));
-      squad.push(generatePlayer('Bowler', 'Professional', 4));
-      squad.push(generatePlayer('Bowler', 'Professional', 5));
-
-      for (let i = 0; i < 5; i++) {
-        const role = i % 2 === 0 ? 'Bowler' : 'Batsman';
-        squad.push(generatePlayer(role, null, i + 6));
-      }
-
-      for (const player of squad) {
-        await supabase.from('players').insert([{ ...player, user_id: userId }]);
-      }
-    }
-
-    function renderSquad(squad) {
-      const squadList = document.getElementById('squadList');
-      squadList.innerHTML = "";
-
-      squad.forEach(player => {
-        const div = document.createElement('div');
-        div.className = 'player-card';
-        div.innerHTML = `
-          <img src="${player.photo_url || 'https://via.placeholder.com/300x180?text=Player'}" alt="Player Avatar" />
-          <h3>${player.name}</h3>
-          <p><strong>Role:</strong> ${player.role}</p>
-          <p><strong>Skill:</strong> ${player.skill_level}</p>
-          <p><strong>Age:</strong> ${player.age}</p>
-        `;
-        squadList.appendChild(div);
-      });
-    }
-
-    async function loadSquad() {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      const userId = sessionData?.session?.user?.id;
-
-      if (!userId) {
-        document.getElementById('status').innerText = "⚠️ Not logged in. Please log in first.";
-        return;
-      }
-
-      let { data: squad, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('user_id', userId);
-
-      if (error) {
-        document.getElementById('status').innerText = "⚠️ Error loading squad.";
-        console.error(error);
-        return;
-      }
-
-      if (!squad || squad.length === 0) {
-        document.getElementById('status').innerText = "🛠️ Generating your squad...";
-        await generateInitialSquad(userId);
-
-        // Re-fetch after generation
-        const { data: newSquad, error: newError } = await supabase
-          .from('players')
-          .select('*')
-          .eq('user_id', userId);
-
-        if (newError || !newSquad) {
-          document.getElementById('status').innerText = "⚠️ Failed to generate squad.";
-          return;
-        }
-
-        document.getElementById('status').innerText = "🎉 Your Initial Squad:";
-        renderSquad(newSquad);
-      } else {
-        document.getElementById('status').innerText = "🎉 Your Initial Squad:";
-        renderSquad(squad);
-      }
-    }
-
-    loadSquad();
-  </script>
+  <script type="module" src="generate-squad.js"></script>
 </body>
 </html>
