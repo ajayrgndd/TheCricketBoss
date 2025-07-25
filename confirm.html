@@ -11,12 +11,16 @@
     <form id="profileForm" style="display:none;">
       <label>Manager Name:</label>
       <input type="text" id="managerName" required>
+      
       <label>Date of Birth (DD/MM/YYYY):</label>
       <input type="text" id="dob" required placeholder="DD/MM/YYYY">
+      
       <label>Team Name:</label>
       <input type="text" id="teamName" required>
+      
       <label>Region:</label>
       <select id="region" required></select>
+      
       <button type="submit">Create Profile</button>
     </form>
   </div>
@@ -24,7 +28,6 @@
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    // ✅ Correct Supabase project info
     const supabaseUrl = 'https://ejcutfzguoqnkrparcox.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw';
 
@@ -34,16 +37,14 @@
     const profileForm = document.getElementById("profileForm");
     const regionSelect = document.getElementById("region");
 
+    // Populate regions
     const regions = [
-      // 28 Indian States
       "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
       "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
       "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana",
       "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
-      // 8 Union Territories
       "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi",
       "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry",
-      // 18 Top Cricket Nations
       "Australia", "Bangladesh", "England", "New Zealand", "Pakistan", "South Africa", "Sri Lanka", "West Indies",
       "Afghanistan", "Ireland", "Zimbabwe", "Netherlands", "Scotland", "Nepal", "UAE", "USA", "Canada", "Namibia"
     ];
@@ -55,63 +56,74 @@
       regionSelect.appendChild(option);
     });
 
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+    async function checkSessionAndShowForm() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (!session || !session.user) {
         statusText.textContent = "Session expired or not found.";
         return;
       }
 
       const user = session.user;
 
-      const { data: existing } = await supabase
-        .from("users")
+      const { data: existingProfile } = await supabase
+        .from("profiles")
         .select("id")
         .eq("id", user.id)
         .single();
 
-      if (existing) {
+      if (existingProfile) {
         statusText.textContent = "Profile already exists. Redirecting...";
         setTimeout(() => window.location.href = "/", 1500);
       } else {
         statusText.textContent = "Email confirmed. Please complete your profile:";
         profileForm.style.display = "block";
-
-        profileForm.addEventListener("submit", async (e) => {
-          e.preventDefault();
-
-          const { error: insertError } = await supabase.from("users").insert([{
-            id: user.id,
-            email: user.email,
-            manager_name: document.getElementById("managerName").value,
-            dob: document.getElementById("dob").value,
-            team_name: document.getElementById("teamName").value,
-            region: document.getElementById("region").value,
-            level: "Beginner",
-            xp: 0
-          }]);
-
-          if (insertError) {
-            statusText.textContent = "Error saving profile.";
-            console.error(insertError);
-          } else {
-            statusText.textContent = "Profile saved! Generating squad...";
-            const { error: squadError } = await supabase.functions.invoke("generate_squad", {
-              body: { user_id: user.id }
-            });
-
-            if (squadError) {
-              statusText.textContent = "Error generating squad.";
-            } else {
-              statusText.textContent = "Squad ready! Redirecting...";
-              setTimeout(() => window.location.href = "/", 2000);
-            }
-          }
-        });
       }
     }
 
-    checkSession();
+    // Submit handler
+    profileForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+
+      if (!user) {
+        statusText.textContent = "Session expired.";
+        return;
+      }
+
+      const { error: insertError } = await supabase.from("profiles").insert([{
+        id: user.id,
+        email: user.email,
+        manager_name: document.getElementById("managerName").value,
+        dob: document.getElementById("dob").value,
+        team_name: document.getElementById("teamName").value,
+        region: document.getElementById("region").value,
+        manager_level: "Beginner"
+      }]);
+
+      if (insertError) {
+        statusText.textContent = "Error saving profile.";
+        console.error(insertError);
+        return;
+      }
+
+      statusText.textContent = "Profile saved! Generating squad...";
+
+      const { error: squadError } = await supabase.functions.invoke("generate_squad", {
+        body: { user_id: user.id }
+      });
+
+      if (squadError) {
+        statusText.textContent = "Error generating squad.";
+        console.error(squadError);
+      } else {
+        statusText.textContent = "Squad ready! Redirecting...";
+        setTimeout(() => window.location.href = "/", 2000);
+      }
+    });
+
+    checkSessionAndShowForm();
   </script>
 </body>
 </html>
