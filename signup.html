@@ -1,13 +1,73 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Signup Test</title>
+  <meta charset="UTF-8">
+  <title>Sign Up - TheCricketBoss</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0e1621;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .card {
+      background-color: #1f2a38;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+      width: 300px;
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 6px;
+      background-color: #2e3a4d;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 15px;
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    .message {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Signup</h2>
-  <input id="email" placeholder="Email" />
-  <input id="password" placeholder="Password" type="password" />
-  <button onclick="signUp()">Sign Up</button>
+  <div class="card">
+    <h2>Create Account</h2>
+    <input id="email" type="email" placeholder="Email" required />
+    <input id="password" type="password" placeholder="Password" required />
+    <button onclick="signUp()">Sign Up</button>
+    <div class="message" id="message"></div>
+  </div>
 
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
@@ -17,11 +77,11 @@
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqY3V0ZnpndW9xbmtycGFyY294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyNDQzMDAsImV4cCI6MjA2ODgyMDMwMH0.gzR9e8gxnisWs9jEooSLiYOSufdjoWjs2hSdOk9iBTw'
     );
 
-    window.signUp = async function () {
-      console.log("SignUp clicked");
-
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+    async function signUp() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const message = document.getElementById('message');
+      message.textContent = "Processing...";
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -32,11 +92,13 @@
       });
 
       if (error) {
-        alert('Error: ' + error.message);
+        message.textContent = "❌ " + error.message;
       } else {
-        alert('Success! Check your email to confirm.');
+        message.textContent = "✅ Success! Please check your email to confirm.";
       }
     }
+
+    window.signUp = signUp;
   </script>
 </body>
 </html>
