@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fixtures – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    .fixture-card {
+      background: #2c2f4a;
+      margin: 12px 16px;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+
+    .fixture-card h3 {
+      margin: 0;
+      color: #00e676;
+    }
+
+    .fixture-card p {
+      margin: 6px 0;
+      font-size: 14px;
+    }
+
+    .prep-bar {
+      background: #444;
+      border-radius: 5px;
+      height: 16px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .prep-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00e676, #03a9f4);
+    }
+
+    .buttons {
+      margin-top: 10px;
+    }
+
+    .buttons button {
+      margin-right: 10px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .watch { background: #2196f3; color: white; }
+    .setlineup { background: #ff9800; color: black; }
+
+    @media screen and (max-width: 500px) {
+      .fixture-card {
+        margin: 12px;
+        font-size: 14px;
+      }
+
+      .buttons button {
+        margin-top: 6px;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2>Your Fixtures</h2>
+    <div id="fixturesContainer"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { loadSharedUI } from "./js/shared-ui.js";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "index.html";
+
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+    const { data: team } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp,
+      coins: 15,
+      cash: 300000
+    });
+
+    const { data: matches } = await supabase
+      .from("matches")
+      .select("*")
+      .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+      .order("date", { ascending: true });
+
+    const { data: lineupData } = await supabase
+      .from("lineups")
+      .select("*")
+      .eq("team_id", team.id);
+
+    const fixturesContainer = document.getElementById("fixturesContainer");
+
+    for (const match of matches) {
+      const isHome = match.home_team_id === team.id;
+      const opponentId = isHome ? match.away_team_id : match.home_team_id;
+      const { data: opponent } = await supabase.from("teams").select("team_name").eq("id", opponentId).single();
+
+      const dateStr = new Date(match.date).toLocaleDateString("en-IN", {
+        weekday: "short", month: "short", day: "numeric"
+      });
+
+      // Prep Level calculation (fake logic here for now)
+      let prepLevel = 0;
+      const reasons = [];
+
+      // Check lineup
+      const lineup = lineupData.find(l => l.match_id === match.id);
+      if (lineup?.playing_xi?.length === 11 && lineup?.overs?.length === 20) {
+        prepLevel += 25;
+      } else {
+        reasons.push("Lineup not set");
+      }
+
+      // Check last scouted
+      const lastScout = new Date(profile.last_scouted || 0);
+      const scoutGap = (Date.now() - lastScout.getTime()) / (1000 * 60 * 60 * 24);
+      if (scoutGap <= 7) {
+        prepLevel += 25;
+      } else {
+        reasons.push("No player scouted this week");
+      }
+
+      // Fitness always assumed 100% (until 30 yrs) → +25
+      prepLevel += 25;
+
+      // Training check placeholder
+      prepLevel += 25;
+
+      const card = document.createElement("div");
+      card.className = "fixture-card";
+      card.innerHTML = `
+        <h3>${dateStr} • ${match.status === "completed" ? "Finished" : "Upcoming"} Match</h3>
+        <p>vs <strong>${opponent.team_name}</strong> (${isHome ? "Home" : "Away"})</p>
+        <p><strong>Time:</strong> 9:00 PM IST</p>
+        <p><strong>Preparation Level:</strong> ${prepLevel}%</p>
+        <div class="prep-bar"><div class="prep-fill" style="width: ${prepLevel}%"></div></div>
+        <p style="font-size:13px; color:#ff5722;">${reasons.join(", ") || "All Set!"}</p>
+        <div class="buttons">
+          ${match.status === "scheduled" ? `<button class="setlineup" onclick="window.location.href='set-lineup.html?match_id=${match.id}'">Set Lineup</button>` : ""}
+          ${match.status === "completed" ? `<button class="watch" onclick="window.location.href='match.html?match_id=${match.id}'">Watch Replay</button>` : ""}
+        </div>
+      `;
+      fixturesContainer.appendChild(card);
+    }
+  </script>
+</body>
+</html>

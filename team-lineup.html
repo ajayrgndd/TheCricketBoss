@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Set Lineup – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    .section { margin: 20px; }
+    .section h2 { color: #00e676; margin-bottom: 10px; }
+
+    .player-list, .bowling-plan {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      min-height: 80px;
+      padding: 10px;
+      background: #1e1e2f;
+      border-radius: 10px;
+    }
+
+    .player {
+      background: #2c2f4a;
+      padding: 10px;
+      border-radius: 6px;
+      color: white;
+      cursor: move;
+      width: 120px;
+      text-align: center;
+    }
+
+    .bowler-entry {
+      background: #2a2d3d;
+      padding: 10px;
+      border-radius: 6px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 240px;
+    }
+
+    .overs-control button {
+      margin: 0 4px;
+      padding: 2px 6px;
+    }
+
+    .actions {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .actions button {
+      padding: 10px 20px;
+      background: #00e676;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .info {
+      font-size: 14px;
+      color: #f5f5f5b0;
+      margin: 8px 0;
+    }
+
+    .warning {
+      color: orange;
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      .player-list, .bowling-plan {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .player, .bowler-entry {
+        width: 90%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h1>Set Your Lineup</h1>
+
+    <div class="section">
+      <h2>Batting Order (Drag to Reorder)</h2>
+      <div id="battingOrder" class="player-list"></div>
+    </div>
+
+    <div class="section">
+      <h2>Bowling Plan (Assign 20 Overs)</h2>
+      <div id="oversLeft" class="info">Overs Left: 20</div>
+      <div id="bowlingPlan" class="bowling-plan"></div>
+      <div id="bowlingWarning" class="info warning" style="display: none;"></div>
+    </div>
+
+    <div class="actions">
+      <button id="saveLineupBtn">Save Lineup</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co", 
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "index.html";
+
+    const { data: team } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
+    const { data: players } = await supabase.from("players").select("*").eq("team_id", team.id);
+
+    const playingXI = players.slice(0, 11); // Default top 11
+    const battingOrderDiv = document.getElementById("battingOrder");
+    const bowlingPlanDiv = document.getElementById("bowlingPlan");
+    const oversLeftDiv = document.getElementById("oversLeft");
+    const warningDiv = document.getElementById("bowlingWarning");
+    const saveBtn = document.getElementById("saveLineupBtn");
+
+    let bowlingPlan = {};
+
+    function renderBattingOrder() {
+      battingOrderDiv.innerHTML = "";
+      playingXI.forEach(player => {
+        const el = document.createElement("div");
+        el.className = "player";
+        el.draggable = true;
+        el.dataset.id = player.id;
+        el.textContent = player.name;
+        battingOrderDiv.appendChild(el);
+      });
+    }
+
+    let dragSrcEl = null;
+    battingOrderDiv.addEventListener("dragstart", e => { dragSrcEl = e.target; });
+    battingOrderDiv.addEventListener("dragover", e => {
+      e.preventDefault();
+      const target = e.target;
+      if (target.classList.contains("player")) {
+        battingOrderDiv.insertBefore(dragSrcEl, target);
+      }
+    });
+    battingOrderDiv.addEventListener("drop", e => { e.preventDefault(); });
+
+    function renderBowlingPlan() {
+      bowlingPlanDiv.innerHTML = "";
+      bowlingPlan = {};
+      playingXI.forEach(player => {
+        bowlingPlan[player.id] = 0;
+        const entry = document.createElement("div");
+        entry.className = "bowler-entry";
+        entry.innerHTML = `
+          <span>${player.name}</span>
+          <div class="overs-control">
+            <button onclick="updateOvers(${player.id}, -1)">−</button>
+            <span id="overs-${player.id}">0</span>
+            <button onclick="updateOvers(${player.id}, 1)">+</button>
+          </div>
+        `;
+        bowlingPlanDiv.appendChild(entry);
+      });
+    }
+
+    window.updateOvers = (id, delta) => {
+      let current = bowlingPlan[id] || 0;
+      const totalUsed = Object.values(bowlingPlan).reduce((a, b) => a + b, 0);
+      if (delta > 0 && totalUsed >= 20) return;
+
+      current += delta;
+      if (current < 0) current = 0;
+      if (current > 4) current = 4;
+
+      bowlingPlan[id] = current;
+      document.getElementById(`overs-${id}`).textContent = current;
+      updateOversLeft();
+    };
+
+    function updateOversLeft() {
+      const used = Object.values(bowlingPlan).reduce((a, b) => a + b, 0);
+      oversLeftDiv.textContent = `Overs Left: ${20 - used}`;
+      const bowlersUsed = Object.values(bowlingPlan).filter(v => v > 0).length;
+
+      if (used < 20) {
+        warningDiv.style.display = "block";
+        warningDiv.textContent = "You must assign exactly 20 overs!";
+      } else if (bowlersUsed < 5) {
+        warningDiv.style.display = "block";
+        warningDiv.textContent = "Tip: Use at least 5 different bowlers.";
+      } else {
+        warningDiv.style.display = "none";
+      }
+    }
+
+    saveBtn.addEventListener("click", async () => {
+      const matchId = localStorage.getItem("next_match_id");
+      if (!matchId) return alert("No upcoming match found");
+
+      const playingOrder = Array.from(battingOrderDiv.children).map(el => parseInt(el.dataset.id));
+      const bowlerSet = Object.entries(bowlingPlan)
+        .filter(([_, overs]) => overs > 0)
+        .map(([id, overs]) => ({ player_id: parseInt(id), overs }));
+
+      const totalOvers = bowlerSet.reduce((sum, b) => sum + b.overs, 0);
+      if (totalOvers !== 20) {
+        return alert("Total overs must be exactly 20.");
+      }
+
+      const { error } = await supabase.from("lineups").upsert({
+        match_id: matchId,
+        team_id: team.id,
+        playing_xi: playingOrder,
+        batting_order: playingOrder,
+        bowling_order: bowlerSet
+      }, { onConflict: ['match_id', 'team_id'] });
+
+      if (error) alert("Error saving lineup: " + error.message);
+      else alert("Lineup saved successfully!");
+    });
+
+    renderBattingOrder();
+    renderBowlingPlan();
+    updateOversLeft();
+  </script>
+</body>
+</html>

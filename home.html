@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Home – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1e1b3a;
+      color: white;
+    }
+    .main {
+      padding: 80px 16px 80px;
+      max-width: 700px;
+      margin: auto;
+    }
+    .top-bar, .bottom-nav {
+      position: fixed;
+      left: 0; right: 0;
+      background: #29255a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      z-index: 1000;
+    }
+    .top-bar {
+      top: 0;
+      border-bottom: 1px solid #444;
+    }
+    .bottom-nav {
+      bottom: 0;
+      justify-content: space-around;
+      border-top: 1px solid #444;
+    }
+    .bottom-nav a {
+      color: #bbb;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .preparation-section {
+      background: #2d2a4a;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 24px;
+    }
+    .preparation-section h3 {
+      margin-top: 0;
+    }
+    .preparation-section p {
+      margin: 8px 0;
+    }
+    .preparation-section button {
+      background: #00e676;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .preparation-section button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div><strong id="username">Manager</strong></div>
+    <div>
+      XP: <span id="xp">0</span> |
+      🪙 <span id="coins">0</span> |
+      💵 ₹<span id="cash">0</span>
+    </div>
+  </div>
+
+  <div class="main">
+    <h2>Welcome back!</h2>
+    <div class="preparation-section">
+      <h3>Match Preparation</h3>
+      <div id="trainingStatus">Checking training status...</div>
+      <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <a href="team.html">🏏 Team</a>
+    <a href="scout.html">🔍 Scout</a>
+    <a href="home.html"><strong>🏠 Home</strong></a>
+    <a href="auction.html">⚒️ Auction</a>
+    <a href="store.html">🛒 Store</a>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    ); // Replace with full anon key
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "index.html";
+
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+    const { data: team } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
+
+    // Header update
+    document.getElementById("username").textContent = profile.manager_name;
+    document.getElementById("xp").textContent = profile.xp;
+    document.getElementById("coins").textContent = profile.coins ?? 0;
+    document.getElementById("cash").textContent = profile.cash ?? 0;
+
+    // Get last match
+    const { data: lastMatch } = await supabase
+      .from("matches")
+      .select("*")
+      .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+      .order("date", { ascending: false })
+      .limit(1)
+      .single();
+
+    const lastMatchDate = lastMatch?.date || "1970-01-01";
+
+    // Check training logs
+    const { data: trainingLogs } = await supabase
+      .from("training_logs")
+      .select("*")
+      .eq("team_id", team.id)
+      .gte("created_at", lastMatchDate)
+      .order("created_at", { ascending: false });
+
+    const trainedPlayers = new Set();
+    trainingLogs?.forEach(t => trainedPlayers.add(t.player_id));
+    const trainingCompleted = trainedPlayers.size >= 3;
+
+    const trainingStatusDiv = document.getElementById("trainingStatus");
+    const goBtn = document.getElementById("goTrainingBtn");
+
+    if (trainingCompleted) {
+      trainingStatusDiv.innerHTML = `✅ <strong>Training Completed</strong> (3 players trained)`;
+      goBtn.disabled = true;
+    } else {
+      trainingStatusDiv.innerHTML = `❌ <strong>Training Pending</strong> – Train 3 players before next match`;
+      goBtn.disabled = false;
+    }
+  </script>
+</body>
+</html>

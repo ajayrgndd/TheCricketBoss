@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>League – TheCricketBoss</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles/global.css" />
+</head>
+<body>
+  <div class="main">
+    <h2>Your League</h2>
+    <div id="pointsTable"></div>
+    <div id="rewardContainer" style="margin-top: 24px;"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { getRewardAmount } from './js/reward-amount.js';
+    import { loadSharedUI } from './js/shared-ui.js';
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." // anon key
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) location.href = "index.html";
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp,
+      coins: 15,
+      cash: profile.cash
+    });
+
+    const { data: team } = await supabase
+      .from("teams")
+      .select("*")
+      .eq("owner_id", user.id)
+      .single();
+
+    const { data: leagueTeams } = await supabase
+      .from("teams")
+      .select("*")
+      .eq("league_tier", team.league_tier);
+
+    const sorted = leagueTeams.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return b.net_run_rate - a.net_run_rate;
+    });
+
+    const table = document.createElement("table");
+    table.innerHTML = `
+      <tr>
+        <th>Rank</th>
+        <th>Team</th>
+        <th>Points</th>
+        <th>NRR</th>
+      </tr>
+    `;
+
+    for (let i = 0; i < sorted.length; i++) {
+      const t = sorted[i];
+      table.innerHTML += `
+        <tr${t.id === team.id ? ' style="background:#d0f0c0"' : ''}>
+          <td>${i + 1}</td>
+          <td>${t.team_name}</td>
+          <td>${t.points}</td>
+          <td>${t.net_run_rate?.toFixed(2) || "0.00"}</td>
+        </tr>
+      `;
+    }
+
+    document.getElementById("pointsTable").appendChild(table);
+
+    // ✅ Show Claim Reward Option
+    const seasonEnded = new Date() > new Date(profile.season_end_date);
+    const rewardClaimed = profile.reward_claimed;
+    const rank = team.season_rank;
+    const reward = getRewardAmount(team.league_tier, rank);
+
+    if (seasonEnded && !rewardClaimed && reward > 0) {
+      const claimBtn = document.createElement("button");
+      claimBtn.textContent = `🎁 Claim ₹${reward.toLocaleString()} Reward`;
+      claimBtn.style.padding = "10px 20px";
+      claimBtn.style.fontSize = "16px";
+      claimBtn.style.background = "#00e676";
+      claimBtn.style.border = "none";
+      claimBtn.style.borderRadius = "6px";
+      claimBtn.style.cursor = "pointer";
+
+      claimBtn.onclick = async () => {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            cash: profile.cash + reward,
+            reward_claimed: true
+          })
+          .eq("id", user.id);
+
+        if (!error) {
+          alert("✅ Reward Claimed!");
+          location.reload();
+        } else {
+          alert("❌ Failed to claim reward.");
+        }
+      };
+
+      document.getElementById("rewardContainer").appendChild(claimBtn);
+    }
+  </script>
+</body>
+</html>

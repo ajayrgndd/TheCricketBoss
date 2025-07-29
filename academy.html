@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Academy – TheCricketBoss</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    .academy-container {
+      padding: 16px;
+      max-width: 800px;
+      margin: auto;
+      color: #fff;
+    }
+
+    .player-card {
+      background: #2e2a4a;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    select, button {
+      margin-top: 8px;
+      padding: 8px;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .active-skill {
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .status {
+      color: #00e676;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
+    .coin-cost {
+      color: #ffca28;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2>🏏 Academy – Train Special Skills</h2>
+    <div class="academy-container" id="academyList"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { loadSharedUI } from "./js/shared-ui.js";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "YOUR_PUBLIC_ANON_KEY"
+    );
+
+    const user = await supabase.auth.getUser().then(res => res.data.user);
+    if (!user) window.location.href = "index.html";
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp,
+      coins: profile.coins,
+      cash: profile.cash
+    });
+
+    const { data: team } = await supabase
+      .from("teams")
+      .select("id")
+      .eq("owner_id", user.id)
+      .single();
+
+    const { data: players } = await supabase
+      .from("players")
+      .select("*")
+      .eq("team_id", team.id);
+
+    const { data: academyRows } = await supabase
+      .from("academy")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("completed", false);
+
+    const activePlayerIds = academyRows.map(r => r.player_id);
+    const academyList = document.getElementById("academyList");
+
+    const skillOptions = [
+      "Top Order", "Middle Order", "Lower Order", "Opener", "Game Builder",
+      "Big Hitter", "Finisher", "Powerplay Specialist", "Middle Over Specialist",
+      "Death Over Specialist", "Economic", "Wicket Taker", "Big Hunter", "Deadly"
+    ];
+
+    for (const player of players) {
+      const alreadyLearning = academyRows.find(r => r.player_id === player.id);
+      const skillsOwned = [player.skill1, player.skill2].filter(Boolean);
+      const availableSlots = skillsOwned.length < 2;
+
+      const card = document.createElement("div");
+      card.className = "player-card";
+
+      card.innerHTML = `
+        <h3>${player.name}</h3>
+        <p><strong>Role:</strong> ${player.role}</p>
+        <p class="active-skill">Skills: ${skillsOwned.join(", ") || "None"}</p>
+
+        ${alreadyLearning ? `
+          <p class="status">⏳ In training: ${alreadyLearning.skill}<br/>
+          Completes: ${new Date(alreadyLearning.end_time).toLocaleString()}</p>
+        ` : availableSlots ? `
+          <label>Select Skill:</label>
+          <select id="skill-${player.id}">
+            ${skillOptions
+              .filter(skill => !skillsOwned.includes(skill))
+              .map(skill => `<option value="${skill}">${skill}</option>`).join("")}
+          </select>
+          <div class="coin-cost">⌛ 72h for Skill 1 / 120h for Skill 2</div>
+          <button onclick="startSkill('${player.id}', ${skillsOwned.length}, false)">🕒 Start Normal</button>
+          <button onclick="startSkill('${player.id}', ${skillsOwned.length}, true)">⚡ Quick Activate</button>
+        ` : `<p class="status">🎓 Already has 2 skills</p>`}
+
+        ${skillsOwned.length ? skillsOwned.map((skill, i) => `
+          <button onclick="removeSkill('${player.id}', '${i === 0 ? "skill1" : "skill2"}')">
+            ❌ Remove ${skill} (${i === 0 ? "Skill 1" : "Skill 2"})
+          </button>
+        `).join("") : ""}
+      `;
+
+      academyList.appendChild(card);
+    }
+
+    window.startSkill = async (playerId, slotIndex, isQuick) => {
+      const skill = document.getElementById(`skill-${playerId}`).value;
+      const skillSlot = slotIndex === 0 ? "skill1" : "skill2";
+      const costCoins = slotIndex === 0 ? 250 : 500;
+      const costCash = slotIndex === 0 ? 500000 : 1000000;
+      const quickCoins = slotIndex === 0 ? 300 : 500;
+      const durationMs = slotIndex === 0 ? 72 * 60 * 60 * 1000 : 120 * 60 * 60 * 1000;
+
+      const coinsNeeded = isQuick ? (costCoins + quickCoins) : costCoins;
+      const confirmText = isQuick
+        ? `Use ${coinsNeeded} coins for instant skill unlock?`
+        : `Start training "${skill}" for ${costCoins} coins + ₹${costCash.toLocaleString()} cash?`;
+
+      if (!confirm(confirmText)) return;
+
+      const { data: profile, error: profErr } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profErr || profile.coins < coinsNeeded || profile.cash < costCash) {
+        alert("❌ Not enough resources.");
+        return;
+      }
+
+      // Deduct coins & cash
+      await supabase.from("profiles")
+        .update({ coins: profile.coins - coinsNeeded, cash: profile.cash - costCash })
+        .eq("id", user.id);
+
+      if (isQuick) {
+        await supabase.from("players")
+          .update({ [skillSlot]: skill })
+          .eq("id", playerId);
+        alert("✅ Skill Activated Instantly!");
+        location.reload();
+      } else {
+        const now = new Date();
+        const end = new Date(Date.now() + durationMs).toISOString();
+
+        await supabase.from("academy").insert({
+          user_id: user.id,
+          player_id: playerId,
+          skill_slot: skillSlot,
+          skill,
+          start_time: now.toISOString(),
+          end_time: end,
+          completed: false
+        });
+
+        alert("⏳ Training started!");
+        location.reload();
+      }
+    };
+
+    window.removeSkill = async (playerId, slot) => {
+      const skillCol = slot === 'skill1' ? 'skill1' : 'skill2';
+
+      if (slot === 'skill1') {
+        const { data: player } = await supabase
+          .from("players")
+          .select("skill2")
+          .eq("id", playerId)
+          .single();
+        if (player.skill2) {
+          return alert("⚠️ Remove Skill 2 before removing Skill 1.");
+        }
+      }
+
+      if (!confirm("Spend 50 Coins to remove this skill?")) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("coins")
+        .eq("id", user.id)
+        .single();
+
+      if (profile.coins < 50) {
+        return alert("🚫 Not enough coins.");
+      }
+
+      await supabase.from("profiles")
+        .update({ coins: profile.coins - 50 })
+        .eq("id", user.id);
+
+      await supabase.from("players")
+        .update({ [skillCol]: null })
+        .eq("id", playerId);
+
+      alert("🗑 Skill removed.");
+      location.reload();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Set Lineup – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    body { background-color: #121212; color: #fff; font-family: sans-serif; }
+    .main { padding: 20px; max-width: 800px; margin: auto; }
+    h2, h3 { text-align: center; }
+    .player-list, .bowl-order { margin: 20px 0; }
+    label { display: block; margin: 5px 0; }
+    .submit-btn {
+      background: #00e676;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+    }
+    select, input[type="number"] {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      border-radius: 6px;
+      border: none;
+    }
+    .player-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2>Set Your Match Lineup</h2>
+    <div id="playerSelection" class="player-list"></div>
+    <h3>Assign Bowling Overs</h3>
+    <div id="bowlingOrder" class="bowl-order"></div>
+    <button class="submit-btn" id="submitLineup">Save Lineup</button>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "index.html";
+
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+    const { data: team } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
+    const { data: players } = await supabase.from("players").select("*").eq("team_id", team.id);
+
+    const playerSelectionDiv = document.getElementById("playerSelection");
+    const bowlingOrderDiv = document.getElementById("bowlingOrder");
+
+    // Build player selection checkboxes
+    players.forEach(p => {
+      const row = document.createElement("label");
+      row.innerHTML = `<input type="checkbox" value="${p.id}"> ${p.name} (${p.role})`;
+      playerSelectionDiv.appendChild(row);
+    });
+
+    // Create bowling inputs
+    players.forEach(p => {
+      const row = document.createElement("div");
+      row.className = "player-row";
+      row.innerHTML = `
+        <label>${p.name}</label>
+        <input type="number" min="0" max="4" step="1" value="0" data-id="${p.id}" />
+      `;
+      bowlingOrderDiv.appendChild(row);
+    });
+
+    // Handle submission
+    document.getElementById("submitLineup").addEventListener("click", async () => {
+      const selected = [...document.querySelectorAll('input[type="checkbox"]:checked')].map(cb => cb.value);
+      if (selected.length !== 11) {
+        alert("You must select exactly 11 players.");
+        return;
+      }
+
+      const oversInputs = [...document.querySelectorAll('.bowl-order input[type="number"]')];
+      let totalOvers = 0;
+      let oversMap = {};
+
+      for (const input of oversInputs) {
+        const val = parseInt(input.value);
+        if (val > 4) {
+          alert("Max 4 overs per bowler.");
+          return;
+        }
+        const pid = input.dataset.id;
+        if (selected.includes(pid)) {
+          totalOvers += val;
+          oversMap[pid] = val;
+        }
+      }
+
+      if (totalOvers !== 20) {
+        alert("Total overs must equal 20.");
+        return;
+      }
+
+      const { error } = await supabase.from("lineups").insert({
+        team_id: team.id,
+        match_date: new Date().toISOString().slice(0, 10),
+        player_ids: selected,
+        bowling_plan: oversMap
+      });
+
+      if (error) {
+        alert("Error saving lineup: " + error.message);
+      } else {
+        alert("Lineup saved successfully!");
+        window.location.href = "home.html";
+      }
+    });
+  </script>
+</body>
+</html>

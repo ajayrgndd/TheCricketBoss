@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Team – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    .team-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      padding-bottom: 80px;
+    }
+    .player-card {
+      background: #2d2a4a;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+      color: #fff;
+      position: relative;
+    }
+    .sell-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: #ff4081;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .modal-content {
+      background: #1e1b3a;
+      color: white;
+      padding: 24px;
+      border-radius: 8px;
+      max-width: 400px;
+      text-align: center;
+    }
+    .modal-content h3 {
+      margin-bottom: 12px;
+    }
+    .modal-content button {
+      margin-top: 12px;
+      padding: 8px 20px;
+      background: #00e676;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .modal-content .cancel {
+      background: #ccc;
+      color: #000;
+      margin-left: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2>Your Team Players</h2>
+    <div id="teamContainer" class="team-container"></div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" id="sellModal">
+    <div class="modal-content">
+      <h3>Sell Player</h3>
+      <p id="sellPlayerName"></p>
+      <p><strong>Market Price:</strong> ₹<span id="sellMarketPrice">0</span></p>
+      <p><em>Duration fixed at 24h</em></p>
+      <button id="confirmSell">Confirm</button>
+      <button class="cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { getExperienceLevel } from "./js/experience-level.js";
+    import { calculateMarketPrice } from "./js/calculate-price.js";
+    import { loadSharedUI } from "./js/shared-ui.js";
+
+    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "index.html";
+
+    const { data: profile } = await supabase
+      .from("profiles").select("*").eq("id", user.id).single();
+    loadSharedUI({ manager_name: profile.manager_name, xp: profile.xp, coins: 15, cash: 300000 });
+
+    const { data: team } = await supabase
+      .from("teams").select("*").eq("owner_id", user.id).single();
+    const { data: players } = await supabase
+      .from("players").select("*").eq("team_id", team.id);
+
+    const container = document.getElementById("teamContainer");
+
+    const sellModal = document.getElementById("sellModal");
+    const sellPlayerName = document.getElementById("sellPlayerName");
+    const sellMarketPrice = document.getElementById("sellMarketPrice");
+    const confirmSellBtn = document.getElementById("confirmSell");
+
+    let selectedPlayer = null;
+    let marketPrice = 0;
+
+    function openSellModal(player) {
+      selectedPlayer = player;
+      marketPrice = calculateMarketPrice(player);
+      sellPlayerName.textContent = player.name;
+      sellMarketPrice.textContent = marketPrice.toLocaleString();
+      sellModal.style.display = "flex";
+    }
+
+    function closeModal() {
+      sellModal.style.display = "none";
+    }
+
+    confirmSellBtn.onclick = async () => {
+      if (!selectedPlayer || !marketPrice) return;
+
+      const expires_at = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase.from("auctions").insert([{
+        player_id: selectedPlayer.id,
+        team_id: team.id,
+        base_price: marketPrice,
+        current_price: marketPrice,
+        expires_at,
+        status: "active"
+      }]);
+
+      if (!error) {
+        alert("Player listed in auction!");
+        closeModal();
+      } else {
+        alert("Failed to list player.");
+        console.error(error);
+      }
+    };
+
+    for (const player of players) {
+      const { data: recentStats } = await supabase
+        .from("player_stats")
+        .select("runs, wickets, result, created_at")
+        .eq("player_id", player.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      const statsHTML = recentStats?.length
+        ? recentStats.map((s, i) => `
+            <p><strong>Match ${i + 1}:</strong> ${s.runs} runs, ${s.wickets} wickets [${s.result}]</p>
+          `).join("")
+        : `<p><em>No match stats yet</em></p>`;
+
+      const expLevel = getExperienceLevel(player.experience || 0);
+      const isSellDisabled = players.length <= 11;
+
+      const card = document.createElement("div");
+      card.className = "player-card";
+      card.innerHTML = `
+        <h3>${player.name}</h3>
+        <p><strong>Role:</strong> ${player.role}</p>
+        <p><strong>Age:</strong> ${player.age_years}y ${player.age_days}d</p>
+        <p><strong>Batting:</strong> ${player.batting}</p>
+        <p><strong>Bowling:</strong> ${player.bowling}</p>
+        <p><strong>Fitness:</strong> ${player.fitness}</p>
+        <p><strong>Form:</strong> ${player.form}</p>
+        <p><strong>Experience:</strong> ${player.experience} pts</p>
+        <p><strong>Level:</strong> ${expLevel}</p>
+        <hr/>
+        <p><strong>Last 5 Matches:</strong></p>
+        ${statsHTML}
+        <button class="sell-btn" ${isSellDisabled ? "disabled" : ""}>
+          Sell
+        </button>
+      `;
+      card.querySelector(".sell-btn").onclick = () => {
+        if (!isSellDisabled) openSellModal(player);
+      };
+      container.appendChild(card);
+    }
+
+    window.closeModal = closeModal;
+  </script>
+</body>
+</html>

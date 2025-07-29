@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Match – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    body {
+      background: #1e1d2b;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    .main {
+      padding: 20px;
+      text-align: center;
+    }
+    .countdown {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    .event-log {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #2e2d3a;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: left;
+      height: 320px;
+      overflow-y: auto;
+      box-shadow: 0 0 10px #0006;
+    }
+    .event-log p {
+      margin: 5px 0;
+      font-size: 15px;
+    }
+    .replay-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #00e676;
+      cursor: pointer;
+    }
+    .replay-btn:hover {
+      background-color: #00c96d;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2 id="matchTitle">Your Match</h2>
+    <div id="status" class="countdown">Checking match status...</div>
+    <div id="eventLog" class="event-log"></div>
+    <button id="replayBtn" class="replay-btn" style="display: none;">Replay Match</button>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const nowIST = new Date(Date.now() + IST_OFFSET);
+    const hour = nowIST.getHours();
+    const minutes = nowIST.getMinutes();
+
+    const statusEl = document.getElementById("status");
+    const logEl = document.getElementById("eventLog");
+    const replayBtn = document.getElementById("replayBtn");
+    const matchTitle = document.getElementById("matchTitle");
+
+    let matchId = null;
+    let events = [];
+
+    // Step 1: Load user and match
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "index.html";
+
+    const { data: team } = await supabase.from("teams").select("id, team_name").eq("owner_id", user.id).single();
+    const today = nowIST.toISOString().split("T")[0];
+
+    const { data: match } = await supabase
+      .from("matches")
+      .select("*")
+      .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+      .eq("date", today)
+      .single();
+
+    if (!match) {
+      statusEl.textContent = "No match scheduled today.";
+      matchTitle.textContent = "";
+      replayBtn.style.display = "none";
+      return;
+    }
+
+    matchId = match.id;
+    const matchStart = new Date(nowIST);
+    matchStart.setHours(21, 0, 0, 0); // 9 PM IST
+
+    const matchEnd = new Date(nowIST);
+    matchEnd.setHours(23, 30, 0, 0); // Replay allowed till midnight
+
+    const timeUntilStart = matchStart - nowIST;
+
+    if (nowIST < matchStart) {
+      // Show countdown
+      const interval = setInterval(() => {
+        const now = new Date(Date.now() + IST_OFFSET);
+        const diff = matchStart - now;
+        if (diff <= 0) {
+          clearInterval(interval);
+          loadAndPlayReplay();
+        } else {
+          const mins = Math.floor(diff / 60000);
+          const secs = Math.floor((diff % 60000) / 1000);
+          statusEl.textContent = `Match starts in ${mins}m ${secs}s`;
+        }
+      }, 1000);
+    } else {
+      loadAndPlayReplay();
+    }
+
+    // Step 2: Replay function
+    async function loadAndPlayReplay() {
+      statusEl.textContent = "Match started… Playing live replay";
+      logEl.innerHTML = "";
+
+      const { data: matchEvents } = await supabase
+        .from("match_events")
+        .select("*")
+        .eq("match_id", matchId)
+        .order("over, ball", { ascending: true });
+
+      if (!matchEvents?.length) {
+        statusEl.textContent = "Match data not available yet. Try again later.";
+        return;
+      }
+
+      events = matchEvents;
+      let i = 0;
+
+      const interval = setInterval(() => {
+        if (i >= events.length) {
+          clearInterval(interval);
+          statusEl.textContent = "Match Ended.";
+          replayBtn.style.display = "inline-block";
+          return;
+        }
+
+        const e = events[i++];
+        const line = document.createElement("p");
+        line.innerHTML = `<strong>Over ${e.over}.${e.ball}:</strong> ${e.commentary}`;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }, 2000); // 2 seconds per ball
+    }
+
+    // Step 3: Replay button
+    replayBtn.addEventListener("click", () => {
+      logEl.innerHTML = "";
+      statusEl.textContent = "Replaying match...";
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i >= events.length) {
+          clearInterval(interval);
+          statusEl.textContent = "Replay complete.";
+          return;
+        }
+        const e = events[i++];
+        const line = document.createElement("p");
+        line.innerHTML = `<strong>Over ${e.over}.${e.ball}:</strong> ${e.commentary}`;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }, 1500);
+    });
+  </script>
+</body>
+</html>

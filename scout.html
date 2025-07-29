@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Scout – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    .scout-section {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .player-card {
+      background: #2c2f4a;
+      margin: 20px auto;
+      max-width: 300px;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 0 10px #0008;
+      color: #fff;
+    }
+
+    .player-card h3 {
+      margin: 0;
+      color: #00e676;
+    }
+
+    .player-card p {
+      margin: 5px 0;
+    }
+
+    button {
+      background: #00e676;
+      border: none;
+      padding: 10px 18px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="main scout-section">
+    <h2>Scout New Talent</h2>
+    <button id="scoutBtn">Scout Player</button>
+    <div id="scoutedPlayer"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { loadSharedUI } from "./js/shared-ui.js";
+    import { regionNameData } from "./js/data/region-names.js";
+
+    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co", "YOUR_PUBLIC_ANON_KEY");
+
+    const scoutBtn = document.getElementById("scoutBtn");
+    const scoutedPlayerDiv = document.getElementById("scoutedPlayer");
+
+    // Date check: Only allow on Wednesday
+    const today = new Date();
+    if (today.getDay() !== 3) {
+      scoutBtn.disabled = true;
+      scoutBtn.textContent = "Available only on Wednesdays";
+    }
+
+    // Get user & profile
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "index.html";
+
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+    const { data: team } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
+
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp,
+      coins: 15,
+      cash: 300000
+    });
+
+    // Prevent multiple scouts per week
+    const lastScouted = new Date(profile.last_scouted || 0);
+    const isSameWeek = (d1, d2) => {
+      const week1 = getWeek(d1), week2 = getWeek(d2);
+      return week1.year === week2.year && week1.week === week2.week;
+    };
+    const getWeek = (date) => {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+      const week = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+      return { year: d.getUTCFullYear(), week };
+    };
+
+    if (isSameWeek(today, lastScouted)) {
+      scoutBtn.disabled = true;
+      scoutBtn.textContent = "Already scouted this week";
+    }
+
+    scoutBtn.addEventListener("click", async () => {
+      const namePool = regionNameData[profile.region] || regionNameData["Maharashtra"];
+      const name = namePool[Math.floor(Math.random() * namePool.length)];
+
+      // Age logic (weighted)
+      const ageProb = [16,16,16,17,17,17,17,17,17,18,18,18,18,18,18,18,18,18,19,19,20];
+      const age_years = ageProb[Math.floor(Math.random() * ageProb.length)];
+      const age_days = 0;
+
+      const batting = 5 + Math.floor(Math.random() * 11);
+      const bowling = 5 + Math.floor(Math.random() * 11);
+      const keeping = Math.floor(Math.random() * 11);
+      const role = ["Batsman", "Bowler", "All-Rounder", "WK"][Math.floor(Math.random() * 4)];
+      const skill_level = (batting + bowling + keeping) / 3 <= 10 ? "Newbie" : "Trainee";
+
+      const fitness = 100;
+      const form = "Average";
+      const experience = 0;
+
+      const { error } = await supabase.from("players").insert({
+        team_id: team.id,
+        name,
+        age_years,
+        age_days,
+        role,
+        batting,
+        bowling,
+        keeping: role === "WK" ? keeping : 0,
+        skill_level,
+        experience,
+        form,
+        fitness
+      });
+
+      if (!error) {
+        await supabase.from("profiles").update({ last_scouted: new Date().toISOString() }).eq("id", user.id);
+
+        scoutBtn.disabled = true;
+        scoutBtn.textContent = "Already scouted this week";
+
+        scoutedPlayerDiv.innerHTML = `
+          <div class="player-card">
+            <h3>${name}</h3>
+            <p><strong>Age:</strong> ${age_years}y ${age_days}d</p>
+            <p><strong>Role:</strong> ${role}</p>
+            <p>Batting: ${batting}</p>
+            <p>Bowling: ${bowling}</p>
+            <p>Fitness: ${fitness}</p>
+            <p>Form: ${form}</p>
+            <p>Experience: ${experience}</p>
+            <p>Skill Level: ${skill_level}</p>
+          </div>
+        `;
+      } else {
+        alert("Error saving player: " + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
