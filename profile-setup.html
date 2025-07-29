@@ -89,18 +89,38 @@
 <body>
   <div class="container">
     <h2>Set Up Your Cricket Manager Profile</h2>
-    <form id="profileForm">
+    <form id="setup-form">
       <label for="managerName">Manager Name</label>
-      <input type="text" id="managerName" required pattern="[A-Za-z ]+" placeholder="e.g. Ajay Ramachandran" />
+      <input
+        type="text"
+        id="managerName"
+        required
+        pattern="[A-Za-z ]+"
+        placeholder="e.g. Ajay Ramachandran"
+      />
 
       <label for="teamName">Team Name</label>
-      <input type="text" id="teamName" required pattern="[A-Za-z0-9 ]+" placeholder="e.g. Chennai Lions" />
+      <input
+        type="text"
+        id="teamName"
+        required
+        pattern="[A-Za-z0-9 ]+"
+        placeholder="e.g. Chennai Lions"
+      />
 
       <label for="dob">Date of Birth</label>
-      <input type="date" id="dob" required />
+      <input
+        type="date"
+        id="dob"
+        required
+        max="2009-12-31"
+        min="1960-01-01"
+      />
 
       <label for="region">Region</label>
-      <select id="region" required></select>
+      <select id="region" required>
+        <option value="" disabled selected>Select Region</option>
+      </select>
 
       <button type="submit">Confirm and Generate Your Squad</button>
     </form>
