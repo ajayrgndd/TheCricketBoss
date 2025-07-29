@@ -1,0 +1,9 @@
+{
+  "jobs": [
+    {
+      "name": "weekly-form-refresh",
+      "schedule": "0 15 * * 0", 
+      "endpoint": "update-form"
+    }
+  ]
+}
