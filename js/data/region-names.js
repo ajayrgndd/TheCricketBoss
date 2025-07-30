@@ -1,21 +1,61 @@
 export const regionNameData = {
-  // 🇮🇳 Indian States (partial example)
-  "Maharashtra": ["Gokul Sharma", "Rohan Jadhav", "Aditya Pawar", "Nilesh Patil", "Tejas Shinde"],
-  "Kerala": ["Vishnu Pillai", "Ajay Nair", "Rahul Menon", "Sandeep Warrier", "Shyam Mohan"],
-  "Tamil Nadu": ["Suresh Iyer", "Raghav Swaminathan", "Mohan Raj", "Vikram Ramasamy", "Prakash Anand"],
-  "Delhi": ["Rajat Kumar", "Ankit Yadav", "Sahil Mehra", "Neeraj Sharma", "Amit Rana"],
-  "Karnataka": ["Vinay Kumar", "Rohan Reddy", "Deepak Shetty", "Abhinav Gowda", "Manoj Patil"],
+  // 28 Indian States
+  "Andhra Pradesh": ["Ravi Teja", "Vijay Kumar", "Naveen Babu", "Suresh Reddy", "Ajay Krishna", "Kalyan Raju", "Ramakrishna Yadav"],
+  "Arunachal Pradesh": ["Taba Tani", "Tanya Ronya", "Toko Teji", "Koyu Riram", "Taba Tagru"],
+  "Assam": ["Rivan Parag", "Saurav Das", "Partha Deka", "Arup Kalita", "Bhaskar Das"],
+  "Bihar": ["Kumar Rajesh", "Ravi Kumar", "Ankit Singh", "Amit Prakash", "Deepak Ranjan"],
+  "Chhattisgarh": ["Akash Sharma", "Sahil Gupta", "Shubham Singh", "Rajkumar Yadav", "Nitin Borkar"],
+  "Goa": ["Shadab Jakati", "Snehal Kauthankar", "Suyash Prabhudesai", "Amulya Pandrekar", "Aditya Kaushik"],
+  "Gujarat": ["Parth Patel", "Het Patel", "Priyan Panchal", "Dhruv Raval", "Karan Vaghela"],
+  "Haryana": ["Yuvan Chahal", "Mohit Tewatia", "Jayant Yadav", "Harshith Patel", "Sumit Kumar"],
+  "Himachal Pradesh": ["Roshi Dhawan", "Ankush Bains", "Mayank Dagar", "Vaishnav Arora", "Pankaj Jaswal"],
+  "Jharkhand": ["Viraj Mohto", "Ishank Jaggi", "Virat Singh", "Anukul Roy", "Sumit Kumar"],
+  "Karnataka": ["Aditya Ray", "Mayank Ansari", "Manish Ram", "Karun Khatoon", "Devdutt Oraon", "Mithul Bibi", "Mishal Kumar", "Chanchal Sankar", "Jagan Prasad", "Devdutt Mandal"],
+  "Kerala": ["Rahul Pillai", "Aneesh Nair", "Vishnu Nambiar", "Hari Chandran", "Mohan Thampi", "Midhun Kartha", "Renjith Raman", "Soorya Narayanan", "Anandhu Krishnan", "Abhijith Krishna"],
+  "Madhya Pradesh": ["Rajat Gupta", "Venkatesh Goyal", "Avesh Jain", "Naman Dixit", "Ankit Sharma", "Venugopal Chaubey", "Ankit Patel", "Jackson Scindia", "Amjit Shuklas"],
+  "Maharashtra": ["Rohit Gaikwad", "Arjun Tripathi", "Ashik Jadhav", "Sony Dube", "Ankeet Bawne"],
+  "Manipur": ["Langlonyamba", "Rex Singh", "Johnson Meitei", "Bijoy Longjam", "Ricky Meitei"],
+  "Meghalaya": ["Abhishek Kumar", "Nirdesh Baisoya", "Dippu Sangma", "Bishal Roy", "Jason Sangma"],
+  "Mizoram": ["B Lalnunfela", "Joseph Lalthankhuma", "Lalhruaizela", "Vanlalhruai", "Rohmingthanga"],
+  "Nagaland": ["Jonathan Rongsen", "Imliwati Lemtur", "Akumjung Jamir", "Merenzong", "Khrielie"],
+  "Odisha": ["Govinda Poddar", "Anurag Sarangi", "Debasish Samantray", "Biplab Samantray", "Suryakant Pradhan"],
+  "Punjab": ["Shobit Gill", "Mandip Singh", "Gurkirat Singh", "Baltej Singh", "Arship Singh"],
+  "Rajasthan": ["Deepan Chahar", "Kapil Yadav", "Ashok Menaria", "Annit Choudhary", "Chirag Jani"],
+  "Sikkim": ["Palzor Tamang", "Padam Gurung", "Tshering Lepcha", "Tashi Bhutia", "Sandeep Rai"],
+  "Tamil Nadu": ["Ravi Murugan", "Venkit Sundar", "Shan Natarajan", "Baba Aparajith", "Nathan Arumugam"],
+  "Telangana": ["Venkitesh Siraj", "T Ravi Teja", "Akshath Reddy", "Mehidy Goud", "Tanmay Agarwal"],
+  "Tripura": ["Manisankar Murasingh", "Joydeep Banik", "Uttar Debbarma", "Mrinmoy Dey", "Debashish Saha"],
+  "Uttar Pradesh": ["Kamaljit Yadav", "Bhuvneshwar Prasad", "Rikshi Singh", "Karanjit Sharma", "Priyam Garg"],
+  "Uttarakhand": ["Unmukt Chand", "Avneesh Sudha", "Kunal Chandela", "Mayank Mishra", "Vineet Saxena"],
+  "West Bengal": ["Wiridhi Saha", "Mahesh Tiwary", "Sudip Chatterjee", "Ishanjith Porel", "Abhimanyu Easwaran"],
 
-  // 🇮🇳 Union Territories (partial)
-  "Delhi UT": ["Karan Bedi", "Manish Sharma", "Ravi Khanna"],
-  "Puducherry": ["Sathish Kumar", "Rajeev Nair", "Anand Murugan"],
+  // 8 Union Territories
+  "Andaman and Nicobar Islands": ["Rohit Jha", "Arvind Das", "Ajay Rawat", "Nikhil Tiwari", "Shubham Das"],
+  "Chandigarh": ["Uday Kaul", "Bhagmender Lather", "Manan Vohra", "Gurinder Singh", "Sandeep Sharma"],
+  "Dadra and Nagar Haveli and Daman and Diu": ["Raj Vaghela", "Sameer Damania", "Deepak Diu", "Vikas Patel", "Hardik Rana"],
+  "Delhi": ["Viranjith Kohli", "Rikin Pant", "Raashith Dhawan", "Nithin Rana", "Naveen Saini"],
+  "Jammu and Kashmir": ["Abid Nabi", "Parvez Rasool", "Umrajith Malik", "Rasikh Salam", "Shubham Khajuria"],
+  "Ladakh": ["Tashi Namgyal", "Sonam Dorjay", "Kunzang Wangmo", "Lobsang Stanzin", "Tsering Angchuk"],
+  "Lakshadweep": ["Mohammed Hameed", "Fayaz Ali", "Abdul Latheef", "Usman Salim", "Saifuddin Khan"],
+  "Puducherry": ["Rohit Don", "Sanjay Karthik", "Aravind Raj", "Abhishek Dipin", "Yash Mehta"],
 
-  // 🌍 Top Cricket Nations (partial)
-  "Australia": ["Michael Smith", "Steve Maxwell", "David Warner", "Josh Bailey"],
-  "England": ["Ben Stokes", "Joe Root", "Harry Brook", "Liam Dawson"],
-  "South Africa": ["Kagiso Rabada", "Temba Bavuma", "Lungi Ngidi", "Faf du Plessis"],
-  "Pakistan": ["Babar Azam", "Shaheen Afridi", "Mohammad Rizwan", "Fakhar Zaman"],
-  "Bangladesh": ["Shakib Hasan", "Liton Das", "Tamim Iqbal", "Taskin Ahmed"]
-  
-  // 👉 Add the rest later for all regions — we'll modularize
+  // 18 Top Cricket Nations
+  "Australia": ["David Marsh", "John Smith", "Greg Cummins", "Glenn Max", "Marnus Sahuschagne"],
+  "England": ["Johny Root", "Ben Green", "Jos Anderson", "Jofra Joseph", "Johnny Britow"],
+  "New Zealand": ["Keans Williamson", "Trint Boult", "Tinkle Southee", "David Conway", "Mitchell Roy"],
+  "South Africa": ["Minton de Kock", "Kasino Rabada", "Peter Miller", "Tony Bavuma", "Marcus Jansen"],
+  "Pakistan": ["Malik Azam", "Shaheen Sha", "Mohammad Anvar", "Ish-ul-Haq", "Shuhaib Khan"],
+  "Bangladesh": ["Sakeer Al Hasan", "Tamin Iqbal", "Mustapha Rahman", "Liston Das", "Maheen Hasan"],
+  "Sri Lanka": ["Krunal Mendis", "Dasanka Shanaka", "Wahihindu Hasaranga", "Maheshan Theekshana", "Pathirana Nissanka"],
+  "Afghanistan": ["Rishad Khan", "Mohammad Najeeb", "Rahmanullah Gaarha", "Swalih-ul-Haq", "Ibrahim Hussain"],
+  "Ireland": ["Jos Stirling", "Andy Balbirnie", "Joshil Little", "Curtis Campher", "Haris Tector"],
+  "Zimbabwe": ["Shikhandar Razam", "Seam William", "Ryan Burl", "Wesley Madhevere", "Blessing Muzarabani"],
+  "West Indies": ["Nicholas Gayle", "Rovman Bravo", "Alpesh Joseph", "Shivaeal Hetmyer", "Jos Pollard"],
+  "Scotland": ["Richie Berrington", "George Munsey", "Mark Watt", "Brad Wheal", "Matthew Cross"],
+  "Netherlands": ["Max O'Dowd", "Bas de Leede", "Scott Edwards", "Logan van Beek", "Paul van Meekeren"],
+  "Nepal": ["Sandeep Lamichhane", "Dipendra Airee", "Rohit Paudel", "Sompal Kami", "Kushal Bhurtel"],
+  "UAE": ["Muhammad Waseem", "Chirag Suri", "Ahmed Raza", "Aryan Lakra", "Basil Hameed"],
+  "USA": ["Monank Patel", "Ali Khan", "Steven Taylor", "Nisarg Patel", "Saurabh Netravalkar"],
+  "Canada": ["Navneet Dhaliwal", "Nitish Kumar", "Saad Bin Zafar", "Ravinderpal Singh", "Romesh Eranga"],
+  "Namibia": ["Gerhard Erasmus", "JJ Smit", "David Wiese", "Ruben Trumpelmann", "Jan Frylinck"]
 };
