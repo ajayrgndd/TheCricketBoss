@@ -1,4 +1,11 @@
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 import { regionNameData } from "./js/data/region-names.js";
+
+// Supabase client
+const supabase = createClient(
+  "https://iukofcmatlfhfwcechdq.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // Replace with real anon key
+);
 
 // Salary Calculator 💰
 function calculateSalary(player) {
@@ -10,8 +17,8 @@ function calculateSalary(player) {
   return Math.floor(baseSkill * ageFactor * experienceFactor * (1 + specialSkillBonus) * 1000);
 }
 
-// Generate squad of 12 players based on region
-export function generateSquad(region) {
+// 🎯 Squad generator that directly inserts into Supabase
+export async function generateSquad(teamId, region) {
   const names = regionNameData[region] || [];
 
   const squad = [];
@@ -20,25 +27,27 @@ export function generateSquad(region) {
 
   for (const role of roles) {
     for (let i = 0; i < roleCounts[role]; i++) {
-      const batting = Math.floor(Math.random() * 11) + 5;
+      const batting = Math.floor(Math.random() * 11) + 5;       // 5–15
       const bowling = Math.floor(Math.random() * 11) + 5;
-      const fitness = Math.floor(Math.random() * 21) + 80;
-      const age_years = Math.floor(Math.random() * 5) + 16;
-      const age_days = Math.floor(Math.random() * 63);
+      const fitness = Math.floor(Math.random() * 21) + 80;       // 80–100
+      const age_years = Math.floor(Math.random() * 5) + 16;      // 16–20
+      const age_days = Math.floor(Math.random() * 63);           // 0–62
       const name = names[Math.floor(Math.random() * names.length)];
       const experience = 0;
 
       const player = {
+        team_id: teamId,
         name,
         role,
         batting,
         bowling,
         fitness,
+        age_years,
+        age_days,
         form: "Average",
         experience,
         skill_level: "Newbie",
-        age_years,
-        age_days,
+        skills: [],
         salary: 0
       };
 
@@ -47,5 +56,11 @@ export function generateSquad(region) {
     }
   }
 
-  return squad;
+  // 🧾 Insert all 12 players to Supabase
+  const { error } = await supabase.from("players").insert(squad);
+  if (error) {
+    console.error("❌ Failed to insert squad:", error.message);
+  } else {
+    console.log("✅ Squad generated and saved.");
+  }
 }
