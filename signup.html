@@ -28,17 +28,23 @@
       width: 100%;
       max-width: 420px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .logo {
+      width: 220px;
+      margin-bottom: 20px;
     }
 
     h2 {
-      text-align: center;
       font-size: 24px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
     }
 
     form {
       display: flex;
       flex-direction: column;
+      text-align: left;
     }
 
     label {
@@ -94,6 +100,10 @@
         padding: 20px;
       }
 
+      .logo {
+        width: 180px;
+      }
+
       h2 {
         font-size: 22px;
       }
@@ -102,6 +112,8 @@
 </head>
 <body>
   <div class="container">
+    <!-- 🔁 Replace path if your logo file is in another folder -->
+    <img src="assets/logo.png" alt="TheCricketBoss Logo" class="logo" />
     <h2>Create Your Account</h2>
     <form id="signup-form">
       <label for="email">Email Address</label>
@@ -133,10 +145,7 @@
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
 
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signUp({ email, password });
 
       if (error) {
         alert("Signup failed: " + error.message);
