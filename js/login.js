@@ -33,16 +33,18 @@ form.addEventListener("submit", async (e) => {
     sessionStorage.setItem("supabaseSession", JSON.stringify(data.session));
   }
 
-  // ✅ Check profile
+  // ✅ Check if profile exists and is complete
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("*")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (profile && !profileError) {
-    window.location.href = "home.html";
-  } else {
+  if (!profile || !profile.manager_name || !profile.team_name) {
+    // Profile doesn't exist or is incomplete → go to setup
     window.location.href = "profile-setup.html";
+  } else {
+    // Profile exists and looks fine → go home
+    window.location.href = "home.html";
   }
 });
