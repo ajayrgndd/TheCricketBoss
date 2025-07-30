@@ -28,10 +28,16 @@
       width: 100%;
       max-width: 420px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .logo {
+      width: 100px;
+      margin: 0 auto 20px;
+      display: block;
     }
 
     h2 {
-      text-align: center;
       font-size: 22px;
       margin-bottom: 20px;
     }
@@ -39,6 +45,7 @@
     form {
       display: flex;
       flex-direction: column;
+      text-align: left;
     }
 
     label {
@@ -83,11 +90,16 @@
       h2 {
         font-size: 20px;
       }
+
+      .logo {
+        width: 80px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- ✅ Logo path fixed -->
     <img src="assets/logo.png" alt="TheCricketBoss Logo" class="logo" />
     <h2>Set Up Your Cricket Manager Profile</h2>
     <form id="setup-form">
@@ -127,6 +139,39 @@
     </form>
   </div>
 
+  <!-- ✅ Region loader JS below -->
+  <script type="module">
+    document.addEventListener("DOMContentLoaded", () => {
+      const regionSelect = document.getElementById("region");
+
+      const indianStates = [
+        "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
+        "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
+        "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
+        "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
+        "Uttarakhand", "West Bengal"
+      ];
+
+      const unionTerritories = [
+        "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+        "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+      ];
+
+      const topCricketNations = [
+        "India", "Australia", "England", "Pakistan", "South Africa", "New Zealand", "Sri Lanka",
+        "Bangladesh", "West Indies", "Afghanistan", "Ireland", "Zimbabwe", "Scotland",
+        "Netherlands", "UAE", "Nepal", "USA", "Oman"
+      ];
+
+      const allRegions = [...indianStates, ...unionTerritories, ...topCricketNations];
+
+      regionSelect.innerHTML += allRegions.map(region => 
+        `<option value="${region}">${region}</option>`
+      ).join("");
+    });
+  </script>
+
+  <!-- Your main JS should come here -->
   <script type="module" src="js/profile-setup.js"></script>
 </body>
 </html>
