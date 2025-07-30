@@ -33,7 +33,7 @@
 
     .logo {
       width: 220px;
-      margin: 0 auto 16px;
+      margin-bottom: 16px;
     }
 
     h2 {
@@ -53,46 +53,35 @@
       font-size: 14px;
     }
 
-    input, button {
+    input[type="email"],
+    input[type="password"] {
       padding: 12px;
       font-size: 15px;
       border-radius: 6px;
       border: none;
       outline: none;
       width: 100%;
-    }
-
-    input {
       background-color: #fff;
       color: #000;
     }
 
-    .remember-forgot {
+    .remember {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-top: 10px;
+      margin-top: 12px;
       font-size: 13px;
     }
 
-    .remember-forgot label {
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .remember-forgot a {
-      color: #80d8ff;
-      text-decoration: none;
-    }
-
-    .remember-forgot a:hover {
-      text-decoration: underline;
+    .remember input {
+      margin-right: 8px;
     }
 
     button {
       margin-top: 20px;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
       background-color: #00c853;
       color: white;
       font-weight: bold;
@@ -113,6 +102,8 @@
       color: #80d8ff;
       text-decoration: none;
       font-size: 14px;
+      display: block;
+      margin-top: 6px;
     }
 
     .links a:hover {
@@ -132,12 +123,6 @@
       h2 {
         font-size: 20px;
       }
-
-      .remember-forgot {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-      }
     }
   </style>
 </head>
@@ -152,16 +137,17 @@
       <label for="password">Password</label>
       <input type="password" id="password" required placeholder="••••••••" />
 
-      <div class="remember-forgot">
-        <label><input type="checkbox" id="rememberMe" /> Remember Me</label>
-        <a href="reset-password.html">Forgot Password?</a>
+      <div class="remember">
+        <input type="checkbox" id="remember" />
+        <label for="remember">Remember Me</label>
       </div>
 
       <button type="submit">Login to Your Team</button>
     </form>
 
     <div class="links">
-      <p>Don’t have an account? <a href="signup.html">Sign up</a></p>
+      <a href="forgot-password.html">Forgot Password?</a>
+      <a href="signup.html">Don’t have an account? Sign up</a>
     </div>
   </div>
 
