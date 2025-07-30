@@ -1,23 +1,13 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 import { regionNameData } from "./js/data/region-names.js";
 
-// Supabase
+// Supabase client setup
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzQ1NzM4NCwiZXhwIjoyMDY5MDMzMzg0fQ.EtpYvjBs7yiTwreqsukK_I7BoK-UKZo3pF_odbzszmI"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // 🛡️ Use service_role key
 );
 
-// Salary Calculator 💰
-function calculateSalary(player) {
-  const baseSkill = player.batting + player.bowling + player.fitness;
-  const ageFactor = 1 + ((player.age_years - 16) * 0.05);
-  const experienceFactor = 1 + (player.experience || 0) / 100;
-  const specialSkillBonus = (player.skills?.length || 0) * 0.1;
-
-  return Math.floor(baseSkill * ageFactor * experienceFactor * (1 + specialSkillBonus) * 1000);
-}
-
-// Random setup
+// Utilities
 const totalBots = 900;
 const namePools = Object.values(regionNameData).flat();
 const randomName = () => namePools[Math.floor(Math.random() * namePools.length)];
@@ -32,17 +22,51 @@ const randomForm = () => {
   return pool[Math.floor(Math.random() * pool.length)];
 };
 
-// Bot team loop
+// Salary Calculation
+function calculateSalary(player) {
+  const baseSkill = player.batting + player.bowling + player.fitness;
+  const ageFactor = 1 + ((player.age_years - 16) * 0.05);
+  const experienceFactor = 1 + (player.experience || 0) / 100;
+  const specialSkillBonus = (player.skills?.length || 0) * 0.1;
+
+  return Math.floor(baseSkill * ageFactor * experienceFactor * (1 + specialSkillBonus) * 1000);
+}
+
+// Pick a random league
+async function getRandomLeagueId() {
+  const { data: leagues } = await supabase.from("leagues").select("id");
+  if (!leagues || leagues.length === 0) throw new Error("No leagues found");
+  const random = Math.floor(Math.random() * leagues.length);
+  return leagues[random].id;
+}
+
+// Main Seeder
 for (let i = 1; i <= totalBots; i++) {
   const teamName = `BotTeam${i}`;
+
+  // Check if already exists
+  const { data: exists } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("team_name", teamName)
+    .maybeSingle();
+
+  if (exists) {
+    console.log(`⚠️ ${teamName} already exists. Skipping...`);
+    continue;
+  }
+
+  // Assign league
+  const league_id = await getRandomLeagueId();
+
   const { data: team, error: teamError } = await supabase
     .from("teams")
-    .insert([{ team_name: teamName, type: "bot", owner_id: null }])
+    .insert([{ team_name: teamName, type: "bot", owner_id: null, league_id }])
     .select()
     .single();
 
   if (teamError) {
-    console.error("Team Error:", teamError.message);
+    console.error(`❌ Team Error for ${teamName}:`, teamError.message);
     continue;
   }
 
@@ -84,19 +108,19 @@ for (let i = 1; i <= totalBots; i++) {
         age_days,
         fitness,
         experience,
-        form
+        form,
+        skills: [], // Empty skills array
       };
 
-      player.salary = calculateSalary(player); // 💰 Add salary field
-
+      player.salary = calculateSalary(player);
       players.push(player);
     }
   }
 
   const { error: playerError } = await supabase.from("players").insert(players);
   if (playerError) {
-    console.error("Player Insert Error:", playerError.message);
+    console.error(`❌ Player Insert Error for ${teamName}:`, playerError.message);
   } else {
-    console.log(`✅ Seeded Bot Team ${i}`);
+    console.log(`✅ Seeded ${teamName} with 12 players`);
   }
 }
