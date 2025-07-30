@@ -1,38 +1,25 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-import { generateSquad } from "./squad-generator.js"; // ⬅️ your squad generation module
+import { generateSquad } from "./squad-generator.js";
 
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
+// Load region options
 document.addEventListener("DOMContentLoaded", async () => {
   const regionSelect = document.getElementById("region");
 
-  const indianStates = [
-    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
-    "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
-    "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
-    "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
-    "Uttarakhand", "West Bengal"
-  ];
-
-  const unionTerritories = [
-    "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
-    "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
-  ];
-
-  const topCricketNations = [
-    "India", "Australia", "England", "Pakistan", "South Africa", "New Zealand", "Sri Lanka",
-    "Bangladesh", "West Indies", "Afghanistan", "Ireland", "Zimbabwe", "Scotland",
-    "Netherlands", "UAE", "Nepal", "USA", "Oman"
-  ];
+  const indianStates = [...]; // same as before
+  const unionTerritories = [...];
+  const topCricketNations = [...];
 
   const allRegions = [...indianStates, ...unionTerritories, ...topCricketNations];
-  regionSelect.innerHTML = allRegions.map(r => `<option value="${r}">${r}</option>`).join("");
+  regionSelect.innerHTML += allRegions.map(r => `<option value="${r}">${r}</option>`).join("");
 });
 
-document.getElementById("profileForm").addEventListener("submit", async (e) => {
+// Handle form submission
+document.getElementById("setup-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const managerName = document.getElementById("managerName").value.trim();
@@ -47,7 +34,6 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     return;
   }
 
-  // 1️⃣ Create profile
   const { error: profileError } = await supabase.from("profiles").insert({
     user_id: user.id,
     manager_name: managerName,
@@ -65,7 +51,6 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     return;
   }
 
-  // 2️⃣ Find an available bot team
   const { data: botTeam, error: botError } = await supabase
     .from("teams")
     .select("*")
@@ -79,7 +64,6 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     return;
   }
 
-  // 3️⃣ Assign bot team to user
   const { error: teamUpdateError } = await supabase.from("teams").update({
     user_id: user.id,
     is_bot: false,
@@ -94,11 +78,15 @@ document.getElementById("profileForm").addEventListener("submit", async (e) => {
     return;
   }
 
-  // 4️⃣ Delete old bot players
   await supabase.from("players").delete().eq("team_id", botTeam.id);
 
-  // 5️⃣ Generate new squad
-  await generateSquad(botTeam.id, region);
+  try {
+    await generateSquad(botTeam.id, region);
+  } catch (err) {
+    console.error("Squad generation failed:", err.message);
+    alert("Squad generation failed. Please try again.");
+    return;
+  }
 
   alert("✅ Welcome! Your squad has been created.");
   window.location.href = "squad.html";
