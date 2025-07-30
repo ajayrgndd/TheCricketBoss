@@ -3,6 +3,9 @@ export async function loadSharedUI({ manager_name, xp, coins, cash }) {
   const topBar = document.createElement('div');
   topBar.className = 'top-bar';
   topBar.innerHTML = `
+    <div class="logo-area">
+      <img src="/assets/logo.png" alt="TheCricketBoss Logo" class="logo-img" />
+    </div>
     <div>
       <strong>${manager_name}</strong>
       <span>XP: ${xp}</span>
