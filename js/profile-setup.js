@@ -6,34 +6,6 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
-// Load region options
-document.addEventListener("DOMContentLoaded", () => {
-  const regionSelect = document.getElementById("region");
-
-  const indianStates = [
-    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
-    "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
-    "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
-    "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
-    "Uttarakhand", "West Bengal"
-  ];
-
-  const unionTerritories = [
-    "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
-    "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
-  ];
-
-  const topCricketNations = [
-    "India", "Australia", "England", "Pakistan", "South Africa", "New Zealand", "Sri Lanka",
-    "Bangladesh", "West Indies", "Afghanistan", "Ireland", "Zimbabwe", "Scotland",
-    "Netherlands", "UAE", "Nepal", "USA", "Namibia"
-  ];
-
-  const allRegions = [...indianStates, ...unionTerritories, ...topCricketNations];
-  regionSelect.innerHTML += allRegions.map(r => `<option value="${r}">${r}</option>`).join("");
-});
-
-// Handle form submission
 document.getElementById("setup-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -42,67 +14,104 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
   const dob = document.getElementById("dob").value;
   const region = document.getElementById("region").value;
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    alert("User not found. Please login again.");
-    window.location.href = "login.html";
-    return;
-  }
-
-  const { error: profileError } = await supabase.from("profiles").insert({
-    user_id: user.id,
-    manager_name: managerName,
-    team_name: teamName,
-    dob,
-    region,
-    xp: 10,
-    coins: 10,
-    cash: 1000,
-    level: "Beginner"
-  });
-
-  if (profileError) {
-    alert("Profile setup failed: " + profileError.message);
-    return;
-  }
-
-  const { data: botTeam, error: botError } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("is_bot", true)
-    .is("user_id", null)
-    .limit(1)
-    .single();
-
-  if (botError || !botTeam) {
-    alert("No available bot teams right now. Please try again later.");
-    return;
-  }
-
-  const { error: teamUpdateError } = await supabase.from("teams").update({
-    user_id: user.id,
-    is_bot: false,
-    region,
-    team_name: teamName,
-    manager_name: managerName,
-    last_active: new Date().toISOString()
-  }).eq("id", botTeam.id);
-
-  if (teamUpdateError) {
-    alert("Team assignment failed: " + teamUpdateError.message);
-    return;
-  }
-
-  await supabase.from("players").delete().eq("team_id", botTeam.id);
+  console.log("🔍 Submitted data:", { managerName, teamName, dob, region });
 
   try {
-    await generateSquad(botTeam.id, region);
-  } catch (err) {
-    console.error("❌ Squad generation failed:", err);
-    alert("Squad generation failed. Please try again.");
-    return;
-  }
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("❌ User fetch failed:", userError?.message);
+      alert("User not found. Please login again.");
+      window.location.href = "login.html";
+      return;
+    }
 
-  alert("✅ Welcome! Your squad has been created.");
-  window.location.href = "squad.html";
+    console.log("✅ User found:", user.id);
+
+    // 1️⃣ Insert Profile
+    const { error: profileError } = await supabase.from("profiles").insert({
+      user_id: user.id,
+      manager_name: managerName,
+      team_name: teamName,
+      dob,
+      region,
+      xp: 10,
+      coins: 10,
+      cash: 1000,
+      level: "Beginner"
+    });
+
+    if (profileError) {
+      console.error("❌ Profile insert failed:", profileError.message);
+      alert("Profile setup failed: " + profileError.message);
+      return;
+    }
+
+    console.log("✅ Profile inserted successfully");
+
+    // 2️⃣ Find a bot team
+    const { data: botTeam, error: botError } = await supabase
+      .from("teams")
+      .select("*")
+      .eq("is_bot", true)
+      .is("user_id", null)
+      .limit(1)
+      .single();
+
+    if (botError || !botTeam) {
+      console.error("❌ Bot team fetch failed:", botError?.message);
+      alert("No available bot teams right now. Please try again later.");
+      return;
+    }
+
+    console.log("✅ Bot team found:", botTeam.id);
+
+    // 3️⃣ Assign bot team to user
+    const { error: teamUpdateError } = await supabase
+      .from("teams")
+      .update({
+        user_id: user.id,
+        is_bot: false,
+        region,
+        team_name: teamName,
+        manager_name: managerName,
+        last_active: new Date().toISOString()
+      })
+      .eq("id", botTeam.id);
+
+    if (teamUpdateError) {
+      console.error("❌ Failed to assign team:", teamUpdateError.message);
+      alert("Team assignment failed: " + teamUpdateError.message);
+      return;
+    }
+
+    console.log("✅ Team assigned to user");
+
+    // 4️⃣ Delete old bot players
+    const { error: deleteError } = await supabase
+      .from("players")
+      .delete()
+      .eq("team_id", botTeam.id);
+
+    if (deleteError) {
+      console.warn("⚠️ Failed to delete old bot players:", deleteError.message);
+    } else {
+      console.log("🧹 Old bot players deleted");
+    }
+
+    // 5️⃣ Generate new squad
+    try {
+      await generateSquad(botTeam.id, region);
+      console.log("✅ Squad generation complete");
+    } catch (err) {
+      console.error("❌ Squad generation failed:", err.message);
+      alert("Squad generation failed. Please try again.");
+      return;
+    }
+
+    alert("✅ Welcome! Your squad has been created.");
+    window.location.href = "squad.html";
+  } catch (e) {
+    console.error("❌ Unexpected error in setup flow:", e);
+    alert("Unexpected error: " + e.message);
+  }
 });
