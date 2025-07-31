@@ -1303,7 +1303,7 @@ export const regionNameData = {
     "Mao Mhiasü", "Maoji Mhokha", "Mar Mhondamo", "Meren Mhonyamo", "Mhabemo Mhontamo",
     "Mhaozemo Mhoro", "Mhaseilie Mhoseilie", "Mhathung Mhotso", "Mhiasü Mhüso",
     "Mhokha Mongko", "Mhondamo Mongko", "Mhonyamo Mongko", "Mhontamo Mongko", "Mhoro Mongko",
-    "Mhoseilie Mongko", "Mhotso Mongko","],
+    "Mhoseilie Mongko", "Mhotso Mongko"],
   "Odisha": ["Govinda Poddar", "Anurag Sarangi", "Debasish Samantray", "Biplab Samantray", "Suryakant Pradhan",
     "Ajit Behera", "Rabindra Das", "Bijay Mohanty", "Satyabrata Patnaik", "Chandrasekhar Mishra",
     "Kishore Nayak", "Hemant Panda", "Prakash Sahu", "Ramesh Swain", "Manoj Rath",
