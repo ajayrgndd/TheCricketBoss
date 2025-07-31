@@ -55,7 +55,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       .eq("is_bot", true)
       .is("owner_id", null)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (botError || !botTeam) {
       console.error("❌ Bot team fetch failed:", botError?.message);
