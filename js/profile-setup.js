@@ -7,12 +7,27 @@ const supabase = createClient(
 );
 
 // Load region options
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
   const regionSelect = document.getElementById("region");
 
-  const indianStates = [...]; // same as before
-  const unionTerritories = [...];
-  const topCricketNations = [...];
+  const indianStates = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
+    "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
+    "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
+    "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
+    "Uttarakhand", "West Bengal"
+  ];
+
+  const unionTerritories = [
+    "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+  ];
+
+  const topCricketNations = [
+    "India", "Australia", "England", "Pakistan", "South Africa", "New Zealand", "Sri Lanka",
+    "Bangladesh", "West Indies", "Afghanistan", "Ireland", "Zimbabwe", "Scotland",
+    "Netherlands", "UAE", "Nepal", "USA", "Namibia"
+  ];
 
   const allRegions = [...indianStates, ...unionTerritories, ...topCricketNations];
   regionSelect.innerHTML += allRegions.map(r => `<option value="${r}">${r}</option>`).join("");
@@ -83,7 +98,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
   try {
     await generateSquad(botTeam.id, region);
   } catch (err) {
-    console.error("Squad generation failed:", err.message);
+    console.error("❌ Squad generation failed:", err);
     alert("Squad generation failed. Please try again.");
     return;
   }
