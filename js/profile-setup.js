@@ -53,7 +53,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       .from("teams")
       .select("*")
       .eq("is_bot", true)
-      .is("user_id", null)
+      .is("owner_id", null)
       .limit(1)
       .single();
 
@@ -69,7 +69,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     const { error: teamUpdateError } = await supabase
       .from("teams")
       .update({
-        user_id: user.id,
+        owner_id: user.id,
         is_bot: false,
         region,
         team_name: teamName,
