@@ -48,21 +48,27 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
 
     console.log("✅ Profile inserted successfully");
 
-    // 2️⃣ Find a bot team
-    const { data: botTeam, error: botError } = await supabase
+    // 2️⃣ Find a bot team (FIXED LOGIC)
+    const { data: botTeams, error: botError } = await supabase
       .from("teams")
       .select("*")
       .eq("is_bot", true)
       .is("owner_id", null)
-      .limit(1)
-      .maybeSingle(); // ✅ avoids error if 0 rows
+      .limit(1);
 
-    if (!botTeam) {
-      console.warn("⚠️ No available bot teams. Query returned no results.");
+    if (botError) {
+      console.error("❌ Bot team fetch failed:", botError.message);
+      alert("Something went wrong while fetching a bot team.");
+      return;
+    }
+
+    if (!botTeams || botTeams.length === 0) {
+      console.warn("⚠️ No available bot teams. Query returned empty.");
       alert("No available bot teams right now. Please try again later.");
       return;
     }
 
+    const botTeam = botTeams[0];
     console.log("✅ Bot team found:", botTeam.id);
 
     // 3️⃣ Assign bot team to user
