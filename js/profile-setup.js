@@ -55,10 +55,10 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       .eq("is_bot", true)
       .is("owner_id", null)
       .limit(1)
-      .maybeSingle();
+      .maybeSingle(); // ✅ avoids error if 0 rows
 
-    if (botError || !botTeam) {
-      console.error("❌ Bot team fetch failed:", botError?.message);
+    if (!botTeam) {
+      console.warn("⚠️ No available bot teams. Query returned no results.");
       alert("No available bot teams right now. Please try again later.");
       return;
     }
