@@ -40,12 +40,15 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       level: "Beginner"
     });
 
-    if (profileError) {
-      console.error("❌ Profile insert failed:", profileError.message);
-      alert("Profile setup failed: " + profileError.message);
-      return;
-    }
-
+if (profileError) {
+  console.error("❌ Profile insert failed:", profileError.message);
+  if (profileError.message.includes("duplicate key value")) {
+    alert("❌ Team name already exists. Please choose a different name.");
+  } else {
+    alert("❌ Profile setup failed: " + profileError.message);
+  }
+  return;
+}
     console.log("✅ Profile inserted successfully");
 
     // 2️⃣ Find a bot team (FIXED LOGIC)
