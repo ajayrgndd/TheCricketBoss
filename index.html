@@ -1,140 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TheCricketBoss – Cricket Manager Game</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom right, #0f2027, #203a43, #2c5364);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      text-align: center;
-    }
-    .container {
-      background-color: #1c1c3c;
-      padding: 24px;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-      text-align: center;
-    }
+  const supabase = createClient(
+    "https://iukofcmatlfhfwcechdq.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+  );
 
-    .logo-img {
-      width: 240px;
-      margin-bottom: 20px;
-      animation: fadeIn 1.2s ease-in-out forwards;
-      opacity: 0;
-    }
+  const spinner = document.getElementById("spinner");
+  spinner.style.display = "block";
 
-    .tagline {
-      font-size: 16px;
-      max-width: 360px;
-      margin: 0 0 30px;
-    }
+  const { data: { session } } = await supabase.auth.getSession();
 
-    .btn-group {
-      display: flex;
-      gap: 15px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+  if (!session) {
+    // 👤 Not logged in, show signup/login buttons
+    spinner.style.display = "none";
+  } else {
+    // 🔒 Session exists, fetch user
+    const { data: { user } } = await supabase.auth.getUser();
 
-    .btn {
-      padding: 12px 24px;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      background-color: #00c853;
-      color: #fff;
-      font-weight: bold;
-      text-decoration: none;
-      transition: background 0.3s;
-    }
-
-    .btn:hover {
-      background-color: #00b248;
-    }
-
-    .spinner {
-      margin-top: 20px;
-      border: 4px solid rgba(255,255,255,0.2);
-      border-top: 4px solid #00c853;
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      animation: spin 1s linear infinite;
-      display: none;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    @media screen and (max-width: 480px) {
-      .logo-img {
-        width: 180px;
-      }
-
-      .btn {
-        width: 100%;
-        padding: 12px;
-      }
-
-      .tagline {
-        font-size: 14px;
-        padding: 0 16px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <!-- ✅ Replace the image path below with your actual logo path -->
-  <img src="assets/logo.png" alt="TheCricketBoss Logo" class="logo-img" />
-  
-  <p class="tagline">Manage your dream cricket team, train players, win matches, and climb the league!</p>
-
-  <div class="btn-group">
-    <a href="signup.html" class="btn">Sign Up</a>
-    <a href="login.html" class="btn">Login</a>
-  </div>
-
-  <div class="spinner" id="spinner"></div>
-
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
-
-    const spinner = document.getElementById("spinner");
-    spinner.style.display = "block";
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      window.location.href = "home.html";
-    } else {
+    if (!user?.email_confirmed_at) {
+      // ❌ Email not confirmed yet
+      await supabase.auth.signOut();
       spinner.style.display = "none";
+    } else {
+      // ✅ Email confirmed, now check profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profile) {
+        window.location.href = "home.html";
+      } else {
+        window.location.href = "profile-setup.html";
+      }
     }
-  </script>
-</body>
-</html>
+  }
+</script>
