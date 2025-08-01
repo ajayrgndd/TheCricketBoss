@@ -135,7 +135,7 @@ export async function generateSquad(teamId) {
         experience,
         skill_level: "Newbie",
         skills: [],
-        avatar: getRoleImage(role), // 🔁 Role image used here
+        image_url: getRoleImage(role), // ✅ Role-based image stored here
         salary: 0,
         market_price: 0
       };
