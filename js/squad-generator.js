@@ -20,6 +20,10 @@ function calculateSalary(player) {
 // 🎯 Squad generator that directly inserts into Supabase
 export async function generateSquad(teamId, region) {
   const names = regionNameData[region] || [];
+if (names.length === 0) {
+  console.warn("⚠️ No names found for region:", region);
+  return;
+}
 
   const squad = [];
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
