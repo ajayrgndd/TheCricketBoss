@@ -2,245 +2,116 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Home – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home - TheCricketBoss</title>
+  <link rel="stylesheet" href="shared-ui.css" />
   <style>
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #1e1b3a;
-      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5f5f5;
     }
-
-    .main {
-      padding: 80px 16px 80px;
-      max-width: 700px;
-      margin: auto;
-    }
-
-    .top-bar, .bottom-nav {
+    .top-bar {
       position: fixed;
-      left: 0; right: 0;
-      background: #29255a;
+      top: 0;
+      width: 100%;
+      background-color: #1e3a8a;
+      color: white;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      padding: 12px 20px;
+      align-items: center;
+      padding: 10px 16px;
       z-index: 1000;
     }
-
-    .top-bar {
-      top: 0;
-      border-bottom: 1px solid #444;
-    }
-
-    .top-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .top-left img {
-      height: 28px;
-    }
-
-    .manager-name {
-      cursor: pointer;
-      font-weight: bold;
-      position: relative;
-    }
-
-    .popup-menu {
-      position: absolute;
-      top: 44px;
-      left: 0;
-      background: #fff;
-      color: #000;
-      border-radius: 6px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      display: none;
-      flex-direction: column;
-      z-index: 1001;
-    }
-
-    .popup-menu button {
-      border: none;
-      background: none;
-      padding: 10px 16px;
-      cursor: pointer;
-      text-align: left;
-    }
-
-    .popup-menu button:hover {
-      background: #eee;
-    }
-
-    .bottom-nav {
-      bottom: 0;
-      justify-content: space-around;
-      border-top: 1px solid #444;
-    }
-
-    .bottom-nav a {
-      color: #bbb;
-      text-decoration: none;
+    .top-bar span {
       font-size: 14px;
+      margin: 0 8px;
     }
-
-    .preparation-section {
-      background: #2d2a4a;
-      padding: 20px;
-      border-radius: 10px;
-      margin-top: 24px;
-    }
-
-    .preparation-section h3 {
-      margin-top: 0;
-    }
-
-    .preparation-section p {
-      margin: 8px 0;
-    }
-
-    .preparation-section button {
-      background: #00e676;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
+    .manager-name {
       font-weight: bold;
       cursor: pointer;
-      margin-top: 10px;
     }
-
-    .preparation-section button:disabled {
-      background: #555;
-      cursor: not-allowed;
+    .main-content {
+      padding: 60px 16px 80px;
+    }
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background-color: #ffffff;
+      border-top: 1px solid #ddd;
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0;
+      z-index: 1000;
+    }
+    .nav-item {
+      text-align: center;
+      font-size: 13px;
+      color: #444;
+      text-decoration: none;
+    }
+    .nav-item:hover {
+      color: #1e3a8a;
+    }
+    .icon {
+      font-size: 20px;
+      display: block;
     }
   </style>
 </head>
 <body>
-
+  <!-- 🔝 Top Bar -->
   <div class="top-bar">
-    <div class="top-left">
-      <img src="assets/logo.png" alt="Logo" />
-      <div class="manager-name" id="managerName">Manager ▼
-        <div class="popup-menu" id="popupMenu">
-          <button id="logoutBtn">Logout</button>
-        </div>
-      </div>
-    </div>
+    <div class="manager-name" id="managerName"><span id="managerLabel">Manager</span></div>
     <div>
-      XP: <span id="xp">0</span> |
-      🪙 <span id="coins">0</span> |
-      💵 ₹<span id="cash">0</span>
+      <span id="xpDisplay">XP: 0</span>
+      <span id="coinDisplay">🪙 0</span>
+      <span id="cashDisplay">₹ 0</span>
     </div>
   </div>
 
-  <div class="main">
-    <h2>Welcome back!</h2>
-    <div class="preparation-section">
-      <h3>Match Preparation</h3>
-      <div id="trainingStatus">Checking training status...</div>
-      <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
-    </div>
+  <!-- 📦 Main Content -->
+  <div class="main-content">
+    <h2>Welcome to The Cricket Boss!</h2>
+    <p>This is your team manager home page. From here you can manage your squad, view match fixtures, scout players, and more.</p>
   </div>
 
+  <!-- 🔻 Bottom Navigation -->
   <div class="bottom-nav">
-    <a href="team.html">🏏 Team</a>
-    <a href="scout.html">🔍 Scout</a>
-    <a href="home.html"><strong>🏠 Home</strong></a>
-    <a href="auction.html">⚒️ Auction</a>
-    <a href="store.html">🛒 Store</a>
+    <a href="team.html" class="nav-item"><span class="icon">👥</span>Team</a>
+    <a href="scout.html" class="nav-item"><span class="icon">🧭</span>Scout</a>
+    <a href="home.html" class="nav-item"><span class="icon">🏠</span>Home</a>
+    <a href="auction.html" class="nav-item"><span class="icon">📦</span>Auction</a>
+    <a href="store.html" class="nav-item"><span class="icon">🛒</span>Store</a>
   </div>
 
+  <!-- 🔌 Supabase & Script -->
   <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
 
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // Replace with full anon key
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    // Get user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       window.location.href = "login.html";
-      return;
     }
 
-    const { data: profile, error: profileError } = await supabase
+    // Get profile
+    const { data: profile } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("id", user.id)
       .single();
 
-    if (profileError || !profile || !profile.manager_name || !profile.team_name) {
-      window.location.href = "profile-setup.html";
-      return;
-    }
+    // Set manager name
+    const firstName = profile?.manager_name?.split(" ")[0] ?? "Manager";
+    document.getElementById("managerLabel").textContent = firstName;
 
-    const { data: team } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    // Header
-    document.getElementById("managerName").firstChild.textContent = profile.manager_name + " ▼";
-    document.getElementById("xp").textContent = profile.xp ?? 0;
-    document.getElementById("coins").textContent = profile.coins ?? 0;
-    document.getElementById("cash").textContent = profile.cash ?? 0;
-
-    // Match & training check
-    const { data: lastMatch } = await supabase
-      .from("matches")
-      .select("*")
-      .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-      .order("date", { ascending: false })
-      .limit(1)
-      .single();
-
-    const lastMatchDate = lastMatch?.date || "1970-01-01";
-
-    const { data: trainingLogs } = await supabase
-      .from("training_logs")
-      .select("*")
-      .eq("team_id", team.id)
-      .gte("created_at", lastMatchDate)
-      .order("created_at", { ascending: false });
-
-    const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
-    const trainingCompleted = trainedPlayers.size >= 3;
-
-    const statusDiv = document.getElementById("trainingStatus");
-    const goBtn = document.getElementById("goTrainingBtn");
-
-    if (trainingCompleted) {
-      statusDiv.innerHTML = `✅ <strong>Training Completed</strong> (3 players trained)`;
-      goBtn.disabled = true;
-    } else {
-      statusDiv.innerHTML = `❌ <strong>Training Pending</strong> – Train 3 players before next match`;
-      goBtn.disabled = false;
-    }
-
-    // Popup
-    const dropdown = document.getElementById("managerName");
-    const popup = document.getElementById("popupMenu");
-
-    dropdown.addEventListener("click", () => {
-      popup.style.display = popup.style.display === "flex" ? "none" : "flex";
+    // Redirect to profile page on name click
+    document.getElementById("managerName").addEventListener("click", () => {
+      window.location.href = "myprofile.html";
     });
 
-    window.addEventListener("click", (e) => {
-      if (!dropdown.contains(e.target)) {
-        popup.style.display = "none";
-      }
-    });
-
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "login.html";
-    });
-  </script>
-</body>
-</html>
+    // Set XP, Coins, Cash
+    document.getElement
