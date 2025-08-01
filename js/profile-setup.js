@@ -52,7 +52,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     const { data: botTeams, error: botError } = await supabase
       .from("teams")
       .select("*")
-      .eq("is_bot", true)
+      .eq("type", "bot")
       .is("owner_id", null)
       .limit(1);
 
@@ -76,7 +76,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       .from("teams")
       .update({
         owner_id: user.id,
-        is_bot: false,
+        type: "user",
         region,
         team_name: teamName,
         manager_name: managerName,
