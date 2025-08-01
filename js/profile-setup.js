@@ -80,7 +80,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       .from("teams")
       .select("*")
       .eq("type", "bot")
-      .is("owner_id", null)
+      .is("owner_id", NULL)
       .limit(1);
 
     if (botError) {
