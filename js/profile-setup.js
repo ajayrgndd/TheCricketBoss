@@ -1,10 +1,33 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 import { generateSquad } from "./squad-generator.js";
 
+// Supabase client
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
+
+// 🎨 Team logo options
+const teamLogos = [
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo1.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo2.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo3.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo4.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo5.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo6.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo7.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo8.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo9.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo10.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo11.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo12.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo13.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo14.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo15.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo16.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo17.png",
+  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo18.png"
+];
 
 document.getElementById("setup-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -40,15 +63,16 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       level: "Beginner"
     });
 
-if (profileError) {
-  console.error("❌ Profile insert failed:", profileError.message);
-  if (profileError.message.includes("duplicate key value")) {
-    alert("❌ Team name already exists. Please choose a different name.");
-  } else {
-    alert("❌ Profile setup failed: " + profileError.message);
-  }
-  return;
-}
+    if (profileError) {
+      console.error("❌ Profile insert failed:", profileError.message);
+      if (profileError.message.includes("duplicate key value")) {
+        alert("❌ Team name already exists. Please choose a different name.");
+      } else {
+        alert("❌ Profile setup failed: " + profileError.message);
+      }
+      return;
+    }
+
     console.log("✅ Profile inserted successfully");
 
     // 2️⃣ Find a bot team (FIXED LOGIC)
@@ -74,6 +98,9 @@ if (profileError) {
     const botTeam = botTeams[0];
     console.log("✅ Bot team found:", botTeam.id);
 
+    // 🖼️ Pick random team logo
+    const logo_url = teamLogos[Math.floor(Math.random() * teamLogos.length)];
+
     // 3️⃣ Assign bot team to user
     const { error: teamUpdateError } = await supabase
       .from("teams")
@@ -83,6 +110,7 @@ if (profileError) {
         region,
         team_name: teamName,
         manager_name: managerName,
+        logo_url, // ✅ logo assigned
         last_active: new Date().toISOString()
       })
       .eq("id", botTeam.id);
