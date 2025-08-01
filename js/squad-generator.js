@@ -62,9 +62,9 @@ if (names.length === 0) {
 
   // 🧾 Insert all 12 players to Supabase
   const { error } = await supabase.from("players").insert(squad);
-  if (error) {
-    console.error("❌ Failed to insert squad:", error.message);
-  } else {
-    console.log("✅ Squad generated and saved.");
-  }
+if (error) {
+  console.error("❌ Failed to insert squad:", error.message, error.details || error.hint || "");
+} else {
+  console.log("✅ Squad generated and saved.");
+}
 }
