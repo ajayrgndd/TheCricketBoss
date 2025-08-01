@@ -4,7 +4,7 @@ import { regionNameData } from "./data/region-names.js";
 // Supabase client
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // Replace with real anon key
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
 // Salary Calculator 💰
@@ -16,14 +16,9 @@ function calculateSalary(player) {
 
   return Math.floor(baseSkill * ageFactor * experienceFactor * (1 + specialSkillBonus) * 1000);
 }
-
-// 🎯 Squad generator that directly inserts into Supabase
-export async function generateSquad(teamId, region) {
-  const names = regionNameData[region] || [];
-if (names.length === 0) {
-  console.warn("⚠️ No names found for region:", region);
-  return;
-}
+export async function generateSquad(teamId) {
+  const availableRegions = Object.keys(regionNameData);
+  const usedNames = new Set();
 
   const squad = [];
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
@@ -31,40 +26,72 @@ if (names.length === 0) {
 
   for (const role of roles) {
     for (let i = 0; i < roleCounts[role]; i++) {
-      const batting = Math.floor(Math.random() * 11) + 5;       // 5–15
+      const batting = Math.floor(Math.random() * 11) + 5;
       const bowling = Math.floor(Math.random() * 11) + 5;
-      const fitness = Math.floor(Math.random() * 21) + 80;       // 80–100
-      const age_years = Math.floor(Math.random() * 5) + 16;      // 16–20
-      const age_days = Math.floor(Math.random() * 63);           // 0–62
-      const name = shuffledNames[nameIndex++] || `Player ${Math.random().toString(36).substring(7)}`;
+      const fitness = Math.floor(Math.random() * 21) + 80;
+      const age_years = Math.floor(Math.random() * 5) + 16;
+      const age_days = Math.floor(Math.random() * 63);
       const experience = 0;
 
-      const player = {
-        team_id: teamId,
-        name,
-        role,
-        batting,
-        bowling,
-        fitness,
-        age_years,
-        age_days,
-        form: "Average",
-        experience,
-        skill_level: "Newbie",
-        skills: [],
-        salary: 0
-      };
+      let name = "Unnamed";
+      let region = "Unknown";
+
+      // Try 10 times to get a unique name from random region
+      let foundUnique = false;
+      for (let tries = 0; tries < 10; tries++) {
+        const tryRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        const names = regionNameData[tryRegion];
+        const randomName = names[Math.floor(Math.random() * names.length)];
+
+        if (!usedNames.has(randomName)) {
+          usedNames.add(randomName);
+          name = randomName;
+          region = tryRegion;
+          foundUnique = true;
+          break;
+        }
+      }
+
+      // Fallback to any region and allow duplicate name
+      if (!foundUnique) {
+        const fallbackRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        const fallbackNames = regionNameData[fallbackRegion];
+        name = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
+        region = fallbackRegion;
+      }
+
+      const avatarURL = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(region + "_" + name)}`;
+const player = {
+  team_id: teamId,
+  name,
+  region,
+  role,
+  batting,
+  bowling,
+  fitness,
+  age_years,
+  age_days,
+  form: "Average",
+  experience,
+  skill_level: "Newbie",
+  skills: [],
+  salary: 0,
+  avatar: avatarURL  // ✅ added avatar field
+};
+
 
       player.salary = calculateSalary(player);
       squad.push(player);
     }
   }
 
-  // 🧾 Insert all 12 players to Supabase
   const { error } = await supabase.from("players").insert(squad);
-if (error) {
-  console.error("❌ Failed to insert squad:", error.message, error.details || error.hint || "");
-} else {
-  console.log("✅ Squad generated and saved.");
+  if (error) {
+    console.error("❌ Failed to insert squad:", error.message);
+  } else {
+    console.log("✅ Your Squad generated.");
+  }
+
+  return squad;
 }
-}
+
