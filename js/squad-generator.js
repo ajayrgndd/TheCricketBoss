@@ -36,7 +36,7 @@ if (names.length === 0) {
       const fitness = Math.floor(Math.random() * 21) + 80;       // 80–100
       const age_years = Math.floor(Math.random() * 5) + 16;      // 16–20
       const age_days = Math.floor(Math.random() * 63);           // 0–62
-      const name = names[Math.floor(Math.random() * names.length)];
+      const name = shuffledNames[nameIndex++] || `Player ${Math.random().toString(36).substring(7)}`;
       const experience = 0;
 
       const player = {
