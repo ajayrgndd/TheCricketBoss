@@ -4,121 +4,88 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Home – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/styles.css" />
+  <link rel="stylesheet" href="styles/global.css" />
   <style>
     body {
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom right, #0f2027, #203a43, #2c5364);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #1e1b3a;
+      color: white;
     }
-    .top-bar {
+
+    .main {
+      padding: 80px 16px 80px;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .top-bar, .bottom-nav {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 60px;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(6px);
+      left: 0; right: 0;
+      background: #29255a;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 12px 20px;
       z-index: 1000;
+    }
+
+    .top-bar {
+      top: 0;
       border-bottom: 1px solid #444;
     }
 
-    .top-bar .left,
-    .top-bar .right {
+    .top-left {
       display: flex;
       align-items: center;
+      gap: 10px;
     }
 
-    .top-bar .right > div {
-      margin-left: 12px;
-      background: #111;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-size: 14px;
+    .top-left img {
+      height: 28px;
     }
 
-    .main-content {
-      flex: 1;
-      padding: 80px 16px 80px; /* Top & bottom spacing to avoid overlap */
-      text-align: center;
-    }
-
-    .main-content h1 {
-      font-size: 28px;
-      margin-bottom: 20px;
-    }
-
-    .main-content button {
-      padding: 12px 20px;
-      font-size: 16px;
-      margin-top: 20px;
-      border: none;
-      border-radius: 8px;
-      background-color: #ffca28;
-      color: #000;
+    .manager-name {
       cursor: pointer;
+      font-weight: bold;
+      position: relative;
     }
 
-    .main-content button:hover {
-      background-color: #ffc107;
+    .popup-menu {
+      position: absolute;
+      top: 44px;
+      left: 0;
+      background: #fff;
+      color: #000;
+      border-radius: 6px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: none;
+      flex-direction: column;
+      z-index: 1001;
+    }
+
+    .popup-menu button {
+      border: none;
+      background: none;
+      padding: 10px 16px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .popup-menu button:hover {
+      background: #eee;
     }
 
     .bottom-nav {
-      position: fixed;
       bottom: 0;
-      left: 0;
-      right: 0;
-      height: 60px;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(6px);
-      display: flex;
       justify-content: space-around;
-      align-items: center;
       border-top: 1px solid #444;
-      z-index: 1000;
     }
 
-    .bottom-nav button {
-      background: none;
-      border: none;
-      color: #ccc;
-      font-size: 13px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-    }
-
-    .bottom-nav button:hover {
-      color: #fff;
-    }
-
-    .bottom-nav img {
-      width: 20px;
-      height: 20px;
-      margin-bottom: 4px;
-    }
-
-    #logoutBtn {
-      margin-left: 12px;
-      background: #e53935;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    #logoutBtn:hover {
-      background: #d32f2f;
+    .bottom-nav a {
+      color: #bbb;
+      text-decoration: none;
+      font-size: 14px;
     }
 
     .preparation-section {
@@ -158,7 +125,7 @@
     <div class="top-left">
       <img src="assets/logo.png" alt="Logo" />
       <div class="manager-name" id="managerName" style="cursor: pointer;">
-  <span id="managerLabel"><a href="myprofile.html"></a><font color="white">Manager</font></a></span>
+  <span id="managerLabel"><a href="myprofile.html">Manager</a></span>
 </div>
       </div>
     </div>
