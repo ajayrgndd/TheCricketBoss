@@ -16,6 +16,53 @@ function calculateSalary(player) {
 
   return Math.floor(baseSkill * ageFactor * experienceFactor * (1 + specialSkillBonus) * 1000);
 }
+
+// Market Price Calculator 💸
+function calculateMarketPrice(player) {
+  const { batting, bowling, keeping = 0, experience = 0, form, skill_level = "Newbie", role, age_years } = player;
+
+  const skillTotal = batting + bowling + keeping + (experience * 0.5);
+  let price = skillTotal * 10000;
+
+  const formMultiplier = {
+    "Poor": 0.8,
+    "Average": 1.0,
+    "Good": 1.2,
+    "Excellent": 1.5
+  };
+  price *= formMultiplier[form] || 1;
+
+  const skillLevelBonus = {
+    "Newbie": 1.0,
+    "Trainee": 1.2,
+    "Domestic": 1.5,
+    "National": 2.0,
+    "Professional": 3.0,
+    "Master": 4.0,
+    "Supreme": 5.0,
+    "World Class": 6.5,
+    "Ultimate": 8.0,
+    "Titan": 10.0,
+    "The Boss": 12.5
+  };
+  price *= skillLevelBonus[skill_level] || 1;
+
+  if (age_years <= 20) price *= 1.2;
+  else if (age_years <= 24) price *= 1.1;
+  else if (age_years >= 30) price *= 0.8;
+  else if (age_years >= 34) price *= 0.6;
+
+  if (role === "All-Rounder") price *= 1.15;
+  if (role === "Wicket Keeper") price *= 1.1;
+
+  if (price > 40000000) price += 10000000;
+  if (price > 50000000) price += 15000000;
+  if (price > 60000000) price += 25000000;
+
+  return Math.round(price);
+}
+
+// 🎯 Squad Generator
 export async function generateSquad(teamId) {
   const availableRegions = Object.keys(regionNameData);
   const usedNames = new Set();
@@ -52,7 +99,7 @@ export async function generateSquad(teamId) {
         }
       }
 
-      // Fallback to any region and allow duplicate name
+      // Fallback to allow duplicates
       if (!foundUnique) {
         const fallbackRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         const fallbackNames = regionNameData[fallbackRegion];
@@ -60,27 +107,32 @@ export async function generateSquad(teamId) {
         region = fallbackRegion;
       }
 
+      const keeping = (role === "Wicket Keeper") ? Math.floor(Math.random() * 11) + 5 : 0;
       const avatarURL = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(region + "_" + name)}`;
-const player = {
-  team_id: teamId,
-  name,
-  region,
-  role,
-  batting,
-  bowling,
-  fitness,
-  age_years,
-  age_days,
-  form: "Average",
-  experience,
-  skill_level: "Newbie",
-  skills: [],
-  salary: 0,
-  avatar: avatarURL  // ✅ added avatar field
-};
 
+      const player = {
+        team_id: teamId,
+        name,
+        region,
+        role,
+        batting,
+        bowling,
+        keeping,
+        fitness,
+        age_years,
+        age_days,
+        form: "Average",
+        experience,
+        skill_level: "Newbie",
+        skills: [],
+        avatar: avatarURL,
+        salary: 0,
+        market_price: 0
+      };
 
       player.salary = calculateSalary(player);
+      player.market_price = calculateMarketPrice(player);
+
       squad.push(player);
     }
   }
@@ -89,9 +141,8 @@ const player = {
   if (error) {
     console.error("❌ Failed to insert squad:", error.message);
   } else {
-    console.log("✅ Your Squad generated.");
+    console.log("✅ Squad generated and saved.");
   }
 
   return squad;
 }
-
