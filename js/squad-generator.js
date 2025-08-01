@@ -62,6 +62,18 @@ function calculateMarketPrice(player) {
   return Math.round(price);
 }
 
+// 🔁 Get Role-Based Image
+function getRoleImage(role) {
+  const base = "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/";
+  const roleMap = {
+    "Batsman": "batsman.png",
+    "Bowler": "bowler.png",
+    "Wicket Keeper": "keeper.png",
+    "All-Rounder": "allrounder.png"
+  };
+  return base + (roleMap[role] || "default.png");
+}
+
 // 🎯 Squad Generator
 export async function generateSquad(teamId) {
   const availableRegions = Object.keys(regionNameData);
@@ -79,11 +91,12 @@ export async function generateSquad(teamId) {
       const age_years = Math.floor(Math.random() * 5) + 16;
       const age_days = Math.floor(Math.random() * 63);
       const experience = 0;
+      const keeping = (role === "Wicket Keeper") ? Math.floor(Math.random() * 11) + 5 : 0;
 
       let name = "Unnamed";
       let region = "Unknown";
 
-      // Try 10 times to get a unique name from random region
+      // Try to get unique name
       let foundUnique = false;
       for (let tries = 0; tries < 10; tries++) {
         const tryRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
@@ -99,16 +112,13 @@ export async function generateSquad(teamId) {
         }
       }
 
-      // Fallback to allow duplicates
+      // If still not unique, fallback
       if (!foundUnique) {
         const fallbackRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         const fallbackNames = regionNameData[fallbackRegion];
         name = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
         region = fallbackRegion;
       }
-
-      const keeping = (role === "Wicket Keeper") ? Math.floor(Math.random() * 11) + 5 : 0;
-      const avatarURL = `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(region + "_" + name)}`;
 
       const player = {
         team_id: teamId,
@@ -125,7 +135,7 @@ export async function generateSquad(teamId) {
         experience,
         skill_level: "Newbie",
         skills: [],
-        avatar: avatarURL,
+        avatar: getRoleImage(role), // 🔁 Role image used here
         salary: 0,
         market_price: 0
       };
