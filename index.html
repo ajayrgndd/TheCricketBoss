@@ -9,32 +9,40 @@
   const spinner = document.getElementById("spinner");
   spinner.style.display = "block";
 
-  const { data: { session } } = await supabase.auth.getSession();
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw new Error(sessionError.message);
 
-  if (!session) {
-    // 👤 Not logged in, show signup/login buttons
-    spinner.style.display = "none";
-  } else {
-    // 🔒 Session exists, fetch user
-    const { data: { user } } = await supabase.auth.getUser();
+    if (!session) {
+      spinner.style.display = "none";
+      return;
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw new Error(userError.message);
 
     if (!user?.email_confirmed_at) {
-      // ❌ Email not confirmed yet
       await supabase.auth.signOut();
       spinner.style.display = "none";
-    } else {
-      // ✅ Email confirmed, now check profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (profile) {
-        window.location.href = "home.html";
-      } else {
-        window.location.href = "profile-setup.html";
-      }
+      return;
     }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileError) throw new Error(profileError.message);
+
+    if (profile) {
+      window.location.href = "home.html";
+    } else {
+      window.location.href = "profile-setup.html";
+    }
+
+  } catch (err) {
+    console.error("🔥 Index redirect error:", err.message);
+    spinner.style.display = "none";
   }
 </script>
