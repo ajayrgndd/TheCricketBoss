@@ -7,33 +7,6 @@ body {
   flex-direction: column;
   height: 100vh;
 }
-
-.top-bar {
-  background-color: #060606;
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  position: fixed;
-  top: 0;
-  width: 100%;
-  z-index: 10;
-  height: 50px;
-  box-sizing: border-box;
-}
-
-.top-left {
-  font-weight: bold;
-  font-size: 1rem;
-}
-
-.top-right {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
 .logout-btn {
   background-color: red;
   color: white;
@@ -64,32 +37,79 @@ body {
   cursor: pointer;
   margin-top: 20px;
 }
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, #0a0a0a, #0f111a);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  z-index: 1000;
+  border-bottom: 1px solid #444;
+  color: white;
+}
+
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-left img {
+  height: 28px;
+}
+
+.manager-name {
+  cursor: pointer;
+  font-weight: bold;
+  position: relative;
+}
+
+.popup-menu {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  background: #fff;
+  color: #000;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  display: none;
+  flex-direction: column;
+  z-index: 1001;
+}
+
+.popup-menu button {
+  border: none;
+  background: none;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.popup-menu button:hover {
+  background: #eee;
+}
 
 .bottom-nav {
-  background-color: #060606;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, #0a0a0a, #0f111a);
   display: flex;
   justify-content: space-around;
   align-items: center;
-  height: 60px;
-  padding: 6px 0;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  z-index: 10;
+  padding: 10px 0;
+  z-index: 1000;
+  border-top: 1px solid #444;
 }
 
 .bottom-nav a {
-  text-align: center;
+  color: #bbb;
   text-decoration: none;
-  color: white;
-  font-size: 0.8rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.bottom-nav a img {
-  width: 24px;
-  height: 24px;
-  margin-bottom: 2px;
+  font-size: 14px;
+  text-align: center;
 }
