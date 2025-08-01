@@ -3,172 +3,213 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Home | Cricket Boss</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script type="module" src="home.js" defer></script>
-  <script type="module" src="shared-ui.js" defer></script>
+  <title>Home – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
   <style>
     body {
       margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom right, #0f2027, #203a43, #2c5364);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #1e1b3a;
+      color: white;
     }
 
-    .top-bar {
+    .main {
+      padding: 80px 16px 80px;
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .top-bar, .bottom-nav {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 60px;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(6px);
+      left: 0; right: 0;
+      background: #29255a;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 12px 20px;
       z-index: 1000;
+    }
+
+    .top-bar {
+      top: 0;
       border-bottom: 1px solid #444;
     }
 
-    .top-bar .left,
-    .top-bar .right {
+    .top-left {
       display: flex;
       align-items: center;
-    }
-
-    .top-bar .right > div {
-      margin-left: 12px;
-      background: #111;
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-
-    .main-content {
-      flex: 1;
-      padding: 80px 16px 80px; /* Top & bottom spacing to avoid overlap */
-      text-align: center;
-    }
-
-    .main-content h1 {
-      font-size: 28px;
-      margin-bottom: 20px;
-    }
-
-    .main-content button {
-      padding: 12px 20px;
-      font-size: 16px;
-      margin-top: 20px;
-      border: none;
-      border-radius: 8px;
-      background-color: #ffca28;
-      color: #000;
+      gap: 10px;
       cursor: pointer;
     }
 
-    .main-content button:hover {
-      background-color: #ffc107;
+    .top-left img {
+      height: 28px;
     }
 
     .bottom-nav {
-      position: fixed;
       bottom: 0;
-      left: 0;
-      right: 0;
-      height: 60px;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(6px);
-      display: flex;
       justify-content: space-around;
-      align-items: center;
       border-top: 1px solid #444;
-      z-index: 1000;
     }
 
-    .bottom-nav button {
-      background: none;
+    .bottom-nav a {
+      color: #bbb;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .logout-btn {
+      background: #f44336;
       border: none;
-      color: #ccc;
-      font-size: 13px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-    }
-
-    .bottom-nav button:hover {
-      color: #fff;
-    }
-
-    .bottom-nav img {
-      width: 20px;
-      height: 20px;
-      margin-bottom: 4px;
-    }
-
-    #logoutBtn {
-      margin-left: 12px;
-      background: #e53935;
       color: white;
-      border: none;
       padding: 6px 12px;
-      border-radius: 6px;
+      border-radius: 4px;
       cursor: pointer;
     }
 
-    #logoutBtn:hover {
-      background: #d32f2f;
+    .preparation-section {
+      background: #2d2a4a;
+      padding: 20px;
+      border-radius: 10px;
+      margin-top: 24px;
     }
 
+    .preparation-section h3 {
+      margin-top: 0;
+    }
+
+    .preparation-section p {
+      margin: 8px 0;
+    }
+
+    .preparation-section button {
+      background: #00e676;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .preparation-section button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
-  <!-- 🔝 Top Bar -->
+
   <div class="top-bar">
-    <div class="left">
-      <strong id="managerLabel">Manager</strong>
+    <div class="top-left" id="profileLink">
+      <img src="assets/logo.png" alt="Logo" />
+      <span id="managerName">Loading...</span>
     </div>
-    <div class="right">
-      <div><span id="xpCount">XP: 0</span></div>
-      <div><span id="coinCount">🪙 0</span></div>
-      <div><span id="cashCount">₹ 0</span></div>
-      <button id="logoutBtn">Logout</button>
+    <div>
+      XP: <span id="xp">0</span> |
+      🪙 <span id="coins">0</span> |
+      💵 ₹<span id="cash">0</span>
+      <button class="logout-btn" id="logoutBtn">Logout</button>
     </div>
   </div>
 
-  <!-- 🏠 Main Content -->
-  <div class="main-content">
-    <h1>Welcome back, <span id="managerNameDisplay">Manager</span>!</h1>
-    <p>Choose what you want to do next.</p>
-    <button onclick="window.location.href='team.html'">View Team</button>
+  <div class="main">
+    <h2>Welcome back!</h2>
+    <div class="preparation-section">
+      <h3>Match Preparation</h3>
+      <div id="trainingStatus">Checking training status...</div>
+      <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
+    </div>
   </div>
 
-  <!-- 🔻 Bottom Navigation -->
   <div class="bottom-nav">
-    <button onclick="window.location.href='team.html'">
-      <img src="icons/team.svg" alt="Team" />
-      Team
-    </button>
-    <button onclick="window.location.href='scout.html'">
-      <img src="icons/scout.svg" alt="Scout" />
-      Scout
-    </button>
-    <button onclick="window.location.href='home.html'">
-      <img src="icons/home.svg" alt="Home" />
-      Home
-    </button>
-    <button onclick="window.location.href='auction.html'">
-      <img src="icons/auction.svg" alt="Auction" />
-      Auction
-    </button>
-    <button onclick="window.location.href='store.html'">
-      <img src="icons/store.svg" alt="Store" />
-      Store
-    </button>
+    <a href="team.html">🏏 Team</a>
+    <a href="scout.html">🔍 Scout</a>
+    <a href="home.html"><strong>🏠 Home</strong></a>
+    <a href="auction.html">⚒️ Auction</a>
+    <a href="store.html">🛒 Store</a>
   </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileError || !profile || !profile.manager_name || !profile.team_name) {
+      window.location.href = "profile-setup.html";
+      return;
+    }
+
+    const { data: team } = await supabase
+      .from("teams")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    // Extract first name
+    const firstName = profile.manager_name.split(" ")[0];
+    document.getElementById("managerName").textContent = firstName;
+    document.getElementById("xp").textContent = profile.xp ?? 0;
+    document.getElementById("coins").textContent = profile.coins ?? 0;
+    document.getElementById("cash").textContent = profile.cash ?? 0;
+
+    // Match & training check
+    const { data: lastMatch } = await supabase
+      .from("matches")
+      .select("*")
+      .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+      .order("date", { ascending: false })
+      .limit(1)
+      .single();
+
+    const lastMatchDate = lastMatch?.date || "1970-01-01";
+
+    const { data: trainingLogs } = await supabase
+      .from("training_logs")
+      .select("*")
+      .eq("team_id", team.id)
+      .gte("created_at", lastMatchDate)
+      .order("created_at", { ascending: false });
+
+    const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
+    const trainingCompleted = trainedPlayers.size >= 3;
+
+    const statusDiv = document.getElementById("trainingStatus");
+    const goBtn = document.getElementById("goTrainingBtn");
+
+    if (trainingCompleted) {
+      statusDiv.innerHTML = "✅ <strong>Training Completed</strong> (3 players trained)";
+      goBtn.disabled = true;
+    } else {
+      statusDiv.innerHTML = "❌ <strong>Training Pending</strong> – Train 3 players before next match";
+      goBtn.disabled = false;
+    }
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "login.html";
+    });
+
+    // Profile click
+    document.getElementById("profileLink").addEventListener("click", () => {
+      window.location.href = "myprofile.html";
+    });
+  </script>
 </body>
 </html>
