@@ -124,16 +124,17 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     console.log("✅ Team assigned to user");
 
     // 4️⃣ Delete old bot players
-    const { error: deleteError } = await supabase
-      .from("players")
-      .delete()
-      .eq("team_id", botTeam.id);
+   const { error: deleteError, count } = await supabase
+  .from("players")
+  .delete({ count: "exact" })
+  .eq("team_id", botTeam.id);
 
-    if (deleteError) {
-      console.warn("⚠️ Failed to delete old bot players:", deleteError.message);
-    } else {
-      console.log("🧹 Old bot players deleted");
-    }
+if (deleteError) {
+  console.warn("⚠️ Failed to delete old bot players:", deleteError.message);
+} else {
+  console.log(`🧹 ${count} old bot players deleted`);
+}
+
 
     // 5️⃣ Generate new squad for user
     try {
@@ -152,3 +153,4 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     alert("Unexpected error: " + e.message);
   }
 });
+
