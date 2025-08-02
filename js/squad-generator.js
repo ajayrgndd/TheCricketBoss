@@ -95,6 +95,34 @@ export async function generateSquad(teamId) {
     return existing;
   }
 
+  // ✅ Fetch team_name and owner_id
+  const { data: teamData, error: teamErr } = await supabase
+    .from("teams")
+    .select("team_name, owner_id")
+    .eq("id", teamId)
+    .single();
+
+  if (teamErr || !teamData) {
+    console.error("❌ Failed to fetch team:", teamErr?.message);
+    return;
+  }
+
+  const { team_name, owner_id } = teamData;
+
+  // ✅ Fetch manager_name
+  const { data: profile, error: profileErr } = await supabase
+    .from("profiles")
+    .select("manager_name")
+    .eq("id", owner_id)
+    .single();
+
+  if (profileErr || !profile) {
+    console.error("❌ Failed to fetch manager:", profileErr?.message);
+    return;
+  }
+
+  const manager_name = profile.manager_name;
+
   const squad = [];
   const usedNames = new Set();
   const availableRegions = Object.keys(regionNameData);
@@ -103,7 +131,6 @@ export async function generateSquad(teamId) {
 
   for (const role of roles) {
     for (let i = 0; i < roleCounts[role]; i++) {
-      // Attributes
       const batting = Math.floor(Math.random() * 11) + 5;
       const bowling = Math.floor(Math.random() * 11) + 5;
       const fitness = Math.floor(Math.random() * 21) + 80;
@@ -112,10 +139,8 @@ export async function generateSquad(teamId) {
       const keeping = (role === "Wicket Keeper") ? Math.floor(Math.random() * 11) + 5 : 0;
 
       // Unique name & region
-      let name = "Unnamed";
-      let region = "Unknown";
+      let name = "Unnamed", region = "Unknown";
       let found = false;
-
       for (let t = 0; t < 10; t++) {
         const r = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         const names = regionNameData[r];
@@ -128,6 +153,7 @@ export async function generateSquad(teamId) {
           break;
         }
       }
+
       if (!found) {
         const fallbackRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         const fallbackNames = regionNameData[fallbackRegion];
@@ -135,7 +161,6 @@ export async function generateSquad(teamId) {
         region = fallbackRegion;
       }
 
-      // Skill level
       const skill_level = determineSkillLevel(batting, bowling, keeping);
 
       const player = {
@@ -155,7 +180,9 @@ export async function generateSquad(teamId) {
         skills: [],
         image_url: getRoleImage(role),
         salary: 0,
-        market_price: 0
+        market_price: 0,
+        team_name,
+        manager_name
       };
 
       player.salary = calculateSalary(player);
@@ -165,11 +192,33 @@ export async function generateSquad(teamId) {
     }
   }
 
-  const { error } = await supabase.from("players").insert(squad);
-  if (error) {
-    console.error("❌ Failed to insert squad:", error.message);
+  const { error: insertErr } = await supabase.from("players").insert(squad);
+  if (insertErr) {
+    console.error("❌ Failed to insert squad:", insertErr.message);
   } else {
     console.log("✅ Squad generated and inserted.");
+  }
+
+  // ✅ Create stadium if not already
+  const { data: stadiumCheck } = await supabase
+    .from("stadiums")
+    .select("id")
+    .eq("team_id", teamId)
+    .maybeSingle();
+
+  if (!stadiumCheck) {
+    const { error: stadiumErr } = await supabase.from("stadiums").insert({
+      team_id: teamId,
+      name: `${team_name} Arena`,
+      capacity: 5000,
+      level: "Local"
+    });
+
+    if (stadiumErr) {
+      console.error("❌ Stadium insert failed:", stadiumErr.message);
+    } else {
+      console.log("🏟️ Stadium created for team:", team_name);
+    }
   }
 
   return squad;
