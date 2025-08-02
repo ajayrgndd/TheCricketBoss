@@ -68,7 +68,7 @@ function getRoleImage(role) {
   const roleMap = {
     "Batsman": "batsman.png",
     "Bowler": "bowler.png",
-    "Wicket Keeper": "keeper.png",
+    "Wicket Keeper": "wicketkeeper.png",
     "All-Rounder": "allrounder.png"
   };
   return base + (roleMap[role] || "default.png");
@@ -156,3 +156,4 @@ export async function generateSquad(teamId) {
 
   return squad;
 }
+
