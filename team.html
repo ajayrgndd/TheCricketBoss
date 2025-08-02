@@ -10,7 +10,7 @@
       margin: 0;
       font-family: Arial, sans-serif;
       background: #1e1b3a;
-      color: #fff;
+      color: white;
     }
 
     .top-bar, .bottom-nav {
@@ -24,28 +24,27 @@
       z-index: 1000;
     }
 
-    .top-bar { top: 0; border-bottom: 1px solid #444; }
-    .bottom-nav { bottom: 0; border-top: 1px solid #444; justify-content: space-around; }
+    .top-bar {
+      top: 0;
+      border-bottom: 1px solid #444;
+    }
+
+    .bottom-nav {
+      bottom: 0;
+      justify-content: space-around;
+      border-top: 1px solid #444;
+    }
+
+    .bottom-nav a {
+      color: #bbb;
+      text-decoration: none;
+      font-size: 14px;
+    }
 
     .main {
       padding: 80px 16px 80px;
       max-width: 900px;
       margin: auto;
-    }
-
-    .filter-bar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .filter-bar select {
-      padding: 6px 10px;
-      border-radius: 6px;
-      border: none;
-      background: #333;
-      color: #fff;
     }
 
     .team-grid {
@@ -56,49 +55,27 @@
 
     .player-card {
       background: #2d2a4a;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      padding: 14px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
       text-align: center;
     }
 
     .player-card img {
-      width: 100px;
-      height: auto;
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
       margin-bottom: 10px;
     }
 
     .player-card h3 {
-      margin: 4px 0;
+      margin: 8px 0 4px;
+      font-size: 18px;
     }
 
     .player-card p {
       margin: 4px 0;
       font-size: 14px;
-    }
-
-    .bottom-nav a {
-      color: #bbb;
-      text-decoration: none;
-      font-size: 14px;
-    }
-
-    .top-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .top-left img {
-      height: 28px;
-    }
-
-    .manager-name {
-      font-weight: bold;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -106,10 +83,7 @@
 
   <!-- 🔝 Top Bar -->
   <div class="top-bar">
-    <div class="top-left">
-      <img src="assets/logo.png" alt="Logo" />
-      <div class="manager-name" id="managerName">Manager ▼</div>
-    </div>
+    <div><strong id="managerName">Manager</strong></div>
     <div>
       XP: <span id="xp">0</span> |
       🪙 <span id="coins">0</span> |
@@ -117,40 +91,13 @@
     </div>
   </div>
 
-  <!-- 🔽 Main Content -->
+  <!-- 💻 Main -->
   <div class="main">
     <h2>Your Team</h2>
-
-    <div class="filter-bar">
-      <select id="roleFilter">
-        <option value="">All Roles</option>
-        <option value="Batsman">Batsman</option>
-        <option value="Bowler">Bowler</option>
-        <option value="All-Rounder">All-Rounder</option>
-        <option value="Wicket Keeper">Wicket Keeper</option>
-      </select>
-
-      <select id="skillFilter">
-        <option value="">All Levels</option>
-        <option value="Newbie">Newbie</option>
-        <option value="Trainee">Trainee</option>
-        <option value="Domestic">Domestic</option>
-        <option value="National">National</option>
-      </select>
-
-      <select id="sortBy">
-        <option value="name">Sort: Name</option>
-        <option value="batting">Sort: Batting</option>
-        <option value="bowling">Sort: Bowling</option>
-        <option value="fitness">Sort: Fitness</option>
-        <option value="experience">Sort: Experience</option>
-      </select>
-    </div>
-
-    <div id="teamGrid" class="team-grid"></div>
+    <div id="teamContainer" class="team-grid"></div>
   </div>
 
-  <!-- ⬇️ Bottom Nav -->
+  <!-- 🔻 Bottom Nav -->
   <div class="bottom-nav">
     <a href="team.html"><strong>🏏 Team</strong></a>
     <a href="scout.html">🔍 Scout</a>
@@ -159,99 +106,85 @@
     <a href="store.html">🛒 Store</a>
   </div>
 
-  <!-- 🔗 Shared UI + Supabase -->
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI } from "./js/shared-ui.js";
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+  import { loadSharedUI } from "./js/shared-ui.js";
 
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
+  const supabase = createClient(
+    "https://iukofcmatlfhfwcechdq.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE",
+    { auth: { persistSession: true, autoRefreshToken: true } }
+  );
 
-    let players = [];
+  // 🌐 Ensure session restored
+  await supabase.auth.getSession();
 
-    async function init() {
-      const { data: session, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.user) {
-        window.location.href = "login.html";
-        return;
-      }
+  // 🔐 Get user
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    window.location.href = "login.html";
+    return;
+  }
 
-      const user = session.user;
+  // 👤 Load profile
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
 
-      const { data: profile } = await supabase
-        .from("profiles").select("*").eq("user_id", user.id).single();
+  if (profileError || !profile) {
+    window.location.href = "profile-setup.html";
+    return;
+  }
 
-      const { data: team } = await supabase
-        .from("teams").select("*").eq("user_id", user.id).single();
+  // 🏏 Load team
+  const { data: team, error: teamError } = await supabase
+    .from("teams")
+    .select("*")
+    .eq("owner_id", user.id)
+    .single();
 
-      if (!profile || !team) {
-        alert("Unable to load profile/team data.");
-        return;
-      }
+  if (teamError || !team) {
+    alert("Unable to load your team.");
+    return;
+  }
 
-      loadSharedUI({
-        manager_name: profile.manager_name,
-        xp: profile.xp ?? 0,
-        coins: profile.coins ?? 0,
-        cash: profile.cash ?? 0
-      });
+  // 🔁 Load players from your team only
+  const { data: players, error: playerError } = await supabase
+    .from("players")
+    .select("*")
+    .eq("team_id", team.id)
+    .order("batting", { ascending: false });
 
-      const { data: rawPlayers } = await supabase
-        .from("players")
-        .select("*")
-        .eq("team_id", team.id);
+  if (playerError) {
+    alert("Unable to load players.");
+    return;
+  }
 
-      players = rawPlayers || [];
-      renderPlayers();
-    }
+  // 🧠 Shared UI (XP, Coins, Cash)
+  loadSharedUI({
+    manager_name: profile.manager_name,
+    xp: profile.xp,
+    coins: profile.coins,
+    cash: profile.cash
+  });
 
-    function renderPlayers() {
-      const role = document.getElementById("roleFilter").value;
-      const skill = document.getElementById("skillFilter").value;
-      const sortBy = document.getElementById("sortBy").value;
-
-      let filtered = [...players];
-
-      if (role) filtered = filtered.filter(p => p.role === role);
-      if (skill) filtered = filtered.filter(p => p.skill_level === skill);
-
-      filtered.sort((a, b) => {
-        if (sortBy === "name") return a.name.localeCompare(b.name);
-        return (b[sortBy] || 0) - (a[sortBy] || 0);
-      });
-
-      const grid = document.getElementById("teamGrid");
-      grid.innerHTML = "";
-
-      if (filtered.length === 0) {
-        grid.innerHTML = "<p>No players found</p>";
-        return;
-      }
-
-      for (const p of filtered) {
-        const div = document.createElement("div");
-        div.className = "player-card";
-        div.innerHTML = `
-          <img src="${p.image_url}" alt="${p.role}" />
-          <h3>${p.name}</h3>
-          <p><strong>Role:</strong> ${p.role}</p>
-          <p><strong>Skill:</strong> ${p.skill_level}</p>
-          <p><strong>Batting:</strong> ${p.batting}</p>
-          <p><strong>Bowling:</strong> ${p.bowling}</p>
-          <p><strong>Fitness:</strong> ${p.fitness}</p>
-          <p><strong>XP:</strong> ${p.experience}</p>
-        `;
-        grid.appendChild(div);
-      }
-    }
-
-    document.getElementById("roleFilter").addEventListener("change", renderPlayers);
-    document.getElementById("skillFilter").addEventListener("change", renderPlayers);
-    document.getElementById("sortBy").addEventListener("change", renderPlayers);
-
-    init();
-  </script>
+  // 🖼️ Populate cards
+  const container = document.getElementById("teamContainer");
+  for (const p of players) {
+    const card = document.createElement("div");
+    card.className = "player-card";
+    card.innerHTML = `
+      <img src="${p.image_url}" alt="${p.role}" />
+      <h3>${p.name}</h3>
+      <p><strong>${p.role}</strong></p>
+      <p>Bat: ${p.batting} | Bowl: ${p.bowling}</p>
+      <p>Fitness: ${p.fitness} | Age: ${p.age_years}</p>
+      <p>XP: ${p.experience} | Level: ${p.skill_level}</p>
+    `;
+    container.appendChild(card);
+  }
+</script>
 </body>
 </html>
