@@ -7,26 +7,26 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
-// 🎨 Team logo options
+// Team logo options
 const teamLogos = [
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo1.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo2.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo3.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo4.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo5.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo6.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo7.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo8.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo9.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo10.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo11.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo12.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo13.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo14.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo15.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo16.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo17.png",
-  "https://github.com/ajayrgndd/TheCricketBoss/blob/df631b5a26e3235a4196f40771e94f5f7d40b676/assets/team_logos/Logo18.png"
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo1.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo2.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo3.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo4.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo5.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo6.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo7.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo8.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo9.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo10.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo11.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo12.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo13.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo14.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo15.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo16.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo17.png",
+  "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo18.png"
 ];
 
 document.getElementById("setup-form").addEventListener("submit", async (e) => {
@@ -37,20 +37,15 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
   const dob = document.getElementById("dob").value;
   const region = document.getElementById("region").value;
 
-  console.log("🔍 Submitted data:", { managerName, teamName, dob, region });
-
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error("❌ User fetch failed:", userError?.message);
       alert("User not found. Please login again.");
       window.location.href = "login.html";
       return;
     }
 
-    console.log("✅ User found:", user.id);
-
-    // 1️⃣ Insert Profile
+    // 1. Insert user profile
     const { error: profileError } = await supabase.from("profiles").insert({
       user_id: user.id,
       manager_name: managerName,
@@ -64,7 +59,6 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     });
 
     if (profileError) {
-      console.error("❌ Profile insert failed:", profileError.message);
       if (profileError.message.includes("duplicate key value")) {
         alert("❌ Team name already exists. Please choose a different name.");
       } else {
@@ -73,9 +67,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       return;
     }
 
-    console.log("✅ Profile inserted successfully");
-
-    // 2️⃣ Find a bot team (FIXED LOGIC)
+    // 2. Find available bot team
     const { data: botTeams, error: botError } = await supabase
       .from("teams")
       .select("*")
@@ -83,72 +75,44 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       .is("owner_id", null)
       .limit(1);
 
-    if (botError) {
-      console.error("❌ Bot team fetch failed:", botError.message);
-      alert("Something went wrong while fetching a bot team.");
-      return;
-    }
-
-    if (!botTeams || botTeams.length === 0) {
-      console.warn("⚠️ No available bot teams. Query returned empty.");
-      alert("No available bot teams right now. Please try again later.");
+    if (botError || !botTeams || botTeams.length === 0) {
+      alert("⚠️ No available bot teams. Please try again later.");
       return;
     }
 
     const botTeam = botTeams[0];
-    console.log("✅ Bot team found:", botTeam.id);
-
-    // 🖼️ Pick random team logo
     const logo_url = teamLogos[Math.floor(Math.random() * teamLogos.length)];
 
-    // 3️⃣ Assign bot team to user
+    // 3. Assign team to user
     const { error: teamUpdateError } = await supabase
       .from("teams")
       .update({
         owner_id: user.id,
         type: "user",
+        team_name,
+        manager_name,
+        logo_url,
         region,
-        team_name: teamName,
-        manager_name: managerName,
-        logo_url, // ✅ logo assigned
         last_active: new Date().toISOString()
       })
       .eq("id", botTeam.id);
 
     if (teamUpdateError) {
-      console.error("❌ Failed to assign team:", teamUpdateError.message);
-      alert("Team assignment failed: " + teamUpdateError.message);
+      alert("❌ Failed to assign team: " + teamUpdateError.message);
       return;
     }
 
-    console.log("✅ Team assigned to user");
+    // 4. Delete old players of the bot team
+    await supabase.from("players").delete().eq("team_id", botTeam.id);
 
-    // 4️⃣ Delete old bot players
-    const { error: deleteError } = await supabase
-      .from("players")
-      .delete()
-      .eq("team_id", botTeam.id);
+    // 5. Generate new squad
+    await generateSquad(botTeam.id);
 
-    if (deleteError) {
-      console.warn("⚠️ Failed to delete old bot players:", deleteError.message);
-    } else {
-      console.log("🧹 Old bot players deleted");
-    }
-
-    // 5️⃣ Generate new squad
-    try {
-      await generateSquad(botTeam.id, region);
-      console.log("✅ Squad generation complete");
-    } catch (err) {
-      console.error("❌ Squad generation failed:", err.message);
-      alert("Squad generation failed. Please try again.");
-      return;
-    }
-
-    alert("✅ Welcome! Your squad has been created.");
+    alert("✅ Profile setup complete. Your squad has been generated!");
     window.location.href = "squad.html";
-  } catch (e) {
-    console.error("❌ Unexpected error in setup flow:", e);
-    alert("Unexpected error: " + e.message);
+
+  } catch (err) {
+    console.error("❌ Error in profile setup:", err.message);
+    alert("Unexpected error: " + err.message);
   }
 });
