@@ -1,4 +1,3 @@
-<!-- team.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,36 +7,76 @@
   <link rel="stylesheet" href="styles/global.css" />
   <style>
     body {
+      margin: 0;
+      font-family: Arial, sans-serif;
       background: #1e1b3a;
       color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding-bottom: 80px;
+      padding-bottom: 100px;
+    }
+
+    .main {
+      padding: 80px 16px 80px;
+      max-width: 1000px;
+      margin: auto;
     }
 
     h2 {
       text-align: center;
-      padding: 80px 16px 16px;
+      margin-bottom: 16px;
     }
 
-    .team-container {
+    .filters {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filters select {
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      background: #2d2a4a;
+      color: white;
+    }
+
+    .team-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
-      padding: 0 16px;
     }
 
     .player-card {
       background: #2d2a4a;
-      padding: 16px;
-      border-radius: 10px;
+      border-radius: 12px;
+      display: flex;
+      padding: 12px;
+      gap: 12px;
+      align-items: center;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
       position: relative;
     }
 
-    .player-card img.role-icon {
-      width: 100%;
+    .player-card img {
+      width: 100px;
+      height: auto;
       border-radius: 8px;
-      margin-bottom: 8px;
+      background: #1a1830;
+    }
+
+    .player-info {
+      flex: 1;
+    }
+
+    .player-info h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .player-info p {
+      margin: 2px 0;
+      font-size: 14px;
     }
 
     .sell-btn {
@@ -47,141 +86,118 @@
       padding: 4px 10px;
       background: #ff4081;
       border: none;
+      color: white;
       border-radius: 4px;
       font-size: 12px;
       cursor: pointer;
-      color: white;
-    }
-
-    .modal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-    }
-
-    .modal-content {
-      background: #1e1b3a;
-      padding: 24px;
-      border-radius: 8px;
-      text-align: center;
-    }
-
-    .modal-content button {
-      margin-top: 12px;
-      padding: 8px 20px;
-      border: none;
-      border-radius: 4px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .modal-content .cancel {
-      background: #ccc;
-      color: #000;
-      margin-left: 12px;
-    }
-
-    .modal-content .confirm {
-      background: #00e676;
-      color: #000;
     }
   </style>
 </head>
 <body>
-  <h2>Your Team</h2>
-  <div id="teamContainer" class="team-container"></div>
 
-  <div class="modal" id="sellModal">
-    <div class="modal-content">
-      <h3>Sell Player</h3>
-      <p id="sellPlayerName"></p>
-      <p>Price: ₹<span id="sellPrice"></span></p>
-      <button class="confirm" id="confirmSell">Confirm</button>
-      <button class="cancel" onclick="closeModal()">Cancel</button>
+  <div class="main">
+    <h2>Your Team</h2>
+
+    <div class="filters">
+      <select id="filterRole">
+        <option value="All">All Roles</option>
+        <option value="Batsman">Batsman</option>
+        <option value="Bowler">Bowler</option>
+        <option value="All-Rounder">All-Rounder</option>
+        <option value="Wicket Keeper">Wicket Keeper</option>
+      </select>
+
+      <select id="sortBy">
+        <option value="fitness">Sort by Fitness</option>
+        <option value="batting">Sort by Batting</option>
+        <option value="bowling">Sort by Bowling</option>
+        <option value="experience">Sort by Experience</option>
+        <option value="age">Sort by Age</option>
+      </select>
     </div>
+
+    <div id="teamGrid" class="team-grid"></div>
   </div>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { loadSharedUI } from "./js/shared-ui.js";
 
-    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) window.location.href = "login.html";
 
-    const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
+    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
     const { data: team } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
 
-    const { data: players } = await supabase.from("players").select("*").eq("team_id", team.id);
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp,
+      coins: profile.coins,
+      cash: profile.cash
+    });
 
-    const container = document.getElementById("teamContainer");
-    const modal = document.getElementById("sellModal");
-    const sellPlayerName = document.getElementById("sellPlayerName");
-    const sellPrice = document.getElementById("sellPrice");
-    const confirmBtn = document.getElementById("confirmSell");
+    let { data: players } = await supabase
+      .from("players")
+      .select("*")
+      .eq("team_id", team.id); // ✅ Only your team’s players
 
-    let selectedPlayer = null;
+    const grid = document.getElementById("teamGrid");
 
-    function openModal(player) {
-      selectedPlayer = player;
-      sellPlayerName.textContent = player.name;
-      sellPrice.textContent = (player.batting + player.bowling + player.keeping) * 1000;
-      modal.style.display = "flex";
+    function renderPlayers(list) {
+      grid.innerHTML = "";
+      for (const player of list) {
+        const div = document.createElement("div");
+        div.className = "player-card";
+        div.innerHTML = `
+          <img src="${player.image_url}" alt="${player.role}" />
+          <div class="player-info">
+            <h3>${player.name}</h3>
+            <p><strong>Role:</strong> ${player.role}</p>
+            <p><strong>Bat:</strong> ${player.batting} | <strong>Bowl:</strong> ${player.bowling}</p>
+            <p><strong>Keeping:</strong> ${player.keeping}</p>
+            <p><strong>Fitness:</strong> ${player.fitness}</p>
+            <p><strong>Age:</strong> ${player.age_years}y ${player.age_days}d</p>
+          </div>
+          <button class="sell-btn">Sell</button>
+        `;
+        grid.appendChild(div);
+      }
     }
 
-    window.closeModal = function () {
-      modal.style.display = "none";
-    };
+    function applyFilterSort() {
+      const roleFilter = document.getElementById("filterRole").value;
+      const sortBy = document.getElementById("sortBy").value;
 
-    confirmBtn.onclick = async () => {
-      if (!selectedPlayer) return;
-      const price = (selectedPlayer.batting + selectedPlayer.bowling + selectedPlayer.keeping) * 1000;
+      let filtered = players;
+      if (roleFilter !== "All") {
+        filtered = filtered.filter(p => p.role === roleFilter);
+      }
 
-      const { error } = await supabase.from("auctions").insert({
-        player_id: selectedPlayer.id,
-        team_id: team.id,
-        base_price: price,
-        current_price: price,
-        status: "active",
-        expires_at: new Date(Date.now() + 86400000).toISOString()
+      filtered.sort((a, b) => {
+        switch (sortBy) {
+          case "fitness": return b.fitness - a.fitness;
+          case "batting": return b.batting - a.batting;
+          case "bowling": return b.bowling - a.bowling;
+          case "experience": return (b.experience || 0) - (a.experience || 0);
+          case "age":
+            const aDays = a.age_years * 63 + a.age_days;
+            const bDays = b.age_years * 63 + b.age_days;
+            return aDays - bDays;
+        }
       });
 
-      if (error) {
-        alert("❌ Failed to sell.");
-        console.error(error);
-      } else {
-        alert("✅ Player listed in auction!");
-        closeModal();
-      }
-    };
-
-    for (const player of players) {
-      const card = document.createElement("div");
-      card.className = "player-card";
-      card.innerHTML = `
-        <img src="${player.image_url}" class="role-icon" alt="${player.role}" />
-        <h3>${player.name}</h3>
-        <p><strong>Role:</strong> ${player.role}</p>
-        <p><strong>Batting:</strong> ${player.batting}</p>
-        <p><strong>Bowling:</strong> ${player.bowling}</p>
-        <p><strong>Keeping:</strong> ${player.keeping}</p>
-        <p><strong>Fitness:</strong> ${player.fitness}</p>
-        <p><strong>Age:</strong> ${player.age_years}y ${player.age_days}d</p>
-        <button class="sell-btn">Sell</button>
-      `;
-
-      card.querySelector(".sell-btn").onclick = () => {
-        if (players.length > 11) openModal(player);
-        else alert("You must keep at least 11 players.");
-      };
-
-      container.appendChild(card);
+      renderPlayers(filtered);
     }
+
+    document.getElementById("filterRole").addEventListener("change", applyFilterSort);
+    document.getElementById("sortBy").addEventListener("change", applyFilterSort);
+
+    applyFilterSort(); // Initial load
   </script>
 </body>
 </html>
