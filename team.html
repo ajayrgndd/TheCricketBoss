@@ -3,219 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Team – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css" />
-<style>
-  * {
-    box-sizing: border-box;
-  }
+  <title>Your Team</title>
+  <link rel="stylesheet" href="styles/shared.css" />
+  <style>
+    body {
+      background-color: #181534;
+      color: white;
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      padding-top: 70px; /* space for top bar */
+      padding-bottom: 80px; /* space for bottom nav */
+    }
 
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #1e1b3a;
-    color: white;
-  }
+    h2 {
+      margin: 20px;
+      font-size: 1.5em;
+    }
 
-  .top-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: #29255a;
-    padding: 10px 15px;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 60px;
-    border-bottom: 1px solid #444;
-  }
+    .filters {
+      display: flex;
+      gap: 10px;
+      padding: 0 20px 10px;
+    }
 
-  .logo-area {
-    display: flex;
-    align-items: center;
-  }
+    select, input {
+      padding: 6px;
+      border-radius: 5px;
+      border: none;
+    }
 
-  .logo-img {
-    height: 32px; /* ✅ Much smaller */
-    max-width: 100px;
-    object-fit: contain;
-  }
+    #playerContainer {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 10px 20px 30px;
+    }
 
-  .bottom-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #29255a;
-    padding: 10px 0;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-around;
-    border-top: 1px solid #444;
-    height: 60px;
-  }
-
-  .main {
-    padding-top: 70px;    /* ✅ Below fixed top bar */
-    padding-bottom: 80px; /* ✅ Above bottom nav */
-    max-width: 900px;
-    margin: 0 auto;
-  }
-
-  .player-card {
-    background: #2f2b50;
-    padding: 16px;
-    margin: 12px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
-  }
-
-  .player-card img {
-    height: 100px;
-    border-radius: 6px;
-  }
-
-  .player-info {
-    flex: 1;
-    font-size: 14px;
-  }
-
-  .player-info strong {
-    display: block;
-    font-size: 16px;
-    margin-bottom: 4px;
-  }
-
-  /* ✅ Responsive tweaks */
-  @media (max-width: 600px) {
     .player-card {
-      flex-direction: row;
-      align-items: flex-start;
+      display: flex;
+      background: #261d4d;
+      border-radius: 10px;
+      padding: 10px;
+      align-items: center;
+      box-shadow: 0 0 8px rgba(255,255,255,0.05);
     }
 
     .player-card img {
-      height: 90px;
+      width: 80px;
+      height: auto;
+      margin-right: 12px;
     }
 
     .player-info {
-      font-size: 13px;
+      font-size: 14px;
     }
 
-    .logo-img {
-      height: 26px;
+    .player-info strong {
+      font-size: 16px;
+      display: block;
+      margin-bottom: 4px;
     }
-  }
-</style>
 
-
+    @media (max-width: 600px) {
+      .player-card {
+        flex-direction: row;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="main">
-    <h2>Your Team</h2>
+  <h2>Your Team</h2>
 
-    <div class="filter-bar">
-      <select id="roleFilter">
-        <option value="">All Roles</option>
-        <option value="Batsman">Batsman</option>
-        <option value="Bowler">Bowler</option>
-        <option value="All-Rounder">All-Rounder</option>
-        <option value="Wicket Keeper">Wicket Keeper</option>
-      </select>
-      <input type="text" id="searchInput" placeholder="Search name..." />
-    </div>
+  <div class="filters">
+    <select id="roleFilter">
+      <option value="All">All Roles</option>
+      <option value="Batsman">Batsman</option>
+      <option value="Bowler">Bowler</option>
+      <option value="All-Rounder">All-Rounder</option>
+      <option value="Wicket Keeper">Wicket Keeper</option>
+    </select>
+    <input type="text" id="searchInput" placeholder="Search name..." />
+  </div>
 
-    <div class="team-grid" id="teamContainer"></div>
+  <div id="playerContainer">
+    <p>Loading your squad...</p>
   </div>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI } from "./js/shared-ui.js";
+    import { loadSharedUI } from "./shared-ui.js";
 
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (!user) {
-      window.location.href = "login.html";
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!profile || !profile.manager_name?.trim()) {
-      window.location.href = "profile-setup.html";
-    }
-
-    loadSharedUI({
-      manager_name: profile.manager_name,
-      xp: profile.xp,
-      coins: profile.coins,
-      cash: profile.cash
-    });
-
-    const { data: team } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("owner_id", user.id)
-      .single();
-
-    const { data: players } = await supabase
-      .from("players")
-      .select("*")
-      .eq("team_id", team.id);
-
-    const container = document.getElementById("teamContainer");
-    const searchInput = document.getElementById("searchInput");
+    const container = document.getElementById("playerContainer");
     const roleFilter = document.getElementById("roleFilter");
+    const searchInput = document.getElementById("searchInput");
+
+    let players = [];
+
+    async function loadTeamPlayers() {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        window.location.href = "/login.html";
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError || !profile) {
+        window.location.href = "/profile-setup.html";
+        return;
+      }
+
+      const { data: team, error: teamError } = await supabase
+        .from("teams")
+        .select("*")
+        .eq("owner_id", user.id)
+        .single();
+
+      if (teamError || !team) {
+        window.location.href = "/profile-setup.html";
+        return;
+      }
+
+      const { data: fetchedPlayers, error: playerError } = await supabase
+        .from("players")
+        .select("*")
+        .eq("team_id", team.id);
+
+      if (playerError || !fetchedPlayers?.length) {
+        container.innerHTML = "<p>No players found.</p>";
+        return;
+      }
+
+      players = fetchedPlayers;
+      await loadSharedUI({
+        manager_name: profile.manager_name,
+        xp: profile.xp,
+        coins: profile.coins,
+        cash: profile.cash
+      });
+
+      renderPlayers(players);
+    }
 
     function renderPlayers(filtered) {
       container.innerHTML = "";
-      for (const p of filtered) {
+      filtered.forEach(p => {
         const div = document.createElement("div");
         div.className = "player-card";
         div.innerHTML = `
-          <img src="${p.image_url}" alt="${p.role}" />
-          <h4>${p.name}</h4>
-          <p><span class="highlight">${p.role}</span></p>
-          <p>Bat: ${p.batting} | Bowl: ${p.bowling}</p>
-          <p>Age: ${p.age_years}y ${p.age_days}d</p>
-          <p>Form: ${p.form} | XP: ${p.experience}</p>
+          <img src="${p.image_url}" alt="${p.name}">
+          <div class="player-info">
+            <strong>${p.name}</strong>
+            ${p.role}<br>
+            Bat: ${p.batting} | Bowl: ${p.bowling}${p.keeping > 0 ? ` | Keep: ${p.keeping}` : ""}<br>
+            Fitness: ${p.fitness}<br>
+            Age: ${p.age_years}y ${p.age_days}d<br>
+            Form: ${p.form} | XP: ${p.experience}
+          </div>
         `;
         container.appendChild(div);
-      }
+      });
     }
 
     function applyFilters() {
-      const nameQuery = searchInput.value.trim().toLowerCase();
-      const role = roleFilter.value;
+      const roleVal = roleFilter.value;
+      const searchVal = searchInput.value.toLowerCase();
 
       const filtered = players.filter(p => {
-        const matchesRole = role ? p.role === role : true;
-        const matchesName = p.name.toLowerCase().includes(nameQuery);
+        const matchesRole = roleVal === "All" || p.role === roleVal;
+        const matchesName = p.name.toLowerCase().includes(searchVal);
         return matchesRole && matchesName;
       });
 
       renderPlayers(filtered);
     }
 
-    // Filters
-    searchInput.addEventListener("input", applyFilters);
     roleFilter.addEventListener("change", applyFilters);
+    searchInput.addEventListener("input", applyFilters);
 
-    renderPlayers(players);
+    loadTeamPlayers();
   </script>
 </body>
 </html>
-
-
-
