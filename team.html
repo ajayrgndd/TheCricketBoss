@@ -164,10 +164,10 @@
           <div class="player-info">
             <strong>${p.name}</strong>
             ${p.role}<br>
-            Bat: ${p.batting} <br/> Bowl: ${p.bowling}${p.keeping > 0 ? ` | Keep: ${p.keeping}` : ""}<br>
+            Bat: ${p.batting} <br/> Bowl: ${p.bowling}${p.keeping > 0 ? ` <br/> Keep: ${p.keeping}` : ""}<br>
             Fitness: ${p.fitness}<br>
             Age: ${p.age_years}y ${p.age_days}d<br>
-            Form: ${p.form} | XP: ${p.experience}
+            Form: ${p.form} <br/> XP: ${p.experience}
           </div>
         `;
         container.appendChild(div);
@@ -194,4 +194,5 @@
   </script>
 </body>
 </html>
+
 
