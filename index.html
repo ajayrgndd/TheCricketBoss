@@ -132,18 +132,18 @@
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
-    // 👤 Not logged in, show signup/login buttons
+    // 👤 Not logged in
     spinner.style.display = "none";
   } else {
-    // 🔒 Session exists, fetch user
+    // 🔐 Logged in, fetch user
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user?.email_confirmed_at) {
-      // ❌ Email not confirmed yet
+    if (!user?.confirmed_at) {
+      // ❌ Email not confirmed
       await supabase.auth.signOut();
       spinner.style.display = "none";
     } else {
-      // ✅ Email confirmed, now check profile
+      // ✅ Email confirmed
       const { data: profile } = await supabase
         .from("profiles")
         .select("*")
@@ -161,3 +161,4 @@
 
 </body>
 </html>
+
