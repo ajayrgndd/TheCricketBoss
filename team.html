@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Team – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
+  <script type="module" src="js/shared-ui.js"></script> <!-- ✅ Shared UI -->
   <style>
     body {
       margin: 0;
@@ -131,8 +132,17 @@
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) window.location.href = "login.html";
 
-    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-    const { data: team } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    const { data: team } = await supabase
+      .from("teams")
+      .select("*")
+      .eq("user_id", user.id) // ✅ FIXED: user_id not owner_id
+      .single();
 
     loadSharedUI({
       manager_name: profile.manager_name,
@@ -144,7 +154,7 @@
     let { data: players } = await supabase
       .from("players")
       .select("*")
-      .eq("team_id", team.id); // ✅ Only your team’s players
+      .eq("team_id", team.id); // ✅ Only this user's team
 
     const grid = document.getElementById("teamGrid");
 
@@ -197,7 +207,7 @@
     document.getElementById("filterRole").addEventListener("change", applyFilterSort);
     document.getElementById("sortBy").addEventListener("change", applyFilterSort);
 
-    applyFilterSort(); // Initial load
+    applyFilterSort(); // Initial render
   </script>
 </body>
 </html>
