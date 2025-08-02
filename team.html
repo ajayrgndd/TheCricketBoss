@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Team – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
-  <script type="module" src="js/shared-ui.js"></script> <!-- ✅ Shared UI -->
+  <script type="module" src="js/shared-ui.js"></script>
   <style>
+    /* (Styles from earlier version stay the same) */
     body {
       margin: 0;
       font-family: Arial, sans-serif;
@@ -14,18 +15,15 @@
       color: white;
       padding-bottom: 100px;
     }
-
     .main {
       padding: 80px 16px 80px;
       max-width: 1000px;
       margin: auto;
     }
-
     h2 {
       text-align: center;
       margin-bottom: 16px;
     }
-
     .filters {
       display: flex;
       justify-content: space-between;
@@ -33,7 +31,6 @@
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
-
     .filters select {
       padding: 8px;
       border-radius: 6px;
@@ -41,13 +38,11 @@
       background: #2d2a4a;
       color: white;
     }
-
     .team-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
     }
-
     .player-card {
       background: #2d2a4a;
       border-radius: 12px;
@@ -58,28 +53,23 @@
       box-shadow: 0 3px 8px rgba(0,0,0,0.4);
       position: relative;
     }
-
     .player-card img {
       width: 100px;
       height: auto;
       border-radius: 8px;
       background: #1a1830;
     }
-
     .player-info {
       flex: 1;
     }
-
     .player-info h3 {
       margin: 0;
       font-size: 18px;
     }
-
     .player-info p {
       margin: 2px 0;
       font-size: 14px;
     }
-
     .sell-btn {
       position: absolute;
       top: 8px;
@@ -130,18 +120,21 @@
     );
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) window.location.href = "login.html";
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
 
     const { data: profile } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", user.id)
+      .eq("user_id", user.id)
       .single();
 
     const { data: team } = await supabase
       .from("teams")
       .select("*")
-      .eq("user_id", user.id) // ✅ FIXED: user_id not owner_id
+      .eq("user_id", user.id)  // ✅ Correct usage here
       .single();
 
     loadSharedUI({
@@ -154,13 +147,13 @@
     let { data: players } = await supabase
       .from("players")
       .select("*")
-      .eq("team_id", team.id); // ✅ Only this user's team
+      .eq("team_id", team.id);  // ✅ Only this user's team
 
     const grid = document.getElementById("teamGrid");
 
     function renderPlayers(list) {
       grid.innerHTML = "";
-      for (const player of list) {
+      list.forEach(player => {
         const div = document.createElement("div");
         div.className = "player-card";
         div.innerHTML = `
@@ -176,7 +169,7 @@
           <button class="sell-btn">Sell</button>
         `;
         grid.appendChild(div);
-      }
+      });
     }
 
     function applyFilterSort() {
@@ -207,7 +200,7 @@
     document.getElementById("filterRole").addEventListener("change", applyFilterSort);
     document.getElementById("sortBy").addEventListener("change", applyFilterSort);
 
-    applyFilterSort(); // Initial render
+    applyFilterSort();
   </script>
 </body>
 </html>
