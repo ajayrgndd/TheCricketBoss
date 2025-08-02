@@ -13,6 +13,12 @@
       color: #fff;
     }
 
+    .logo {
+      display: block;
+      margin: 0 auto 20px;
+      width: 140px;
+    }
+
     h2 {
       text-align: center;
     }
@@ -24,6 +30,16 @@
       border-radius: 10px;
       max-width: 400px;
       box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
+
+    .squad-card img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      background: #fff;
     }
 
     .squad-card p {
@@ -32,7 +48,7 @@
 
     button {
       display: block;
-      margin: 20px auto;
+      margin: 30px auto;
       padding: 12px 24px;
       background: #00e676;
       color: #000;
@@ -40,92 +56,95 @@
       border-radius: 6px;
       font-size: 16px;
       cursor: pointer;
+      font-weight: bold;
+    }
+
+    @media screen and (max-width: 480px) {
+      .squad-card {
+        padding: 12px;
+      }
+
+      .squad-card img {
+        width: 60px;
+        height: 60px;
+      }
+
+      button {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- ✅ Logo -->
+  <img src="assets/logo.png" alt="TheCricketBoss Logo" class="logo" />
   <h2>Your Squad is Ready</h2>
   <div id="squadList"></div>
   <button id="goHomeBtn">Go to Home</button>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { regionNameData } from "./js/data/region-names.js";
 
-    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) window.location.href = "index.html";
-
-    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-    const { data: team } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
-
-    const namePool = regionNameData[profile.region] || regionNameData["Maharashtra"];
-    const roles = [
-      { role: "Wicket Keeper", count: 1 },
-      { role: "All-Rounder", count: 1 },
-      { role: "Bowler", count: 5 },
-      { role: "Batsman", count: 5 }
-    ];
-
-    const generatePlayer = (role, type) => {
-      const name = namePool[Math.floor(Math.random() * namePool.length)];
-      const batting = Math.floor(Math.random() * 21);
-      const bowling = Math.floor(Math.random() * 21);
-      const keeping = role === "Wicket Keeper" ? Math.floor(Math.random() * 21) : 0;
-      const age_years = type === "Newbie" ? 16 : type === "Trainee" ? 17 : (type === "Senior" ? 30 : (18 + Math.floor(Math.random() * 12)));
-      const age_days = 0;
-      const skillAvg = (batting + bowling + keeping) / 3;
-      const skill_level = skillAvg <= 10 ? "Newbie" : skillAvg <= 20 ? "Trainee" : "Domestic";
-
-      return {
-        team_id: team.id,
-        name,
-        role,
-        batting,
-        bowling,
-        keeping,
-        age_years,
-        age_days,
-        skill_level,
-        fitness: 100,
-        form: "Average",
-        experience: 0
-      };
-    };
-
-    const players = [];
-
-    for (const { role, count } of roles) {
-      for (let i = 0; i < count; i++) {
-        let type = "Regular";
-        if (role === "Wicket Keeper" && i === 0) type = "Trainee";
-        if (role === "All-Rounder") type = "Newbie";
-        if (role === "Bowler" && i < 2) type = "Senior"; // 2 Nationals
-        players.push(generatePlayer(role, type));
-      }
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      window.location.href = "index.html";
+      return;
     }
 
-    await supabase.from("players").insert(players);
+    // Get user's team
+    const { data: team, error: teamError } = await supabase
+      .from("teams")
+      .select("*")
+      .eq("owner_id", user.id)
+      .single();
+
+    if (teamError || !team) {
+      alert("Could not fetch your team.");
+      return;
+    }
+
+    // Get players in that team
+    const { data: players, error: playerError } = await supabase
+      .from("players")
+      .select("*")
+      .eq("team_id", team.id);
+
+    if (playerError) {
+      alert("Could not fetch squad players.");
+      console.error("Player fetch error:", playerError);
+      return;
+    }
 
     const squadList = document.getElementById("squadList");
-    players.forEach(player => {
-      const div = document.createElement("div");
-      div.className = "squad-card";
-      div.innerHTML = `
-        <h3>${player.name}</h3>
-        <p><strong>Role:</strong> ${player.role}</p>
-        <p><strong>Batting:</strong> ${player.batting}</p>
-        <p><strong>Bowling:</strong> ${player.bowling}</p>
-        <p><strong>Keeping:</strong> ${player.keeping}</p>
-        <p><strong>Age:</strong> ${player.age_years}y ${player.age_days}d</p>
-        <p><strong>Skill Level:</strong> ${player.skill_level}</p>
-        <p><strong>Fitness:</strong> ${player.fitness}</p>
-        <p><strong>Form:</strong> ${player.form}</p>
-        <p><strong>Experience:</strong> ${player.experience}</p>
-      `;
-      squadList.appendChild(div);
-    });
+
+    if (!players || players.length === 0) {
+      squadList.innerHTML = "<p>No players found in your squad.</p>";
+    } else {
+      players.forEach(player => {
+        const card = document.createElement("div");
+        card.className = "squad-card";
+
+        card.innerHTML = `
+          <img src="${player.image_url || 'assets/default-player.png'}" alt="${player.role} image" />
+          <h3>${player.name}</h3>
+          <p><strong>Role:</strong> ${player.role}</p>
+          <p><strong>Batting:</strong> ${player.batting}</p>
+          <p><strong>Bowling:</strong> ${player.bowling}</p>
+          <p><strong>Keeping:</strong> ${player.keeping}</p>
+          <p><strong>Age:</strong> ${player.age_years}y ${player.age_days}d</p>
+          <p><strong>Skill Level:</strong> ${player.skill_level}</p>
+          <p><strong>Fitness:</strong> ${player.fitness}</p>
+          <p><strong>Form:</strong> ${player.form}</p>
+          <p><strong>Experience:</strong> ${player.experience}</p>
+        `;
+        squadList.appendChild(card);
+      });
+    }
 
     document.getElementById("goHomeBtn").addEventListener("click", () => {
       window.location.href = "home.html";
