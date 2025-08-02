@@ -181,11 +181,11 @@
     const { data: team } = await supabase
       .from("teams")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("owner_id", user.id)
       .single();
 
     // Header
-    document.getElementById("managerName").firstChild.textContent = profile.manager_name + " ▼";
+    document.getElementById("managerLabel").innerText = profile.manager_name + " ▼";
     document.getElementById("xp").textContent = profile.xp ?? 0;
     document.getElementById("coins").textContent = profile.coins ?? 0;
     document.getElementById("cash").textContent = profile.cash ?? 0;
@@ -243,3 +243,4 @@
   </script>
 </body>
 </html>
+
