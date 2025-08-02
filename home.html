@@ -153,96 +153,102 @@
     <a href="store.html">🛒 Store</a>
   </div>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // Replace with full anon key
-    );
+  const supabase = createClient(
+    "https://iukofcmatlfhfwcechdq.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+  );
 
-   const { data: { user }, error: authError } = await supabase.auth.getUser();
-if (authError || !user) {
-  window.location.href = "login.html";
-  return;
-}
+  // 🔐 1. Check auth session
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-const { data: profile, error: profileError } = await supabase
-  .from("profiles")
-  .select("*")
-  .eq("user_id", user.id)
-  .single();
+  if (authError || !user) {
+    window.location.href = "login.html";
+    return;
+  }
 
-if (profileError || !profile || !profile.manager_name || !profile.team_name) {
-  // 🚧 No complete profile
-  window.location.href = "profile-setup.html";
-  return;
-}
+  // 📄 2. Load profile
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
 
-    const { data: team } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("owner_id", user.id)
-      .single();
+  if (!profile || !profile.manager_name?.trim() || !profile.team_name?.trim()) {
+    console.warn("⚠️ Profile incomplete. Redirecting to setup.");
+    await supabase.auth.signOut(); // Optional: force logout if profile is corrupted
+    window.location.href = "profile-setup.html";
+    return;
+  }
 
-    // Header
-    document.getElementById("managerLabel").innerText = profile.manager_name + " ▼";
-    document.getElementById("xp").textContent = profile.xp ?? 0;
-    document.getElementById("coins").textContent = profile.coins ?? 0;
-    document.getElementById("cash").textContent = profile.cash ?? 0;
+  // 🧠 3. Load user's team
+  const { data: team, error: teamError } = await supabase
+    .from("teams")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
 
-    // Match & training check
-    const { data: lastMatch } = await supabase
-      .from("matches")
-      .select("*")
-      .or(home_team_id.eq.${team.id},away_team_id.eq.${team.id})
-      .order("date", { ascending: false })
-      .limit(1)
-      .single();
+  // 🔝 4. Update header values
+  document.getElementById("managerName").firstChild.textContent = profile.manager_name + " ▼";
+  document.getElementById("xp").textContent = profile.xp ?? 0;
+  document.getElementById("coins").textContent = profile.coins ?? 0;
+  document.getElementById("cash").textContent = profile.cash ?? 0;
 
-    const lastMatchDate = lastMatch?.date || "1970-01-01";
+  // 📅 5. Get match and training info
+  const { data: lastMatch } = await supabase
+    .from("matches")
+    .select("*")
+    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+    .order("date", { ascending: false })
+    .limit(1)
+    .single();
 
-    const { data: trainingLogs } = await supabase
-      .from("training_logs")
-      .select("*")
-      .eq("team_id", team.id)
-      .gte("created_at", lastMatchDate)
-      .order("created_at", { ascending: false });
+  const lastMatchDate = lastMatch?.date || "1970-01-01";
 
-    const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
-    const trainingCompleted = trainedPlayers.size >= 3;
+  const { data: trainingLogs } = await supabase
+    .from("training_logs")
+    .select("*")
+    .eq("team_id", team.id)
+    .gte("created_at", lastMatchDate)
+    .order("created_at", { ascending: false });
 
-    const statusDiv = document.getElementById("trainingStatus");
-    const goBtn = document.getElementById("goTrainingBtn");
+  const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
+  const trainingCompleted = trainedPlayers.size >= 3;
 
-    if (trainingCompleted) {
-      statusDiv.innerHTML = ✅ <strong>Training Completed</strong> (3 players trained);
-      goBtn.disabled = true;
-    } else {
-      statusDiv.innerHTML = ❌ <strong>Training Pending</strong> – Train 3 players before next match;
-      goBtn.disabled = false;
+  const statusDiv = document.getElementById("trainingStatus");
+  const goBtn = document.getElementById("goTrainingBtn");
+
+  if (trainingCompleted) {
+    statusDiv.innerHTML = "✅ <strong>Training Completed</strong> (3 players trained)";
+    goBtn.disabled = true;
+  } else {
+    statusDiv.innerHTML = "❌ <strong>Training Pending</strong> – Train 3 players before next match";
+    goBtn.disabled = false;
+  }
+
+  // 🔽 6. Popup menu for logout
+  const dropdown = document.getElementById("managerName");
+  const popup = document.getElementById("popupMenu");
+
+  dropdown.addEventListener("click", () => {
+    popup.style.display = popup.style.display === "flex" ? "none" : "flex";
+  });
+
+  window.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target)) {
+      popup.style.display = "none";
     }
+  });
 
-    // Popup
-    const dropdown = document.getElementById("managerName");
-    const popup = document.getElementById("popupMenu");
-
-    dropdown.addEventListener("click", () => {
-      popup.style.display = popup.style.display === "flex" ? "none" : "flex";
-    });
-
-    window.addEventListener("click", (e) => {
-      if (!dropdown.contains(e.target)) {
-        popup.style.display = "none";
-      }
-    });
-
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      window.location.href = "login.html";
-    });
-  </script>
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    window.location.href = "login.html";
+  });
+</script>
 </body>
 </html>
+
 
 
