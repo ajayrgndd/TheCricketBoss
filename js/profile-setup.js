@@ -124,21 +124,53 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     console.log("✅ Team assigned to user");
 
     // 4️⃣ Delete old bot players
-   const { error: deleteError, count } = await supabase
-  .from("players")
-  .delete({ count: "exact" })
-  .eq("team_id", botTeam.id);
+    const { error: deleteError, count } = await supabase
+      .from("players")
+      .delete({ count: "exact" })
+      .eq("team_id", botTeam.id);
 
-if (deleteError) {
-  console.warn("⚠️ Failed to delete old bot players:", deleteError.message);
-} else {
-  console.log(`🧹 ${count} old bot players deleted`);
-}
+    if (deleteError) {
+      console.warn("⚠️ Failed to delete old bot players:", deleteError.message);
+    } else {
+      console.log(`🧹 ${count} old bot players deleted`);
+    }
 
+    // 5️⃣ Delete old bot stadium (if any)
+    const { data: oldStadium } = await supabase
+      .from("stadiums")
+      .select("id")
+      .eq("team_id", botTeam.id)
+      .maybeSingle();
 
-    // 5️⃣ Generate new squad for user
+    if (oldStadium?.id) {
+      const { error: stadiumDelError } = await supabase
+        .from("stadiums")
+        .delete()
+        .eq("id", oldStadium.id);
+      if (stadiumDelError) {
+        console.warn("⚠️ Failed to delete old stadium:", stadiumDelError.message);
+      } else {
+        console.log("🧹 Old bot stadium deleted");
+      }
+    }
+
+    // 6️⃣ Create new stadium for user
+    const { error: stadiumCreateError } = await supabase.from("stadiums").insert({
+      team_id: botTeam.id,
+      name: `${teamName} Arena`,
+      capacity: 5000,
+      level: "Local"
+    });
+
+    if (stadiumCreateError) {
+      console.error("❌ Failed to create stadium:", stadiumCreateError.message);
+    } else {
+      console.log("🏟️ New stadium created");
+    }
+
+    // 7️⃣ Generate new squad
     try {
-      await generateSquad(botTeam.id); // region-based generation not required for user
+      await generateSquad(botTeam.id);
       console.log("✅ Squad generation complete");
     } catch (err) {
       console.error("❌ Squad generation failed:", err.message);
@@ -153,4 +185,3 @@ if (deleteError) {
     alert("Unexpected error: " + e.message);
   }
 });
-
