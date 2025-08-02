@@ -62,7 +62,7 @@ function calculateMarketPrice(player) {
   return Math.round(price);
 }
 
-// 🔁 Get Role-Based Image
+// Role-based image
 function getRoleImage(role) {
   const base = "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/";
   const roleMap = {
@@ -74,51 +74,69 @@ function getRoleImage(role) {
   return base + (roleMap[role] || "default.png");
 }
 
-// 🎯 Squad Generator
+// Skill level assignment
+function determineSkillLevel(batting, bowling, keeping) {
+  const avg = (batting + bowling + keeping) / 3;
+  if (avg < 10) return "Newbie";
+  if (avg < 20) return "Trainee";
+  return "Domestic";
+}
+
+// ✅ Squad Generator (checks first, inserts only once)
 export async function generateSquad(teamId) {
-  const availableRegions = Object.keys(regionNameData);
-  const usedNames = new Set();
+  // 🧠 Check if players already exist for this team
+  const { data: existing } = await supabase
+    .from("players")
+    .select("id")
+    .eq("team_id", teamId);
+
+  if (existing.length > 0) {
+    console.warn("⚠️ Squad already exists. Skipping generation.");
+    return existing;
+  }
 
   const squad = [];
+  const usedNames = new Set();
+  const availableRegions = Object.keys(regionNameData);
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
   const roleCounts = { Batsman: 5, Bowler: 5, "All-Rounder": 1, "Wicket Keeper": 1 };
 
   for (const role of roles) {
     for (let i = 0; i < roleCounts[role]; i++) {
+      // Attributes
       const batting = Math.floor(Math.random() * 11) + 5;
       const bowling = Math.floor(Math.random() * 11) + 5;
       const fitness = Math.floor(Math.random() * 21) + 80;
       const age_years = Math.floor(Math.random() * 5) + 16;
       const age_days = Math.floor(Math.random() * 63);
-      const experience = 0;
       const keeping = (role === "Wicket Keeper") ? Math.floor(Math.random() * 11) + 5 : 0;
 
+      // Unique name & region
       let name = "Unnamed";
       let region = "Unknown";
+      let found = false;
 
-      // Try to get unique name
-      let foundUnique = false;
-      for (let tries = 0; tries < 10; tries++) {
-        const tryRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-        const names = regionNameData[tryRegion];
-        const randomName = names[Math.floor(Math.random() * names.length)];
-
-        if (!usedNames.has(randomName)) {
-          usedNames.add(randomName);
-          name = randomName;
-          region = tryRegion;
-          foundUnique = true;
+      for (let t = 0; t < 10; t++) {
+        const r = availableRegions[Math.floor(Math.random() * availableRegions.length)];
+        const names = regionNameData[r];
+        const candidate = names[Math.floor(Math.random() * names.length)];
+        if (!usedNames.has(candidate)) {
+          usedNames.add(candidate);
+          name = candidate;
+          region = r;
+          found = true;
           break;
         }
       }
-
-      // If still not unique, fallback
-      if (!foundUnique) {
+      if (!found) {
         const fallbackRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         const fallbackNames = regionNameData[fallbackRegion];
         name = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
         region = fallbackRegion;
       }
+
+      // Skill level
+      const skill_level = determineSkillLevel(batting, bowling, keeping);
 
       const player = {
         team_id: teamId,
@@ -132,10 +150,10 @@ export async function generateSquad(teamId) {
         age_years,
         age_days,
         form: "Average",
-        experience,
-        skill_level: "Newbie",
+        experience: 0,
+        skill_level,
         skills: [],
-        image_url: getRoleImage(role), // ✅ Role-based image stored here
+        image_url: getRoleImage(role),
         salary: 0,
         market_price: 0
       };
@@ -151,9 +169,8 @@ export async function generateSquad(teamId) {
   if (error) {
     console.error("❌ Failed to insert squad:", error.message);
   } else {
-    console.log("✅ Squad generated and saved.");
+    console.log("✅ Squad generated and inserted.");
   }
 
   return squad;
 }
-
