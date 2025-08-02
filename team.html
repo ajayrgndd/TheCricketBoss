@@ -7,53 +7,112 @@
   <link rel="stylesheet" href="styles/global.css" />
   <style>
     body {
-      margin: 0;
-      background: #1e1b3a;
-      font-family: Arial, sans-serif;
+      background: #15132a;
       color: white;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
     }
 
     .main {
-      padding: 90px 16px 80px;
-      max-width: 1000px;
+      padding: 80px 16px 100px;
+      max-width: 960px;
       margin: auto;
+    }
+
+    h2 {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .filters {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    select {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      background: #292955;
+      color: white;
     }
 
     .team-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 16px;
     }
 
     .player-card {
-      background: #2d2a4a;
+      background: #242042;
       padding: 14px;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+      color: white;
+      position: relative;
       text-align: center;
     }
 
     .player-card img {
-      width: 70px;
-      height: 70px;
+      width: 100%;
+      max-height: 180px;
       object-fit: contain;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      background: #191734;
+      border-radius: 6px;
     }
 
     .player-card h3 {
       margin: 6px 0;
-      font-size: 18px;
+      font-size: 16px;
     }
 
     .player-card p {
       margin: 4px 0;
-      font-size: 13px;
+      font-size: 14px;
+    }
+
+    .sell-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #ff4081;
+      color: white;
+      padding: 4px 10px;
+      font-size: 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
+
   <div class="main">
     <h2>Your Team Players</h2>
+
+    <div class="filters">
+      <select id="roleFilter">
+        <option value="">All Roles</option>
+        <option value="Batsman">Batsman</option>
+        <option value="Bowler">Bowler</option>
+        <option value="All-Rounder">All-Rounder</option>
+        <option value="Wicket Keeper">Wicket Keeper</option>
+      </select>
+
+      <select id="sortBy">
+        <option value="">Sort By</option>
+        <option value="batting">Batting</option>
+        <option value="bowling">Bowling</option>
+        <option value="fitness">Fitness</option>
+        <option value="experience">Experience</option>
+      </select>
+    </div>
+
     <div id="teamContainer" class="team-grid">
       <p>Loading your squad...</p>
     </div>
@@ -68,65 +127,76 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      window.location.href = "login.html";
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles").select("*").eq("id", user.id).single();
+
+    if (!profile || profileError) {
+      console.error("Profile fetch error");
+      window.location.href = "profile-setup.html";
+    }
+
+    const { data: team, error: teamError } = await supabase
+      .from("teams").select("*").eq("owner_id", user.id).single();
+
+    if (!team || teamError) {
+      console.error("Team fetch error");
+      document.getElementById("teamContainer").innerHTML = "<p>Team not found.</p>";
+    }
+
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp ?? 0,
+      coins: profile.coins ?? 0,
+      cash: profile.cash ?? 0
+    });
+
+    const { data: players, error: playerError } = await supabase
+      .from("players").select("*").eq("team_id", team.id);
+
     const container = document.getElementById("teamContainer");
+    if (playerError || !players?.length) {
+      container.innerHTML = "<p>No players found.</p>";
+    } else {
+      renderPlayers(players);
+    }
 
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error("User not authenticated");
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles").select("*").eq("id", user.id).single();
-      if (profileError || !profile) throw new Error("Failed to load profile");
-
-      const { data: team, error: teamError } = await supabase
-        .from("teams").select("*").eq("owner_id", user.id).single();
-      if (teamError || !team) throw new Error("Failed to load team");
-
-      // ✅ Load top and bottom UI
-      await loadSharedUI({
-        manager_name: profile.manager_name,
-        xp: profile.xp,
-        coins: profile.coins,
-        cash: profile.cash
-      });
-
-      const { data: players, error: playerError } = await supabase
-        .from("players")
-        .select("*")
-        .eq("team_id", team.id)
-        .order("batting", { ascending: false });
-
-      if (playerError || !players?.length) {
-        container.innerHTML = "<p>No players found for your team.</p>";
-        return;
-      }
-
-      container.innerHTML = ""; // Clear loading
-
-      for (const p of players) {
-        const div = document.createElement("div");
-        div.className = "player-card";
-        div.innerHTML = `
+    function renderPlayers(playerList) {
+      container.innerHTML = "";
+      for (const p of playerList) {
+        const card = document.createElement("div");
+        card.className = "player-card";
+        card.innerHTML = `
           <img src="${p.image_url}" alt="${p.role}" />
           <h3>${p.name}</h3>
-          <p><strong>${p.role}</strong></p>
-          <p>Bat: ${p.batting} | Bowl: ${p.bowling}</p>
-          <p>Fitness: ${p.fitness}</p>
-          <p>Age: ${p.age_years}y ${p.age_days}d</p>
-          <p>XP: ${p.experience ?? 0}</p>
-          <p>Level: ${p.skill_level}</p>
+          <p><strong>Role:</strong> ${p.role}</p>
+          <p><strong>Bat:</strong> ${p.batting} | <strong>Bowl:</strong> ${p.bowling}</p>
+          <p><strong>Fitness:</strong> ${p.fitness}</p>
+          <p><strong>Age:</strong> ${p.age_years}y ${p.age_days}d</p>
+          <p><strong>XP:</strong> ${p.experience ?? 0}</p>
+          <p><strong>Level:</strong> ${p.skill_level}</p>
+          <button class="sell-btn">Sell</button>
         `;
-        container.appendChild(div);
-      }
-
-    } catch (err) {
-      console.error("❌ Error loading team:", err.message);
-      container.innerHTML = `<p style="color: red;">${err.message}</p>`;
-      // Optional: redirect to login
-      if (err.message.includes("authenticated")) {
-        window.location.href = "login.html";
+        container.appendChild(card);
       }
     }
+
+    // Filters
+    document.getElementById("roleFilter").addEventListener("change", () => {
+      const role = document.getElementById("roleFilter").value;
+      const filtered = role ? players.filter(p => p.role === role) : players;
+      renderPlayers(filtered);
+    });
+
+    document.getElementById("sortBy").addEventListener("change", () => {
+      const key = document.getElementById("sortBy").value;
+      const sorted = [...players].sort((a, b) => (b[key] ?? 0) - (a[key] ?? 0));
+      renderPlayers(sorted);
+    });
   </script>
 </body>
 </html>
