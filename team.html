@@ -13,43 +13,15 @@
       color: white;
     }
 
-    .top-bar, .bottom-nav {
-      position: fixed;
-      left: 0; right: 0;
-      background: #29255a;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 20px;
-      z-index: 1000;
-    }
-
-    .top-bar {
-      top: 0;
-      border-bottom: 1px solid #444;
-    }
-
-    .bottom-nav {
-      bottom: 0;
-      justify-content: space-around;
-      border-top: 1px solid #444;
-    }
-
-    .bottom-nav a {
-      color: #bbb;
-      text-decoration: none;
-      font-size: 14px;
-    }
-
     .main {
-      padding: 80px 16px 80px;
-      max-width: 900px;
+      padding: 90px 16px 80px; /* leave space for top and bottom bars */
+      max-width: 1000px;
       margin: auto;
     }
 
     .team-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
     }
 
@@ -57,134 +29,103 @@
       background: #2d2a4a;
       padding: 14px;
       border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
       text-align: center;
     }
 
     .player-card img {
-      width: 80px;
-      height: 80px;
+      width: 70px;
+      height: 70px;
       object-fit: contain;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .player-card h3 {
-      margin: 8px 0 4px;
+      margin: 6px 0;
       font-size: 18px;
     }
 
     .player-card p {
       margin: 4px 0;
-      font-size: 14px;
+      font-size: 13px;
     }
   </style>
 </head>
 <body>
-
-  <!-- 🔝 Top Bar -->
-  <div class="top-bar">
-    <div><strong id="managerName">Manager</strong></div>
-    <div>
-      XP: <span id="xp">0</span> |
-      🪙 <span id="coins">0</span> |
-      💵 ₹<span id="cash">0</span>
-    </div>
-  </div>
-
-  <!-- 💻 Main -->
   <div class="main">
-    <h2>Your Team</h2>
+    <h2>Your Team Players</h2>
     <div id="teamContainer" class="team-grid"></div>
   </div>
 
-  <!-- 🔻 Bottom Nav -->
-  <div class="bottom-nav">
-    <a href="team.html"><strong>🏏 Team</strong></a>
-    <a href="scout.html">🔍 Scout</a>
-    <a href="home.html">🏠 Home</a>
-    <a href="auction.html">⚒️ Auction</a>
-    <a href="store.html">🛒 Store</a>
-  </div>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { loadSharedUI } from "./js/shared-ui.js";
 
-<script type="module">
-  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-  import { loadSharedUI } from "./js/shared-ui.js";
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
 
-  const supabase = createClient(
-    "https://iukofcmatlfhfwcechdq.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE",
-    { auth: { persistSession: true, autoRefreshToken: true } }
-  );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      window.location.href = "login.html";
+      return;
+    }
 
-  // 🌐 Ensure session restored
-  await supabase.auth.getSession();
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles").select("*").eq("id", user.id).single();
 
-  // 🔐 Get user
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    window.location.href = "login.html";
-    return;
-  }
+    if (profileError || !profile) {
+      console.error("❌ Unable to load profile");
+      window.location.href = "profile-setup.html";
+      return;
+    }
 
-  // 👤 Load profile
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+    const { data: team, error: teamError } = await supabase
+      .from("teams").select("*").eq("owner_id", user.id).single();
 
-  if (profileError || !profile) {
-    window.location.href = "profile-setup.html";
-    return;
-  }
+    if (teamError || !team) {
+      console.error("❌ Team not found for user");
+      return;
+    }
 
-  // 🏏 Load team
-  const { data: team, error: teamError } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("owner_id", user.id)
-    .single();
+    // 🔁 Load only this team's players
+    const { data: players, error: playerError } = await supabase
+      .from("players")
+      .select("*")
+      .eq("team_id", team.id)
+      .order("batting", { ascending: false });
 
-  if (teamError || !team) {
-    alert("Unable to load your team.");
-    return;
-  }
+    if (playerError || !players?.length) {
+      document.getElementById("teamContainer").innerHTML = "<p>No players found.</p>";
+      return;
+    }
 
-  // 🔁 Load players from your team only
-  const { data: players, error: playerError } = await supabase
-    .from("players")
-    .select("*")
-    .eq("team_id", team.id)
-    .order("batting", { ascending: false });
+    // ✅ Load top bar/bottom bar
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp,
+      coins: profile.coins,
+      cash: profile.cash
+    });
 
-  if (playerError) {
-    alert("Unable to load players.");
-    return;
-  }
+    const container = document.getElementById("teamContainer");
 
-  // 🧠 Shared UI (XP, Coins, Cash)
-  loadSharedUI({
-    manager_name: profile.manager_name,
-    xp: profile.xp,
-    coins: profile.coins,
-    cash: profile.cash
-  });
-
-  // 🖼️ Populate cards
-  const container = document.getElementById("teamContainer");
-  for (const p of players) {
-    const card = document.createElement("div");
-    card.className = "player-card";
-    card.innerHTML = `
-      <img src="${p.image_url}" alt="${p.role}" />
-      <h3>${p.name}</h3>
-      <p><strong>${p.role}</strong></p>
-      <p>Bat: ${p.batting} | Bowl: ${p.bowling}</p>
-      <p>Fitness: ${p.fitness} | Age: ${p.age_years}</p>
-      <p>XP: ${p.experience} | Level: ${p.skill_level}</p>
-    `;
-    container.appendChild(card);
-  }
-</script>
+    for (const p of players) {
+      const div = document.createElement("div");
+      div.className = "player-card";
+      div.innerHTML = `
+        <img src="${p.image_url}" alt="${p.role}" />
+        <h3>${p.name}</h3>
+        <p><strong>${p.role}</strong></p>
+        <p>Bat: ${p.batting} | Bowl: ${p.bowling}</p>
+        <p>Fitness: ${p.fitness}</p>
+        <p>Age: ${p.age_years}y ${p.age_days}d</p>
+        <p>XP: ${p.experience ?? 0}</p>
+        <p>Level: ${p.skill_level}</p>
+      `;
+      container.appendChild(div);
+    }
+  </script>
 </body>
 </html>
