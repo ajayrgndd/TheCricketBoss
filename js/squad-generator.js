@@ -26,8 +26,9 @@ function calculateMarketPrice(player) {
   price *= formMultiplier[form] || 1;
 
   const skillLevelBonus = {
-    "Newbie": 1.0, "Trainee": 1.2, "Domestic": 1.5, "National": 2.0, "Professional": 3.0,
-    "Master": 4.0, "Supreme": 5.0, "World Class": 6.5, "Ultimate": 8.0, "Titan": 10.0, "The Boss": 12.5
+    "Newbie": 1.0, "Trainee": 1.2, "Domestic": 1.5, "National": 2.0,
+    "Professional": 3.0, "Master": 4.0, "Supreme": 5.0, "World Class": 6.5,
+    "Ultimate": 8.0, "Titan": 10.0, "The Boss": 12.5
   };
   price *= skillLevelBonus[skill_level] || 1;
 
@@ -66,16 +67,17 @@ function determineSkillLevel(batting, bowling, keeping) {
 
 // 🏏 Squad Generator
 export async function generateSquad(teamId) {
+  // Prevent duplicate generation
   const { data: existing } = await supabase.from("players").select("id").eq("team_id", teamId);
   if (existing?.length > 0) {
     console.warn("⚠️ Squad already exists. Skipping generation.");
     return existing;
   }
 
-  // 🔍 Get team info
+  // Get team info
   const { data: teamData, error: teamErr } = await supabase
     .from("teams")
-    .select("team_name, owner_id")
+    .select("team_name, owner_id, manager_name, region")
     .eq("id", teamId)
     .single();
   if (teamErr || !teamData) {
@@ -83,20 +85,8 @@ export async function generateSquad(teamId) {
     return;
   }
 
-  const { team_name, owner_id } = teamData;
+  const { team_name, owner_id, manager_name, region } = teamData;
 
-  // 🔍 Get manager name
-  const { data: profile, error: profileErr } = await supabase
-    .from("profiles")
-    .select("manager_name")
-    .eq("id", owner_id)
-    .single();
-  if (profileErr || !profile) {
-    console.error("❌ Failed to fetch manager:", profileErr?.message);
-    return;
-  }
-
-  const manager_name = profile.manager_name;
   const usedNames = new Set();
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
   const roleCounts = { Batsman: 5, Bowler: 5, "All-Rounder": 1, "Wicket Keeper": 1 };
@@ -106,35 +96,34 @@ export async function generateSquad(teamId) {
 
   for (const role of roles) {
     for (let i = 0; i < roleCounts[role]; i++) {
-      // 🎯 Role-Based Skill Assignment
+      // Role-Based Skills
       let batting = 0, bowling = 0, keeping = 0;
       switch (role) {
         case "Batsman":
-          batting = Math.floor(Math.random() * 6) + 15;   // 15–20
-          bowling = Math.floor(Math.random() * 6) + 5;    // 5–10
+          batting = Math.floor(Math.random() * 6) + 15;
+          bowling = Math.floor(Math.random() * 6) + 5;
           break;
         case "Bowler":
-          bowling = Math.floor(Math.random() * 6) + 15;   // 15–20
-          batting = Math.floor(Math.random() * 6) + 5;    // 5–10
+          bowling = Math.floor(Math.random() * 6) + 15;
+          batting = Math.floor(Math.random() * 6) + 5;
           break;
         case "All-Rounder":
-          batting = Math.floor(Math.random() * 6) + 12;   // 12–17
-          bowling = Math.floor(Math.random() * 6) + 12;   // 12–17
+          batting = Math.floor(Math.random() * 6) + 12;
+          bowling = Math.floor(Math.random() * 6) + 12;
           break;
         case "Wicket Keeper":
-          batting = Math.floor(Math.random() * 6) + 10;   // 10–15
-          keeping = Math.floor(Math.random() * 6) + 12;   // 12–17
-          bowling = Math.floor(Math.random() * 4);        // 0–3
+          batting = Math.floor(Math.random() * 6) + 10;
+          keeping = Math.floor(Math.random() * 6) + 12;
+          bowling = Math.floor(Math.random() * 4);
           break;
       }
 
-      const fitness = age_years > 30 ? 95 : 100;
       const age_years = Math.floor(Math.random() * 5) + 16;
       const age_days = Math.floor(Math.random() * 63);
+      const fitness = age_years > 30 ? 95 : 100;
 
-      // 🧬 Unique name & region
-      let name = "Unnamed", region = "Unknown";
-      let found = false;
+      // Unique Name
+      let name = "Unnamed", playerRegion = region || "Unknown";
       for (let t = 0; t < 10; t++) {
         const r = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         const names = regionNameData[r];
@@ -142,24 +131,19 @@ export async function generateSquad(teamId) {
         if (!usedNames.has(candidate)) {
           usedNames.add(candidate);
           name = candidate;
-          region = r;
-          found = true;
+          if (!region) playerRegion = r;
           break;
         }
       }
 
-      if (!found) {
-        const fallbackRegion = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-        const fallbackNames = regionNameData[fallbackRegion];
-        name = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
-        region = fallbackRegion;
-      }
-
+      const form = "Average";
+      const experience = 0;
       const skill_level = determineSkillLevel(batting, bowling, keeping);
+
       const player = {
         team_id: teamId,
         name,
-        region,
+        region: playerRegion,
         role,
         batting,
         bowling,
@@ -167,8 +151,8 @@ export async function generateSquad(teamId) {
         fitness,
         age_years,
         age_days,
-        form: "Average",
-        experience: 0,
+        form,
+        experience,
         skill_level,
         skills: [],
         image_url: getRoleImage(role),
@@ -184,7 +168,7 @@ export async function generateSquad(teamId) {
     }
   }
 
-  // 💾 Save players
+  // Save Players
   const { error: insertErr } = await supabase.from("players").insert(squad);
   if (insertErr) {
     console.error("❌ Failed to insert squad:", insertErr.message);
@@ -192,7 +176,7 @@ export async function generateSquad(teamId) {
     console.log("✅ Squad inserted successfully");
   }
 
-  // 🏟️ Stadium insert
+  // Create Stadium if not exists
   const { data: stadiumExists } = await supabase
     .from("stadiums")
     .select("id")
@@ -213,3 +197,55 @@ export async function generateSquad(teamId) {
   return squad;
 }
 
+// 👤 Assign bot team to a real user and regenerate squad
+export async function assignBotTeamToUser(userId) {
+  const { data: profile, error: profileErr } = await supabase
+    .from("profiles")
+    .select("manager_name, region")
+    .eq("id", userId)
+    .single();
+
+  if (profileErr || !profile) {
+    console.error("❌ Failed to fetch profile:", profileErr?.message);
+    return;
+  }
+
+  const { data: team, error: teamErr } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("type", "bot")
+    .is("owner_id", null)
+    .limit(1)
+    .single();
+
+  if (teamErr || !team) {
+    console.error("❌ No free bot teams:", teamErr?.message);
+    return;
+  }
+
+  const teamId = team.id;
+
+  // Delete existing bot players
+  await supabase.from("players").delete().eq("team_id", teamId);
+
+  // Assign team to user
+  const { error: updateErr } = await supabase
+    .from("teams")
+    .update({
+      type: "user",
+      owner_id: userId,
+      manager_name: profile.manager_name,
+      region: profile.region
+    })
+    .eq("id", teamId);
+
+  if (updateErr) {
+    console.error("❌ Failed to assign team:", updateErr.message);
+    return;
+  }
+
+  // Generate squad
+  await generateSquad(teamId);
+
+  console.log("✅ Bot team assigned and new squad generated for user:", userId);
+}
