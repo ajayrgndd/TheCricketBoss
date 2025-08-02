@@ -113,7 +113,18 @@ export async function generateSquad(teamId) {
           break;
       }
 
-      const age_years = Math.floor(Math.random() * 5) + 16;
+      // 🧓 Better age logic
+let age_years;
+const rand = Math.random();
+if (rand < 0.25) {
+  age_years = Math.floor(Math.random() * 4) + 18; // 18–21
+} else if (rand < 0.70) {
+  age_years = Math.floor(Math.random() * 5) + 22; // 22–26
+} else if (rand < 0.90) {
+  age_years = Math.floor(Math.random() * 4) + 27; // 27–30
+} else {
+  age_years = Math.floor(Math.random() * 5) + 31; // 31–35
+}
       const age_days = Math.floor(Math.random() * 63);
       const fitness = age_years > 30 ? 95 : 100;
 
@@ -188,3 +199,4 @@ export async function generateSquad(teamId) {
 
   return squad;
 }
+
