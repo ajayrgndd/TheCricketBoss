@@ -67,14 +67,12 @@ function determineSkillLevel(batting, bowling, keeping) {
 
 // 🏏 Squad Generator
 export async function generateSquad(teamId) {
-  // Prevent duplicate generation
   const { data: existing } = await supabase.from("players").select("id").eq("team_id", teamId);
   if (existing?.length > 0) {
     console.warn("⚠️ Squad already exists. Skipping generation.");
     return existing;
   }
 
-  // Get team info
   const { data: teamData, error: teamErr } = await supabase
     .from("teams")
     .select("team_name, owner_id, manager_name, region")
@@ -86,17 +84,14 @@ export async function generateSquad(teamId) {
   }
 
   const { team_name, owner_id, manager_name, region } = teamData;
-
   const usedNames = new Set();
+  const squad = [];
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
   const roleCounts = { Batsman: 5, Bowler: 5, "All-Rounder": 1, "Wicket Keeper": 1 };
-  const squad = [];
-
   const availableRegions = Object.keys(regionNameData);
 
   for (const role of roles) {
     for (let i = 0; i < roleCounts[role]; i++) {
-      // Role-Based Skills
       let batting = 0, bowling = 0, keeping = 0;
       switch (role) {
         case "Batsman":
@@ -122,7 +117,6 @@ export async function generateSquad(teamId) {
       const age_days = Math.floor(Math.random() * 63);
       const fitness = age_years > 30 ? 95 : 100;
 
-      // Unique Name
       let name = "Unnamed", playerRegion = region || "Unknown";
       for (let t = 0; t < 10; t++) {
         const r = availableRegions[Math.floor(Math.random() * availableRegions.length)];
@@ -136,10 +130,7 @@ export async function generateSquad(teamId) {
         }
       }
 
-      const form = "Average";
-      const experience = 0;
       const skill_level = determineSkillLevel(batting, bowling, keeping);
-
       const player = {
         team_id: teamId,
         name,
@@ -151,8 +142,8 @@ export async function generateSquad(teamId) {
         fitness,
         age_years,
         age_days,
-        form,
-        experience,
+        form: "Average",
+        experience: 0,
         skill_level,
         skills: [],
         image_url: getRoleImage(role),
@@ -168,84 +159,32 @@ export async function generateSquad(teamId) {
     }
   }
 
-  // Save Players
   const { error: insertErr } = await supabase.from("players").insert(squad);
-  if (insertErr) {
-    console.error("❌ Failed to insert squad:", insertErr.message);
-  } else {
-    console.log("✅ Squad inserted successfully");
-  }
+  if (insertErr) console.error("❌ Failed to insert squad:", insertErr.message);
+  else console.log("✅ Squad inserted successfully");
 
-  // Create Stadium if not exists
-  const { data: stadiumExists } = await supabase
+  // 🧹 Delete old bot stadium if exists
+  const { data: stadium } = await supabase
     .from("stadiums")
     .select("id")
     .eq("team_id", teamId)
     .maybeSingle();
 
-  if (!stadiumExists) {
-    const { error: stadiumErr } = await supabase.from("stadiums").insert({
-      team_id: teamId,
-      name: `${team_name} Arena`,
-      capacity: 5000,
-      level: "Local"
-    });
-    if (stadiumErr) console.error("❌ Stadium insert failed:", stadiumErr.message);
-    else console.log("🏟️ Stadium created");
+  if (stadium?.id) {
+    const { error: deleteErr } = await supabase.from("stadiums").delete().eq("id", stadium.id);
+    if (deleteErr) console.warn("⚠️ Failed to delete old stadium:", deleteErr.message);
+    else console.log("🧹 Old stadium deleted");
   }
+
+  // 🏟️ Insert new stadium for real user
+  const { error: stadiumErr } = await supabase.from("stadiums").insert({
+    team_id: teamId,
+    name: `${team_name} Arena`,
+    capacity: 5000,
+    level: "Local"
+  });
+  if (stadiumErr) console.error("❌ Stadium insert failed:", stadiumErr.message);
+  else console.log("🏟️ New stadium created");
 
   return squad;
-}
-
-// 👤 Assign bot team to a real user and regenerate squad
-export async function assignBotTeamToUser(userId) {
-  const { data: profile, error: profileErr } = await supabase
-    .from("profiles")
-    .select("manager_name, region")
-    .eq("id", userId)
-    .single();
-
-  if (profileErr || !profile) {
-    console.error("❌ Failed to fetch profile:", profileErr?.message);
-    return;
-  }
-
-  const { data: team, error: teamErr } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("type", "bot")
-    .is("owner_id", null)
-    .limit(1)
-    .single();
-
-  if (teamErr || !team) {
-    console.error("❌ No free bot teams:", teamErr?.message);
-    return;
-  }
-
-  const teamId = team.id;
-
-  // Delete existing bot players
-  await supabase.from("players").delete().eq("team_id", teamId);
-
-  // Assign team to user
-  const { error: updateErr } = await supabase
-    .from("teams")
-    .update({
-      type: "user",
-      owner_id: userId,
-      manager_name: profile.manager_name,
-      region: profile.region
-    })
-    .eq("id", teamId);
-
-  if (updateErr) {
-    console.error("❌ Failed to assign team:", updateErr.message);
-    return;
-  }
-
-  // Generate squad
-  await generateSquad(teamId);
-
-  console.log("✅ Bot team assigned and new squad generated for user:", userId);
 }
