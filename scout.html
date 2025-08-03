@@ -2,81 +2,105 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <title>Scout</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Scout Player</title>
-  <link rel="stylesheet" href="styles.css" />
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom, #003f5c, #2f4b7c);
+      padding: 20px;
+      background: #f5f7fa;
+      color: #333;
+    }
+
+    h2 {
+      margin-bottom: 15px;
+    }
+
+    #scout-btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #0078D4;
       color: white;
-      text-align: center;
-      padding: 30px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 20px;
     }
 
-    #status {
-      font-size: 1.3rem;
-      margin-top: 40px;
-      animation: fade 1.2s infinite alternate;
-    }
-
-    @keyframes fade {
-      from { opacity: 0.4; }
-      to { opacity: 1; }
+    #scout-btn:disabled {
+      background-color: gray;
+      cursor: not-allowed;
     }
 
     #player-card {
-      margin-top: 40px;
       display: none;
-      background: rgba(255, 255, 255, 0.1);
+      opacity: 0;
+      transform: scale(0.95);
+      transition: all 0.5s ease;
       padding: 20px;
-      border-radius: 12px;
+      border-radius: 10px;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.15);
+      max-width: 400px;
     }
 
-    #player-img {
-      width: 100px;
+    #player-card.reveal {
+      display: block;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .stat-bar {
+      background: #e0e0e0;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
       margin-bottom: 10px;
     }
 
-    .btn {
-      margin-top: 20px;
-      background-color: #ffa600;
-      color: black;
-      border: none;
-      padding: 10px 20px;
-      font-size: 1rem;
-      border-radius: 6px;
-      cursor: pointer;
+    .stat-bar-inner {
+      height: 100%;
+      transition: width 0.7s ease;
     }
 
-    .btn:hover {
-      background-color: #ffcc00;
+    .label {
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    img {
+      width: 100px;
+      height: auto;
+      display: block;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <h2>🔍 Scout New Talent</h2>
-  <div id="status">🧭 Our Scouting Team searching for best young talent, they will be reach here with New Talent on <b>WEDNESDAY</b>.<br/> So stay tuned and comeback here on <b>WEDNESDAY</b> to meet your New Player.</div>
+  <h2>🧭 Scout New Talent</h2>
+  <button id="scout-btn">Scout Player</button>
+  <div id="countdown" style="margin-top: 10px; font-size: 14px;"></div>
 
   <div id="player-card">
-    <img id="player-img" src="" alt="Player Role" />
+    <img id="player-img" src="" alt="Player Image" />
     <h3 id="player-name"></h3>
     <p id="player-role"></p>
     <p id="player-age"></p>
     <p id="player-skill"></p>
-    <button class="btn" onclick="goToTeam()">View My Team</button>
+
+    <div class="label">Batting</div>
+    <div class="stat-bar"><div id="bar-batting" class="stat-bar-inner" style="background: #1e88e5;"></div></div>
+
+    <div class="label">Bowling</div>
+    <div class="stat-bar"><div id="bar-bowling" class="stat-bar-inner" style="background: #43a047;"></div></div>
+
+    <div class="label">Keeping</div>
+    <div class="stat-bar"><div id="bar-keeping" class="stat-bar-inner" style="background: #f4511e;"></div></div>
+
+    <div class="label">Fitness</div>
+    <div class="stat-bar"><div id="bar-fitness" class="stat-bar-inner" style="background: #8e24aa;"></div></div>
   </div>
 
-  <script type="module" src="./js/scout.js"></script>
-  <script>
-    function goToTeam() {
-      window.location.href = "team.html";
-    }
-  </script>
+  <script type="module" src="scout.js"></script>
 </body>
 </html>
-
-
-
-
-
