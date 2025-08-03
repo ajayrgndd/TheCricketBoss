@@ -106,17 +106,6 @@
       transition: width 0.3s ease;
     }
 
-    .xp-tag {
-      font-size: 13px;
-      margin-top: 8px;
-      color: #ffd54f;
-    }
-
-    .level {
-      font-weight: bold;
-      color: #ff4081;
-    }
-
     .sell-btn {
       position: absolute;
       top: 12px;
@@ -133,7 +122,7 @@
     .skills {
       display: flex;
       gap: 8px;
-      margin-top: 10px;
+      margin: 8px 0 6px;
     }
 
     .skill-slot {
@@ -153,6 +142,10 @@
       .player-card {
         flex-direction: column;
         align-items: flex-start;
+      }
+
+      .player-meta {
+        width: 100%;
       }
 
       .player-card img {
@@ -247,6 +240,13 @@
       return "Newbie";
     }
 
+    function getFitnessLevel(value) {
+      if (value >= 96) return "Excellent";
+      if (value >= 71) return "Good";
+      if (value >= 51) return "Average";
+      return "Poor";
+    }
+
     function renderPlayers(filtered) {
       container.innerHTML = "";
       for (const p of filtered) {
@@ -258,8 +258,14 @@
           <div class="player-meta">
             <strong>${p.name}</strong>
             <div class="sub">Role: ${p.role} | Region: ${p.region}</div>
-            <div class="sub">Age: ${p.age_years}y ${p.age_days}d | Form: ${p.form}</div>
+            <div class="sub">Age: ${p.age_years}y ${p.age_days}d</div>
+            <div class="sub">Form: ${p.form} | Fitness: ${getFitnessLevel(p.fitness)}</div>
             <div class="salary-market">Salary: ₹${p.salary?.toLocaleString() || 0} | Market: ₹${p.market_value?.toLocaleString() || 0}</div>
+
+            <div class="skills">
+              <div class="skill-slot" title="Skill 1">${p.skill1 || '🔒'}</div>
+              <div class="skill-slot" title="Skill 2">${p.skill2 || '🔒'}</div>
+            </div>
 
             <div class="bar-label">
               <span>Batting</span>
@@ -281,15 +287,11 @@
               <div class="bar" style="--value:${p.keeping}"></div>
             ` : ''}
 
-            <div class="bar-label"><span>Fitness</span></div>
-            <div class="bar" style="--value:${p.fitness / 2}"></div>
-
-            <div class="xp-tag">${p.experience} XP – <span class="level">${getSkillLevel(p.experience)}</span></div>
-
-            <div class="skills">
-              <div class="skill-slot" title="Skill 1">${p.skill1 || '🔒'}</div>
-              <div class="skill-slot" title="Skill 2">${p.skill2 || '🔒'}</div>
+            <div class="bar-label">
+              <span>Experience</span>
+              <span>${getSkillLevel(p.experience)}</span>
             </div>
+            <div class="bar" style="--value:${p.experience}"></div>
           </div>
         `;
         container.appendChild(div);
