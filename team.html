@@ -5,117 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Team – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
- <style>
-  * {
-    box-sizing: border-box;
-  }
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #1e1b3a;
-    color: white;
-  }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1e1b3a;
+      color: white;
+    }
 
-  .top-bar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: #29255a;
-    padding: 10px 15px;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 60px;
-    border-bottom: 1px solid #444;
-  }
+    .main {
+      padding-top: 80px;    /* ✅ space for top bar */
+      padding-bottom: 90px; /* ✅ space for bottom nav */
+      max-width: 900px;
+      margin: 0 auto;
+    }
 
-  .logo-area {
-    display: flex;
-    align-items: center;
-  }
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      padding: 0 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
 
-  .logo-img {
-    height: 32px; /* ✅ Much smaller */
-    max-width: 100px;
-    object-fit: contain;
-  }
+    .filter-bar select,
+    .filter-bar input {
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      width: 160px;
+      max-width: 100%;
+    }
 
-  .bottom-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: #29255a;
-    padding: 10px 0;
-    z-index: 1000;
-    display: flex;
-    justify-content: space-around;
-    border-top: 1px solid #444;
-    height: 60px;
-  }
-
-  .main {
-    padding-top: 70px;    /* ✅ Below fixed top bar */
-    padding-bottom: 80px; /* ✅ Above bottom nav */
-    max-width: 900px;
-    margin: 0 auto;
-  }
-
-  .player-card {
-    background: #2f2b50;
-    padding: 16px;
-    margin: 12px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
-  }
-
-  .player-card img {
-    height: 100px;
-    border-radius: 6px;
-  }
-
-  .player-info {
-    flex: 1;
-    font-size: 14px;
-  }
-
-  .player-info strong {
-    display: block;
-    font-size: 16px;
-    margin-bottom: 4px;
-  }
-
-  /* ✅ Responsive tweaks */
-  @media (max-width: 600px) {
     .player-card {
-      flex-direction: row;
-      align-items: flex-start;
+      background: #2f2b50;
+      padding: 16px;
+      margin: 12px 16px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
     }
 
     .player-card img {
-      height: 90px;
+      height: 100px;
+      border-radius: 6px;
     }
 
     .player-info {
-      font-size: 13px;
+      flex: 1;
+      font-size: 14px;
     }
 
-    .logo-img {
-      height: 26px;
+    .player-info strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 4px;
     }
-  }
-</style>
 
+    @media (max-width: 600px) {
+      .player-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .player-card img {
+        height: 90px;
+      }
+
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="main">
-    <h2>Your Team</h2>
+    <h2 style="padding: 0 16px;">Your Team</h2>
 
     <div class="filter-bar">
       <select id="roleFilter">
@@ -128,7 +101,7 @@
       <input type="text" id="searchInput" placeholder="Search name..." />
     </div>
 
-    <div class="team-grid" id="teamContainer"></div>
+    <div id="teamContainer"></div>
   </div>
 
   <script type="module">
@@ -140,7 +113,7 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       window.location.href = "login.html";
     }
@@ -184,11 +157,13 @@
         div.className = "player-card";
         div.innerHTML = `
           <img src="${p.image_url}" alt="${p.role}" />
-          <h4>${p.name}</h4>
-          <p><span class="highlight">${p.role}</span></p>
-          <p>Bat: ${p.batting} | Bowl: ${p.bowling}</p>
-          <p>Age: ${p.age_years}y ${p.age_days}d</p>
-          <p>Form: ${p.form} | XP: ${p.experience}</p>
+          <div class="player-info">
+            <strong>${p.name}</strong>
+            <p><span class="highlight">${p.role}</span></p>
+            <p>Bat: ${p.batting} | Bowl: ${p.bowling}</p>
+            <p>Age: ${p.age_years}y ${p.age_days}d</p>
+            <p>Form: ${p.form} | XP: ${p.experience}</p>
+          </div>
         `;
         container.appendChild(div);
       }
@@ -207,7 +182,6 @@
       renderPlayers(filtered);
     }
 
-    // Filters
     searchInput.addEventListener("input", applyFilters);
     roleFilter.addEventListener("change", applyFilters);
 
