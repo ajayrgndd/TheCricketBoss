@@ -51,6 +51,7 @@
       margin: 12px 16px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.4);
       color: white;
+      position: relative;
     }
 
     .player-card img {
@@ -63,11 +64,6 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .player-meta .top {
-      margin-bottom: 8px;
     }
 
     .player-meta strong {
@@ -75,15 +71,21 @@
       color: #fff;
     }
 
-    .player-meta .sub {
+    .sub {
       font-size: 13px;
       color: #ccc;
     }
 
+    .salary-market {
+      font-size: 13px;
+      margin: 6px 0;
+    }
+
     .bar-label {
-      font-size: 12px;
+      font-size: 13px;
       margin-top: 8px;
-      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
     }
 
     .bar {
@@ -105,7 +107,7 @@
     }
 
     .xp-tag {
-      font-size: 12px;
+      font-size: 13px;
       margin-top: 8px;
       color: #ffd54f;
     }
@@ -113,6 +115,38 @@
     .level {
       font-weight: bold;
       color: #ff4081;
+    }
+
+    .sell-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #ff4081;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .skills {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .skill-slot {
+      width: 34px;
+      height: 34px;
+      background: #1c1a30;
+      border: 1px solid #666;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #999;
     }
 
     @media (max-width: 600px) {
@@ -128,6 +162,13 @@
       .filter-bar {
         flex-direction: column;
         align-items: stretch;
+      }
+
+      .sell-btn {
+        top: 8px;
+        right: 10px;
+        padding: 3px 8px;
+        font-size: 11px;
       }
     }
   </style>
@@ -194,37 +235,60 @@
     const searchInput = document.getElementById("searchInput");
     const roleFilter = document.getElementById("roleFilter");
 
+    function getSkillLevel(value) {
+      if (value >= 101) return "The Boss";
+      if (value >= 81) return "Titan";
+      if (value >= 61) return "World Class";
+      if (value >= 51) return "Supreme";
+      if (value >= 41) return "National";
+      if (value >= 31) return "Professional";
+      if (value >= 21) return "Domestic";
+      if (value >= 11) return "Trainee";
+      return "Newbie";
+    }
+
     function renderPlayers(filtered) {
       container.innerHTML = "";
       for (const p of filtered) {
         const div = document.createElement("div");
         div.className = "player-card";
         div.innerHTML = `
+          <button class="sell-btn">SELL</button>
           <img src="${p.image_url}" alt="${p.role}" />
           <div class="player-meta">
-            <div class="top">
-              <strong>${p.name}</strong>
-              <div class="sub">Role: ${p.role} | Region: ${p.region}</div>
-              <div class="sub">Age: ${p.age_years}y ${p.age_days}d | Form: ${p.form}</div>
+            <strong>${p.name}</strong>
+            <div class="sub">Role: ${p.role} | Region: ${p.region}</div>
+            <div class="sub">Age: ${p.age_years}y ${p.age_days}d | Form: ${p.form}</div>
+            <div class="salary-market">Salary: ₹${p.salary?.toLocaleString() || 0} | Market: ₹${p.market_value?.toLocaleString() || 0}</div>
+
+            <div class="bar-label">
+              <span>Batting</span>
+              <span>${getSkillLevel(p.batting)}</span>
             </div>
+            <div class="bar" style="--value:${p.batting}"></div>
 
-            <div class="stats">
-              <div class="bar-label">Batting</div>
-              <div class="bar" style="--value:${p.batting}"></div>
+            <div class="bar-label">
+              <span>Bowling</span>
+              <span>${getSkillLevel(p.bowling)}</span>
+            </div>
+            <div class="bar" style="--value:${p.bowling}"></div>
 
-              <div class="bar-label">Bowling</div>
-              <div class="bar" style="--value:${p.bowling}"></div>
-
-              ${p.keeping > 0 ? `
-              <div class="bar-label">Keeping</div>
+            ${p.keeping > 0 ? `
+              <div class="bar-label">
+                <span>Keeping</span>
+                <span>${getSkillLevel(p.keeping)}</span>
+              </div>
               <div class="bar" style="--value:${p.keeping}"></div>
-              ` : ''}
+            ` : ''}
 
-              <div class="bar-label">Fitness</div>
-              <div class="bar" style="--value:${p.fitness / 2}"></div>
+            <div class="bar-label"><span>Fitness</span></div>
+            <div class="bar" style="--value:${p.fitness / 2}"></div>
 
-              <div class="bar-label">XP</div>
-              <div class="xp-tag">${p.experience} XP – <span class="level">${p.skill_level}</span></div>
+            <div class="xp-tag">${p.experience} XP – <span class="level">${getSkillLevel(p.experience)}</span></div>
+
+            <div class="skills">
+              <div class="skill-slot" title="Skill 1">${p.skill1 || '🔒'}</div>
+              <div class="skill-slot" title="Skill 2">${p.skill2 || '🔒'}</div>
             </div>
           </div>
         `;
@@ -251,4 +315,3 @@
   </script>
 </body>
 </html>
-
