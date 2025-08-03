@@ -2,106 +2,159 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Scout</title>
+  <title>Scout – TheCricketBoss</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles/global.css" />
   <style>
     body {
+      margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      padding: 20px;
-      background: #f5f7fa;
-      color: #333;
+      background: #1e1b3a;
+      color: white;
+    }
+
+    .main {
+      padding-top: 80px;
+      padding-bottom: 90px;
+      max-width: 600px;
+      margin: 0 auto;
     }
 
     h2 {
-      margin-bottom: 15px;
+      text-align: center;
+      margin-bottom: 20px;
+      color: #fff;
     }
 
     #scout-btn {
+      display: block;
+      margin: 0 auto 16px;
       padding: 10px 20px;
       font-size: 16px;
-      background-color: #0078D4;
-      color: white;
+      background-color: #00e676;
+      color: #000;
       border: none;
-      border-radius: 5px;
+      border-radius: 6px;
       cursor: pointer;
-      margin-bottom: 20px;
     }
 
     #scout-btn:disabled {
-      background-color: gray;
+      background-color: #777;
+      color: #ccc;
       cursor: not-allowed;
+    }
+
+    #countdown {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #bbb;
     }
 
     #player-card {
       display: none;
-      opacity: 0;
-      transform: scale(0.95);
+      background: #2d2a4a;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 0 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      color: white;
+      text-align: center;
       transition: all 0.5s ease;
-      padding: 20px;
-      border-radius: 10px;
-      background: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.15);
-      max-width: 400px;
     }
 
     #player-card.reveal {
       display: block;
-      opacity: 1;
-      transform: scale(1);
     }
 
-    .stat-bar {
-      background: #e0e0e0;
-      height: 10px;
-      border-radius: 5px;
-      overflow: hidden;
+    #player-card img {
+      height: 110px;
+      border-radius: 8px;
       margin-bottom: 10px;
-    }
-
-    .stat-bar-inner {
-      height: 100%;
-      transition: width 0.7s ease;
+      border: 2px solid #00e676;
     }
 
     .label {
-      font-size: 14px;
-      margin-bottom: 2px;
+      font-size: 13px;
+      margin: 8px 0 4px;
+      text-align: left;
     }
 
-    img {
-      width: 100px;
-      height: auto;
-      display: block;
-      margin-bottom: 10px;
+    .stat-bar {
+      background: #444;
+      height: 10px;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .stat-bar-inner {
+      position: absolute;
+      height: 100%;
+      width: 0%;
+      transition: width 0.7s ease;
+      border-radius: 6px;
     }
   </style>
 </head>
 <body>
-  <h2>🧭 Scout New Talent</h2>
-  <button id="scout-btn">Scout Player</button>
-  <div id="countdown" style="margin-top: 10px; font-size: 14px;"></div>
+  <div class="main">
+    <h2>🧭 Scout New Talent</h2>
 
-  <div id="player-card">
-    <img id="player-img" src="" alt="Player Image" />
-    <h3 id="player-name"></h3>
-    <p id="player-role"></p>
-    <p id="player-age"></p>
-    <p id="player-skill"></p>
+    <button id="scout-btn">Scout Player</button>
+    <div id="countdown"></div>
 
-    <div class="label">Batting</div>
-    <div class="stat-bar"><div id="bar-batting" class="stat-bar-inner" style="background: #1e88e5;"></div></div>
+    <div id="player-card">
+      <img id="player-img" src="" alt="Player Image" />
+      <h3 id="player-name"></h3>
+      <p id="player-role"></p>
+      <p id="player-age"></p>
+      <p id="player-skill"></p>
 
-    <div class="label">Bowling</div>
-    <div class="stat-bar"><div id="bar-bowling" class="stat-bar-inner" style="background: #43a047;"></div></div>
+      <div class="label">Batting</div>
+      <div class="stat-bar"><div id="bar-batting" class="stat-bar-inner" style="background: #00e676;"></div></div>
 
-    <div class="label">Keeping</div>
-    <div class="stat-bar"><div id="bar-keeping" class="stat-bar-inner" style="background: #f4511e;"></div></div>
+      <div class="label">Bowling</div>
+      <div class="stat-bar"><div id="bar-bowling" class="stat-bar-inner" style="background: #00bcd4;"></div></div>
 
-    <div class="label">Fitness</div>
-    <div class="stat-bar"><div id="bar-fitness" class="stat-bar-inner" style="background: #8e24aa;"></div></div>
+      <div class="label">Keeping</div>
+      <div class="stat-bar"><div id="bar-keeping" class="stat-bar-inner" style="background: #ff9800;"></div></div>
+
+      <div class="label">Fitness</div>
+      <div class="stat-bar"><div id="bar-fitness" class="stat-bar-inner" style="background: #8e24aa;"></div></div>
+    </div>
   </div>
 
+  <script type="module">
+    import { loadSharedUI } from './js/shared-ui.js';
+
+    // Get user profile for top bar
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "login.html";
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!profile || !profile.manager_name) {
+      window.location.href = "profile-setup.html";
+    }
+
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp,
+      coins: profile.coins,
+      cash: profile.cash
+    });
+  </script>
   <script type="module" src="js/scout.js"></script>
 </body>
 </html>
-
