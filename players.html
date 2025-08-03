@@ -260,7 +260,7 @@
             <div class="sub">Role: ${p.role} | Region: ${p.region}</div>
             <div class="sub">Age: ${p.age_years}y ${p.age_days}d</div>
             <div class="sub">Form: ${p.form} | Fitness: ${getFitnessLevel(p.fitness)}</div>
-            <div class="salary-market">Salary: ₹${p.salary?.toLocaleString() || 0} | Market: ₹${p.market_value?.toLocaleString() || 0}</div>
+            <div class="salary-market">Salary: ₹${p.salary?.toLocaleString() || 0} | Market: ₹${p.market_price?.toLocaleString() || 0}</div>
 
             <div class="skills">
               <div class="skill-slot" title="Skill 1">${p.skill1 || '🔒'}</div>
