@@ -139,7 +139,9 @@ export async function generateSquad(teamId) {
       const age_days = Math.floor(Math.random() * 63);
       const fitness = age_years > 30 ? 95 : 100;
 
-      let name = "Unnamed", playerRegion = region || "Unknown";
+      // ✅ Region now correctly matches the region of the name
+      let name = "Unnamed";
+      let playerRegion = region; // fallback
       for (let t = 0; t < 10; t++) {
         const r = availableRegions[Math.floor(Math.random() * availableRegions.length)];
         const names = regionNameData[r];
@@ -147,7 +149,7 @@ export async function generateSquad(teamId) {
         if (!usedNames.has(candidate)) {
           usedNames.add(candidate);
           name = candidate;
-          if (!region) playerRegion = r;
+          playerRegion = r; // ✅ Assign actual origin region
           break;
         }
       }
