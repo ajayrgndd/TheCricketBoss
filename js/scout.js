@@ -87,7 +87,7 @@ const agePool = [
   const today = new Date();
   const todayISO = today.toISOString().split("T")[0];
 
-  if (today.getDay() !== 3) {
+  if (today.getDay() !== 0) {
     alert("Scouting only allowed on Wednesdays.");
     location.href = "home.html";
     return;
@@ -204,4 +204,5 @@ const agePool = [
   document.getElementById("playerSalary").textContent = `Salary: ₹${player.salary.toLocaleString()}`;
   document.getElementById("playerPrice").textContent = `Market Price: ₹${player.market_price.toLocaleString()}`;
 })();
+
 
