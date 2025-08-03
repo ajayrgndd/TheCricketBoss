@@ -1,5 +1,5 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-import { regionNameData } from "./js/data/region-names.js";
+import { regionNameData } from "./data/region-names.js";
 
 // 🔐 Supabase client
 const supabase = createClient(
@@ -204,5 +204,6 @@ const agePool = [
   document.getElementById("playerSalary").textContent = `Salary: ₹${player.salary.toLocaleString()}`;
   document.getElementById("playerPrice").textContent = `Market Price: ₹${player.market_price.toLocaleString()}`;
 })();
+
 
 
