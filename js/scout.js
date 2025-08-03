@@ -3,64 +3,70 @@ import { regionNameData } from "./data/region-names.js";
 
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // 🔒 Use anon/public key here
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
-// UI Elements
+// UI elements
+const btn = document.getElementById("scout-btn");
+const countdown = document.getElementById("countdown");
 const card = document.getElementById("player-card");
-const img = document.getElementById("player-img");
 const nameEl = document.getElementById("player-name");
 const roleEl = document.getElementById("player-role");
 const ageEl = document.getElementById("player-age");
 const skillEl = document.getElementById("player-skill");
+const img = document.getElementById("player-img");
 
-// ✅ Auth check
+const bar = {
+  batting: document.getElementById("bar-batting"),
+  bowling: document.getElementById("bar-bowling"),
+  keeping: document.getElementById("bar-keeping"),
+  fitness: document.getElementById("bar-fitness"),
+};
+
+// Get server date from Supabase
+const { data: nowData } = await supabase.rpc("get_server_date");
+const serverDate = new Date(nowData);
+const serverDateStr = serverDate.toISOString().split("T")[0];
+const serverDay = serverDate.getUTCDay(); // Sunday = 0, Monday = 1, etc.
+
 const { data: { user } } = await supabase.auth.getUser();
 if (!user) {
-  alert("Please login first.");
+  alert("Please login.");
   location.href = "index.html";
 }
 
-// ✅ Profile check
-const { data: profile, error: profileErr } = await supabase
+const { data: profile } = await supabase
   .from("profiles")
   .select("region, last_scouted_date")
   .eq("user_id", user.id)
   .single();
 
-if (profileErr || !profile) {
-  alert("Profile not found.");
-  location.href = "index.html";
-}
-
-const today = new Date().toISOString().split("T")[0];
-const todayDay = new Date().getDay(); // Sunday = 0
-
-if (todayDay !== 0) {
-  alert("Scouting only available on SUNDAY for testing.");
-  location.href = "home.html";
-}
-
-if (profile.last_scouted_date === today) {
-  alert("You've already scouted this week.");
-  location.href = "team.html";
-}
-
-// ✅ Team fetch
-const { data: team, error: teamErr } = await supabase
+const { data: team } = await supabase
   .from("teams")
   .select("id, team_name, manager_name")
   .eq("owner_id", user.id)
   .single();
 
-if (teamErr || !team) {
-  alert("Team not found.");
-  location.href = "index.html";
+// ✅ Allow only on Sunday (change to 3 for Wednesday)
+if (serverDay !== 0) {
+  btn.disabled = true;
+  btn.textContent = "Scouting locked until next Sunday";
 }
 
-// ✅ Scout function
-async function scoutPlayer() {
-  // 🎯 Age & Role
+if (profile?.last_scouted_date) {
+  const lastDate = new Date(profile.last_scouted_date);
+  const daysSince = Math.floor((serverDate - lastDate) / (1000 * 60 * 60 * 24));
+  if (daysSince < 7) {
+    btn.disabled = true;
+    const next = new Date(lastDate);
+    next.setDate(next.getDate() + 7);
+    countdown.textContent = `Next scout available on ${next.toDateString()}`;
+  }
+}
+
+btn.onclick = async () => {
+  btn.disabled = true;
+
   const agePool = [
     ...Array(15).fill(16),
     ...Array(30).fill(17),
@@ -74,10 +80,7 @@ async function scoutPlayer() {
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
   const role = roles[Math.floor(Math.random() * roles.length)];
 
-  // Skills by Role
-  let batting = 0, bowling = 0, keeping = 0;
-  const fitness = Math.floor(Math.random() * 21) + 80;
-
+  let batting = 0, bowling = 0, keeping = 0, fitness = Math.floor(Math.random() * 21) + 80;
   switch (role) {
     case "Batsman":
       batting = Math.floor(Math.random() * 11) + 12;
@@ -97,25 +100,8 @@ async function scoutPlayer() {
       break;
   }
 
-  const experience = 0;
-  const skill_level = "Newbie";
-
-  const regionNames = regionNameData[profile.region] || [];
+  const regionNames = regionNameData[profile.region] || ["Unknown"];
   const name = regionNames[Math.floor(Math.random() * regionNames.length)];
-
-  // Salary & Market Price
-  function calculateSalary(p) {
-    const base = p.batting + p.bowling + p.fitness;
-    return Math.floor(base * 1000);
-  }
-
-  function calculateMarketPrice(p) {
-    const total = p.batting + p.bowling + p.keeping;
-    return total * 10000;
-  }
-
-  // 🖼 Role image fix (lowercase, no spaces or hyphens)
-  const image_url = `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`;
 
   const player = {
     team_id: team.id,
@@ -131,45 +117,39 @@ async function scoutPlayer() {
     age_years,
     age_days,
     form: "Good",
-    experience,
-    skill_level,
+    experience: 0,
+    skill_level: "Newbie",
     skills: [],
     salary: 0,
     market_price: 0,
-    image_url
+    image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replace(" ", "")}.png`
   };
 
-  player.salary = calculateSalary(player);
-  player.market_price = calculateMarketPrice(player);
+  player.salary = Math.floor((batting + bowling + fitness) * 1000);
+  player.market_price = (batting + bowling + keeping) * 10000;
 
-  // ➕ Insert player
   const { error: insertErr } = await supabase.from("players").insert(player);
-  if (insertErr) {
-    alert("❌ Failed to insert player.");
+  if (!insertErr) {
+    await supabase
+      .from("profiles")
+      .update({ last_scouted_date: serverDateStr })
+      .eq("user_id", user.id);
+
+    // Show player
+    nameEl.textContent = player.name;
+    roleEl.textContent = `Role: ${role}`;
+    ageEl.textContent = `Age: ${age_years}y ${age_days}d`;
+    skillEl.textContent = `Skill: ${player.skill_level}`;
+    img.src = player.image_url;
+
+    bar.batting.style.width = `${batting * 5}%`;
+    bar.bowling.style.width = `${bowling * 5}%`;
+    bar.keeping.style.width = `${keeping * 5}%`;
+    bar.fitness.style.width = `${(fitness / 100) * 100}%`;
+
+    card.classList.add("reveal");
+  } else {
+    alert("❌ Failed to scout.");
     console.log(insertErr);
-    return;
   }
-
-  // ✅ Update profile
-  const { error: updateErr } = await supabase
-    .from("profiles")
-    .update({ last_scouted_date: today })
-    .eq("user_id", user.id);
-
-  if (updateErr) {
-    alert("❌ Failed to update profile.");
-    console.log(updateErr);
-    return;
-  }
-
-  // 🎉 Show result
-  img.src = image_url;
-  nameEl.textContent = player.name;
-  roleEl.textContent = `Role: ${role}`;
-  ageEl.textContent = `Age: ${age_years}y ${age_days}d`;
-  skillEl.textContent = `Skill: ${skill_level}`;
-  card.style.display = "block";
-}
-
-// Call only ONCE after validations
-await scoutPlayer();
+};
