@@ -49,9 +49,9 @@ const { data: team } = await supabase
   .single();
 
 // ✅ Only allow scouting on Sunday (change to 3 for Wednesday if needed)
-if (serverDay !== 0) {
+if (serverDay !== 3) {
   btn.disabled = true;
-  btn.textContent = "Scouting locked until next Sunday";
+  btn.textContent = "Scouting locked until next Wednesday";
 }
 
 if (profile?.last_scouted_date) {
@@ -175,4 +175,5 @@ btn.onclick = async () => {
     console.error(insertErr);
   }
 };
+
 
