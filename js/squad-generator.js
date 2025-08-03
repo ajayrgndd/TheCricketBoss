@@ -6,7 +6,29 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
-// 🧠 Skill Calculators
+// 📊 Weighted Age Generator
+function getWeightedRandomAge() {
+  const ageBuckets = [
+    { min: 18, max: 19, weight: 2 },
+    { min: 20, max: 22, weight: 4 },
+    { min: 23, max: 26, weight: 3 },
+    { min: 27, max: 29, weight: 1 },
+    { min: 30, max: 32, weight: 1 },
+    { min: 33, max: 35, weight: 1 }
+  ];
+
+  const expanded = [];
+  for (const bucket of ageBuckets) {
+    for (let i = 0; i < bucket.weight; i++) {
+      expanded.push(bucket);
+    }
+  }
+
+  const selected = expanded[Math.floor(Math.random() * expanded.length)];
+  return Math.floor(Math.random() * (selected.max - selected.min + 1)) + selected.min;
+}
+
+// 🧠 Salary & Market Price Calculators
 function calculateSalary(player) {
   const baseSkill = player.batting + player.bowling + player.fitness;
   const ageFactor = 1 + ((player.age_years - 16) * 0.05);
@@ -113,18 +135,7 @@ export async function generateSquad(teamId) {
           break;
       }
 
-      // 🧓 Better age logic
-let age_years;
-const rand = Math.random();
-if (rand < 0.25) {
-  age_years = Math.floor(Math.random() * 4) + 18; // 18–21
-} else if (rand < 0.70) {
-  age_years = Math.floor(Math.random() * 5) + 22; // 22–26
-} else if (rand < 0.90) {
-  age_years = Math.floor(Math.random() * 4) + 27; // 27–30
-} else {
-  age_years = Math.floor(Math.random() * 5) + 31; // 31–35
-}
+      const age_years = getWeightedRandomAge();
       const age_days = Math.floor(Math.random() * 63);
       const fitness = age_years > 30 ? 95 : 100;
 
@@ -174,7 +185,7 @@ if (rand < 0.25) {
   if (insertErr) console.error("❌ Failed to insert squad:", insertErr.message);
   else console.log("✅ Squad inserted successfully");
 
-  // 🧹 Delete old bot stadium if exists
+  // 🧹 Delete old stadium if exists
   const { data: stadium } = await supabase
     .from("stadiums")
     .select("id")
@@ -187,16 +198,16 @@ if (rand < 0.25) {
     else console.log("🧹 Old stadium deleted");
   }
 
-  // 🏟️ Insert new stadium for real user
+  // 🏟️ Create new stadium
   const { error: stadiumErr } = await supabase.from("stadiums").insert({
     team_id: teamId,
     name: `${team_name} Arena`,
     capacity: 5000,
     level: "Local"
   });
+
   if (stadiumErr) console.error("❌ Stadium insert failed:", stadiumErr.message);
   else console.log("🏟️ New stadium created");
 
   return squad;
 }
-
