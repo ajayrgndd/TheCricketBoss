@@ -258,6 +258,7 @@
           <div class="player-meta">
             <strong>${p.name}</strong>
             <div class="sub">Role: ${p.role} | Region: ${p.region}</div>
+            <div class="sub">Style: ${p.batting_style || "–"} | ${p.bowling_style || "–"}</div>
             <div class="sub">Age: ${p.age_years}y ${p.age_days}d</div>
             <div class="sub">Form: ${p.form} | Fitness: ${getFitnessLevel(p.fitness)}</div>
             <div class="salary-market">Salary: ₹${p.salary?.toLocaleString() || 0} | Market: ₹${p.market_price?.toLocaleString() || 0}</div>
