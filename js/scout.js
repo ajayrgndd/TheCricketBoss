@@ -96,7 +96,7 @@ const agePool = [
   const { data: profile, error: profileErr } = await supabase
     .from("profiles")
     .select("region, last_scouted")
-    .eq("id", user.id)
+    .eq("user_id", user.id)
     .single();
 
   if (profileErr || !profile) {
@@ -204,3 +204,4 @@ const agePool = [
   document.getElementById("playerSalary").textContent = `Salary: ₹${player.salary.toLocaleString()}`;
   document.getElementById("playerPrice").textContent = `Market Price: ₹${player.market_price.toLocaleString()}`;
 })();
+
