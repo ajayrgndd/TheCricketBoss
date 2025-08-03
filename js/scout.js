@@ -137,7 +137,7 @@ btn.onclick = async () => {
     skills: [],
     batting_style,
     bowling_style,
-    image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replace(" ", "")}.png`
+    image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`
   };
 
   // ✅ Salary and Market Value from utils
@@ -175,3 +175,4 @@ btn.onclick = async () => {
     console.error(insertErr);
   }
 };
+
