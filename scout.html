@@ -2,99 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Scout Player</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+  <title>Scout Player</title>
+  <link rel="stylesheet" href="styles.css" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
     body {
-      margin: 0;
-      font-family: 'Montserrat', sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #003f5c, #2f4b7c);
       color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-
-    .card {
-      background: rgba(255, 255, 255, 0.1);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 15px;
-      padding: 25px;
-      width: 320px;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-      backdrop-filter: blur(10px);
       text-align: center;
-      transform: scale(0.9);
-      opacity: 0;
-      animation: fadeInUp 0.8s ease-out forwards;
+      padding: 30px 20px;
     }
 
-    @keyframes fadeInUp {
-      to {
-        transform: scale(1);
-        opacity: 1;
-      }
+    #status {
+      font-size: 1.3rem;
+      margin-top: 40px;
+      animation: fade 1.2s infinite alternate;
     }
 
-    .card img {
-      width: 120px;
+    @keyframes fade {
+      from { opacity: 0.4; }
+      to { opacity: 1; }
+    }
+
+    #player-card {
+      margin-top: 40px;
+      display: none;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    #player-img {
+      width: 100px;
       margin-bottom: 10px;
     }
 
-    h2 {
-      margin: 10px 0 5px;
-    }
-
-    .stat {
-      font-size: 14px;
-      margin: 3px 0;
-      color: #ddd;
-    }
-
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      font-size: 14px;
+    .btn {
+      margin-top: 20px;
+      background-color: #ffa600;
+      color: black;
       border: none;
-      background-color: #00c6ff;
-      color: white;
+      padding: 10px 20px;
+      font-size: 1rem;
       border-radius: 6px;
       cursor: pointer;
-      transition: background 0.3s;
     }
 
-    button:hover {
-      background-color: #007acc;
-    }
-
-    .loader {
-      color: #ccc;
-      font-size: 16px;
-      margin-bottom: 20px;
+    .btn:hover {
+      background-color: #ffcc00;
     }
   </style>
 </head>
 <body>
-  <div class="loader">🧭 Scouting the best young talent...</div>
-  <div class="card" id="playerCard" style="display: none;">
-    <img id="playerImg" src="" alt="Player Image" />
-    <h2 id="playerName"></h2>
-    <div class="stat" id="playerRole"></div>
-    <div class="stat" id="playerAge"></div>
-    <div class="stat" id="playerRegion"></div>
-    <div class="stat" id="playerStats"></div>
-    <div class="stat" id="playerSkill"></div>
-    <div class="stat" id="playerSalary"></div>
-    <div class="stat" id="playerPrice"></div>
-    <button onclick="window.location.href='team.html'">Go to Team</button>
+  <h2>🔍 Scout New Talent</h2>
+  <div id="status">🧭 Scouting the best young talent...</div>
+
+  <div id="player-card">
+    <img id="player-img" src="" alt="Player Role" />
+    <h3 id="player-name"></h3>
+    <p id="player-role"></p>
+    <p id="player-age"></p>
+    <p id="player-skill"></p>
+    <button class="btn" onclick="goToTeam()">View My Team</button>
   </div>
 
-  <script type="module" src="scout.js"></script>
+  <script type="module" src="./scout.js"></script>
+  <script>
+    function goToTeam() {
+      window.location.href = "team.html";
+    }
+  </script>
 </body>
 </html>
+
