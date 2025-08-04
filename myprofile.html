@@ -156,7 +156,7 @@
 
       const { data: players } = await supabase
         .from("players")
-        .select("age_years, market_value")
+        .select("age_years, market_price")
         .eq("team_id", team.id);
 
       const { data: matches } = await supabase
