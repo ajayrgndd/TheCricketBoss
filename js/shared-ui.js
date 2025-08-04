@@ -54,5 +54,66 @@ export function loadSharedUI({ manager_name, xp, coins, cash }) {
       await supabase.auth.signOut();
       window.location.href = "login.html";
     }
+    // XP rewards
+const XP_REWARDS = {
+  daily_login: 10,
+  scout_player: 10,
+  // More will be added later
+};
+
+// XP → Level mapping
+function getManagerLevel(xp) {
+  if (xp >= 13500) return "The Boss";
+  if (xp >= 8500) return "Ultimate";
+  if (xp >= 5500) return "World Class";
+  if (xp >= 3500) return "Supreme";
+  if (xp >= 1750) return "Master";
+  if (xp >= 750) return "Professional";
+  if (xp >= 250) return "Expert";
+  return "Beginner";
+}
+
+// Add XP to manager
+async function addManagerXP(userId, eventKey) {
+  const xpToAdd = XP_REWARDS[eventKey] || 0;
+  if (xpToAdd === 0) return;
+
+  // Get current XP
+  const { data: profile, error: fetchError } = await supabase
+    .from("profiles")
+    .select("xp")
+    .eq("id", userId)
+    .single();
+
+  if (fetchError) {
+    console.error("❌ XP Fetch Error:", fetchError.message);
+    return;
+  }
+
+  const newXP = (profile?.xp || 0) + xpToAdd;
+  const newLevel = getManagerLevel(newXP);
+
+  // Update XP and level in profiles
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ xp: newXP, level: newLevel })
+    .eq("user_id", userId);
+
+  if (updateError) {
+    console.error("❌ XP Update Error:", updateError.message);
+  } else {
+    console.log(`✅ XP +${xpToAdd} → ${newXP} (${newLevel})`);
+    updateTopbarXPLevel(newXP, newLevel); // update UI if needed
+  }
+}
+
+// Optional: update UI top bar
+function updateTopbarXPLevel(xp, level) {
+  const xpSpan = document.getElementById("xp-count");
+  const lvlSpan = document.getElementById("manager-level");
+  if (xpSpan) xpSpan.innerText = `XP: ${xp}`;
+  if (lvlSpan) lvlSpan.innerText = `Level: ${level}`;
+}
   });
 }
+
