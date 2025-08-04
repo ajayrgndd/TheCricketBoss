@@ -42,6 +42,21 @@
       max-width: 100%;
     }
 
+    .default-lineup-action {
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .default-lineup-action button {
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #00e676;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
     .player-card {
       background: #2d2a4a;
       border-radius: 12px;
@@ -167,16 +182,15 @@
   </style>
 </head>
 <body>
-  <!-- Add this inside the main body container of team.html -->
-<div class="default-lineup-action" style="text-align:center; margin: 20px 0;">
-  <a href="team-lineup.html?mode=default">
-    <button style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
-      🛡️ Set Default Lineup
-    </button>
-  </a>
-</div>
   <div class="main">
     <h2 style="padding: 0 16px;">Your Team</h2>
+
+    <!-- ✅ Set Default Lineup Button (now placed right under heading) -->
+    <div class="default-lineup-action">
+      <a href="team-lineup.html?mode=default">
+        <button>🛡️ Set Default Lineup</button>
+      </a>
+    </div>
 
     <div class="filter-bar">
       <select id="roleFilter">
@@ -191,7 +205,6 @@
 
     <div id="teamContainer"></div>
   </div>
-
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
