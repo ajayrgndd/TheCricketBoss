@@ -167,6 +167,14 @@
   </style>
 </head>
 <body>
+  <!-- Add this inside the main body container of team.html -->
+<div class="default-lineup-action" style="text-align:center; margin: 20px 0;">
+  <a href="team-lineup.html?mode=default">
+    <button style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
+      🛡️ Set Default Lineup
+    </button>
+  </a>
+</div>
   <div class="main">
     <h2 style="padding: 0 16px;">Your Team</h2>
 
@@ -183,14 +191,7 @@
 
     <div id="teamContainer"></div>
   </div>
-<!-- Add this inside the main body container of team.html -->
-<div class="default-lineup-action" style="text-align:center; margin: 20px 0;">
-  <a href="team-lineup.html?mode=default">
-    <button style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
-      🛡️ Set Default Lineup
-    </button>
-  </a>
-</div>
+
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
