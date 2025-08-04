@@ -1,3 +1,4 @@
+<!-- ✅ myprofile.html – Fixed manager name + logo upload -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,7 +56,7 @@
       margin: 10px auto;
       height: 100px;
       border-radius: 10px;
-      border: 0px solid #00e676;
+      border: none;
     }
     #logoInput {
       display: none;
@@ -77,7 +78,6 @@
   </style>
 </head>
 <body>
-  <!-- Top & Bottom bar auto-loaded -->
   <div class="main">
     <h2>👤 MANAGER PROFILE</h2>
 
@@ -118,7 +118,7 @@
   <script type="module">
     import { loadSharedUI } from './js/shared-ui.js';
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    
+
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
@@ -164,7 +164,7 @@
         .select("result, home_team_id, away_team_id")
         .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`);
 
-      // Shared top bar + nav
+      // ✅ Load top nav
       loadSharedUI({
         manager_name: profile.manager_name,
         xp: profile.xp,
@@ -172,15 +172,14 @@
         cash: profile.cash,
       });
 
-      // Fill profile info
-      document.getElementById("managerName").textContent = profile.manager_name;
+      // ✅ Fill profile data
+      document.getElementById("managerName").textContent = profile.manager_name || "–";
       document.getElementById("teamName").textContent = profile.team_name;
       document.getElementById("region").textContent = profile.region;
       document.getElementById("age").textContent = calculateAge(profile.dob);
       document.getElementById("level").textContent = getManagerLevel(profile.xp);
       document.getElementById("xpValue").textContent = `${profile.xp} XP`;
 
-      const level = getManagerLevel(profile.xp);
       const levels = {
         Beginner: 0, Expert: 250, Professional: 750, Master: 1750,
         Supreme: 3500, "World Class": 5500, Ultimate: 8500, "The Boss": 13500
@@ -190,48 +189,53 @@
       const pct = Math.round(((profile.xp - prevLvlXP) / (nextLvlXP - prevLvlXP)) * 100);
       document.getElementById("xpBar").style.width = `${pct}%`;
 
-      // Logo
-      document.getElementById("logoPreview").src = team.logo_url || "assets/default-logo.png";
+      // ✅ Logo Upload & Preview
+      const logoImg = document.getElementById("logoPreview");
+      logoImg.src = team.logo_url || "assets/default-logo.png";
+
       document.getElementById("logoInput").addEventListener("change", async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const path = `${team.id}/${file.name}`;
+
         const { error: uploadError } = await supabase.storage
           .from("team-logos")
           .upload(path, file, { upsert: true });
 
-        if (!uploadError) {
-          const { data: publicUrl, error } = supabase.storage
-  .from("team-logos")
-  .getPublicUrl(path);
-
-if (error) {
-  console.error("❌ Failed to get public URL:", error.message);
-} else {
-  console.log("✅ Got public URL:", publicUrl.publicUrl);
-}
-
-
-          await supabase.from("teams").update({ logo_url: publicUrl.publicUrl }).eq("id", team.id);
-          document.getElementById("logoPreview").src = publicUrl.publicUrl;
+        if (uploadError) {
+          console.error("❌ Upload error:", uploadError.message);
+          return;
         }
+
+        const { data: { publicUrl }, error: urlErr } = supabase
+          .storage.from("team-logos")
+          .getPublicUrl(path);
+
+        if (urlErr) {
+          console.error("❌ URL fetch error:", urlErr.message);
+          return;
+        }
+
+        await supabase
+          .from("teams")
+          .update({ logo_url: publicUrl })
+          .eq("id", team.id);
+
+        logoImg.src = publicUrl;
       });
 
-      // Activity snapshot
+      // ✅ Activity
       document.getElementById("lastLogin").textContent = profile.last_xp_login_date || "—";
       document.getElementById("lastScout").textContent = profile.last_scout_date || "—";
       document.getElementById("matchesPlayed").textContent = matches?.length ?? 0;
       document.getElementById("matchesWon").textContent = matches?.filter(m => m.result === team.id).length ?? 0;
 
-      // Avg Age
+      // ✅ Age + Value
       if (players?.length) {
         const avgAge = players.reduce((acc, p) => acc + (p.age_years || 0), 0) / players.length;
         document.getElementById("avgAge").textContent = avgAge.toFixed(1) + " yrs";
-      } else {
-        document.getElementById("avgAge").textContent = "—";
       }
 
-      // Team Value
       const marketValue = players?.reduce((acc, p) => acc + (p.market_price || 0), 0) || 0;
       const totalValue = marketValue + (team.cash || 0) + (profile.coins * 10) + (profile.xp * 0.25);
       document.getElementById("teamValue").textContent = `₹${Math.round(totalValue).toLocaleString()}`;
