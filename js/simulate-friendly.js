@@ -1,128 +1,87 @@
 // simulate-friendly.js
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const supabase = createClient(
-  'https://iukofcmatlfhfwcechdq.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
-);
+export async function simulateFriendlyMatch(supabase, homeTeamId, awayTeamId, options = {}) {
+  const { skipSimulation = false } = options;
 
-export async function simulateFriendlyMatch(user_id, opponent_team_id) {
-  // Get user's team
-  const { data: userTeam } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("owner_id", user_id)
-    .single();
-
-  const home_team_id = userTeam.id;
-  const away_team_id = opponent_team_id;
-
-  // Get players for both teams
-  const { data: homePlayers } = await supabase
-    .from("players")
-    .select("*")
-    .eq("team_id", home_team_id)
-    .limit(11);
-
-  const { data: awayPlayers } = await supabase
-    .from("players")
-    .select("*")
-    .eq("team_id", away_team_id)
-    .limit(11);
-
-  // Create match record
-  const { data: matchInsert, error: matchError } = await supabase
+  // Step 1: Insert match row
+  const { data: match, error: matchErr } = await supabase
     .from("matches")
     .insert({
-      home_team_id,
-      away_team_id,
-      status: "completed",
-      date: new Date().toISOString().split("T")[0],
-      type: "friendly"
+      home_team_id: homeTeamId,
+      away_team_id: awayTeamId,
+      type: "friendly",
+      date: new Date().toISOString(),
+      result: skipSimulation ? null : "pending"
     })
     .select()
     .single();
 
-  if (matchError) {
-    console.error("❌ Failed to create match:", matchError.message);
+  if (matchErr || !match) {
+    console.error("❌ Failed to create match:", matchErr?.message);
     return null;
   }
 
-  const match_id = matchInsert.id;
-
-  // Simulate match logic (2 innings: 10 overs each)
-  const events = [];
-  let ballId = 1;
-
-  function simulateInning(battingTeam, bowlingTeam, inningNum) {
-    let runs = 0;
-    let wickets = 0;
-    let over = 0;
-
-    for (let o = 1; o <= 10 && wickets < 10; o++) {
-      for (let b = 1; b <= 6 && wickets < 10; b++) {
-        const batter = battingTeam[wickets % battingTeam.length];
-        const bowler = bowlingTeam[(o + b) % bowlingTeam.length];
-
-        const battingSkill = batter.batting + Math.random() * 10;
-        const bowlingSkill = bowler.bowling + Math.random() * 10;
-        const outcome = battingSkill - bowlingSkill;
-
-        let commentary = "";
-        let runsThisBall = 0;
-        let out = false;
-
-        if (outcome < -5) {
-          out = true;
-          commentary = `${batter.name} is OUT! Bowled by ${bowler.name}`;
-          wickets++;
-        } else if (outcome < 0) {
-          runsThisBall = 0;
-          commentary = `${batter.name} defended the ball. Dot.`;
-        } else if (outcome < 5) {
-          runsThisBall = 1;
-          commentary = `${batter.name} takes a quick single.`;
-        } else if (outcome < 10) {
-          runsThisBall = 2;
-          commentary = `${batter.name} drives it! Two runs.`;
-        } else if (outcome < 15) {
-          runsThisBall = 4;
-          commentary = `${batter.name} smashes a FOUR!`;
-        } else {
-          runsThisBall = 6;
-          commentary = `${batter.name} hits a SIX! What a shot!`;
-        }
-
-        runs += runsThisBall;
-
-        events.push({
-          id: ballId++,
-          match_id,
-          inning: inningNum,
-          over: o,
-          ball: b,
-          commentary
-        });
-      }
-    }
-
-    return { runs, wickets };
+  if (skipSimulation) {
+    // Postpone simulation until after lineup is set
+    return match.id;
   }
 
-  const homeInnings = simulateInning(homePlayers, awayPlayers, 1);
-  const awayInnings = simulateInning(awayPlayers, homePlayers, 2);
+  // Step 2: Fetch lineups
+  const { data: homeLineup } = await supabase
+    .from("lineups")
+    .select("*")
+    .eq("match_id", match.id)
+    .eq("team_id", homeTeamId)
+    .single();
 
-  // Insert match events
-  const { error: eventError } = await supabase
-    .from("match_events")
-    .insert(events);
+  const { data: awayLineup } = await supabase
+    .from("lineups")
+    .select("*")
+    .eq("match_id", match.id)
+    .eq("team_id", awayTeamId)
+    .single();
 
-  if (eventError) {
-    console.error("❌ Error inserting match events:", eventError.message);
-    return null;
+  if (!homeLineup || !awayLineup) {
+    console.warn("⚠️ Lineups not found for both teams. Match left as pending.");
+    return match.id;
   }
 
-  // Done
-  console.log("✅ Friendly match simulated.");
-  return match_id;
+  // Step 3: Fetch players
+  const [homePlayersRes, awayPlayersRes] = await Promise.all([
+    supabase.from("players").select("*").in("id", homeLineup.playing_xi),
+    supabase.from("players").select("*").in("id", awayLineup.playing_xi)
+  ]);
+
+  const homePlayers = homePlayersRes.data || [];
+  const awayPlayers = awayPlayersRes.data || [];
+
+  // Step 4: Simulate match (basic logic)
+  function simulateScore(players, overs) {
+    const battingAvg = players.reduce((sum, p) => sum + p.batting, 0) / players.length;
+    const base = Math.round((battingAvg / 10) * overs * 6); // rough formula
+    return base + Math.floor(Math.random() * 21) - 10; // ±10 random
+  }
+
+  const homeScore = simulateScore(homePlayers, 20);
+  const awayScore = simulateScore(awayPlayers, 20);
+
+  let result = "tie";
+  if (homeScore > awayScore) result = "home_win";
+  else if (awayScore > homeScore) result = "away_win";
+
+  // Step 5: Update match result
+  const { error: updateErr } = await supabase
+    .from("matches")
+    .update({
+      result,
+      home_score: homeScore,
+      away_score: awayScore
+    })
+    .eq("id", match.id);
+
+  if (updateErr) {
+    console.error("❌ Failed to update match result:", updateErr.message);
+  }
+
+  return match.id;
 }
