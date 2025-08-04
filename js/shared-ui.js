@@ -21,35 +21,37 @@ export function loadSharedUI({ manager_name, xp, coins, cash }) {
   }
 
   async function addManagerXP(userId, eventKey) {
-    const xpToAdd = XP_REWARDS[eventKey] || 0;
-    if (xpToAdd === 0) return;
+  const xpToAdd = XP_REWARDS[eventKey] || 0;
+  if (xpToAdd === 0) return;
 
-    const { data: profile, error: fetchError } = await supabase
-      .from("profiles")
-      .select("xp")
-      .eq("user_id", userId)
-      .single();
+  // Get current XP
+  const { data: profile, error: fetchError } = await supabase
+    .from("profiles")
+    .select("xp")
+    .eq("user_id", userId)   // ✅ Corrected
+    .single();
 
-    if (fetchError) {
-      console.error("❌ XP Fetch Error:", fetchError.message);
-      return;
-    }
-
-    const newXP = (profile?.xp || 0) + xpToAdd;
-    const newLevel = getManagerLevel(newXP);
-
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ xp: newXP, level: newLevel })
-      .eq("user_id", userId);
-
-    if (updateError) {
-      console.error("❌ XP Update Error:", updateError.message);
-    } else {
-      console.log(`✅ XP +${xpToAdd} → ${newXP} (${newLevel})`);
-      updateTopbarXPLevel(newXP, newLevel);
-    }
+  if (fetchError) {
+    console.error("❌ XP Fetch Error:", fetchError.message);
+    return;
   }
+
+  const newXP = (profile?.xp || 0) + xpToAdd;
+  const newLevel = getManagerLevel(newXP);
+
+  // Update XP and level
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ xp: newXP, level: newLevel })
+    .eq("user_id", userId);   // ✅ Corrected
+
+  if (updateError) {
+    console.error("❌ XP Update Error:", updateError.message);
+  } else {
+    console.log(`✅ XP +${xpToAdd} → ${newXP} (${newLevel})`);
+    updateTopbarXPLevel(newXP, newLevel);
+  }
+}
 
   function updateTopbarXPLevel(xp, level) {
     const xpSpan = document.getElementById("xp-count");
@@ -121,5 +123,6 @@ export function loadSharedUI({ manager_name, xp, coins, cash }) {
   window.getManagerLevel = getManagerLevel;
   window.updateTopbarXPLevel = updateTopbarXPLevel;
 }
+
 
 
