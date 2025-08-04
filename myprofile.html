@@ -201,9 +201,16 @@
           .upload(path, file, { upsert: true });
 
         if (!uploadError) {
-          const { data: publicUrl } = supabase.storage
-            .from("team-logos")
-            .getPublicUrl(path);
+          const { data: publicUrl, error } = supabase.storage
+  .from("team-logos")
+  .getPublicUrl(path);
+
+if (error) {
+  console.error("❌ Failed to get public URL:", error.message);
+} else {
+  console.log("✅ Got public URL:", publicUrl.publicUrl);
+}
+
 
           await supabase.from("teams").update({ logo_url: publicUrl.publicUrl }).eq("id", team.id);
           document.getElementById("logoPreview").src = publicUrl.publicUrl;
