@@ -232,7 +232,7 @@ if (error) {
       }
 
       // Team Value
-      const marketValue = players?.reduce((acc, p) => acc + (p.market_value || 0), 0) || 0;
+      const marketValue = players?.reduce((acc, p) => acc + (p.market_price || 0), 0) || 0;
       const totalValue = marketValue + (team.cash || 0) + (profile.coins * 10) + (profile.xp * 0.25);
       document.getElementById("teamValue").textContent = `₹${Math.round(totalValue).toLocaleString()}`;
     }
