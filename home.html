@@ -6,7 +6,7 @@
   <title>Home – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    /* [Style unchanged — omitted for brevity] */
+    /* [Style unchanged — can keep your original styles here] */
   </style>
 </head>
 <body>
@@ -24,7 +24,7 @@
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI } from "./js/shared-ui.js";
+    import { loadSharedUI, addManagerXP } from "./js/shared-ui.js";
 
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
@@ -46,7 +46,7 @@
       }
 
       if (data?.last_xp_login_date !== today) {
-        await addManagerXP(userId, "daily_login");
+        await addManagerXP(supabase, userId, "daily_login");
 
         const { error: updateErr } = await supabase
           .from("profiles")
@@ -80,15 +80,16 @@
         return;
       }
 
-      // Load UI top bar + bottom nav
+      // ✅ Load shared UI with supabase passed in
       loadSharedUI({
+        supabase,
         manager_name: profile.manager_name,
         xp: profile.xp ?? 0,
         coins: profile.coins ?? 0,
         cash: profile.cash ?? 0
       });
 
-      // Daily XP
+      // ✅ Grant daily login XP
       await distributeDailyLoginXP(user.id);
 
       const { data: team } = await supabase
@@ -132,5 +133,3 @@
   </script>
 </body>
 </html>
-
-
