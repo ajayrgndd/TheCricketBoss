@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Match – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    body {
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .main {
+      padding: 80px 16px 90px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .team-vs {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #bbb;
+    }
+
+    .live-status {
+      text-align: center;
+      font-size: 16px;
+      color: #00e676;
+      margin-bottom: 10px;
+    }
+
+    .players-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .player-card {
+      background: #1f1f2f;
+      border-radius: 10px;
+      padding: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .player-card .name {
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .player-card .on-strike {
+      color: #00e676;
+    }
+
+    .player-card .sub {
+      font-size: 13px;
+      color: #aaa;
+      margin-top: 4px;
+    }
+
+    .commentary {
+      background: #1e1e1e;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .score {
+      text-align: center;
+      font-size: 20px;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      .players-section {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2>🏏 Live Match</h2>
+    <div class="team-vs" id="teamVs">Loading match...</div>
+    <div class="live-status">Live • 1st Innings</div>
+
+    <div class="score" id="liveScore">Team A 0/0 (0.0)</div>
+
+    <div class="players-section" id="battingCards">
+      <!-- Batter cards -->
+    </div>
+
+    <div class="players-section" id="bowlingCards">
+      <!-- Bowler cards -->
+    </div>
+
+    <div class="commentary" id="commentaryLog">
+      <!-- Ball-by-ball commentary -->
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { loadSharedUI } from './js/shared-ui.js';
+
+    const supabase = createClient(
+      'https://iukofcmatlfhfwcechdq.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = "login.html";
+
+    // Load manager top/bottom bars
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+
+    loadSharedUI({
+      manager_name: profile.manager_name,
+      xp: profile.xp,
+      coins: profile.coins,
+      cash: profile.cash
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const matchId = params.get("match_id");
+
+    if (!matchId) {
+      document.getElementById("teamVs").textContent = "Match ID missing!";
+      throw new Error("Missing match_id");
+    }
+
+    async function loadSimulationView() {
+      const { data: match } = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", matchId)
+        .single();
+
+      if (!match) return;
+
+      const { data: homeTeam } = await supabase
+        .from("teams")
+        .select("team_name")
+        .eq("id", match.home_team_id)
+        .single();
+
+      const { data: awayTeam } = await supabase
+        .from("teams")
+        .select("team_name")
+        .eq("id", match.away_team_id)
+        .single();
+
+      document.getElementById("teamVs").textContent = `${homeTeam.team_name} vs ${awayTeam.team_name}`;
+
+      // For now: placeholder player cards
+      renderPlayerCards();
+      addFakeCommentary("Welcome to the live match simulation!");
+    }
+
+    function renderPlayerCards() {
+      const batting = document.getElementById("battingCards");
+      const bowling = document.getElementById("bowlingCards");
+
+      batting.innerHTML = `
+        <div class="player-card">
+          <div class="name on-strike">* Rohit Sharma</div>
+          <div class="sub">Runs: 22 (18) | Batting: 75 | Form: 80 | Fitness: 85</div>
+        </div>
+        <div class="player-card">
+          <div class="name">Shubman Gill</div>
+          <div class="sub">Runs: 12 (9) | Batting: 72 | Form: 70 | Fitness: 90</div>
+        </div>
+      `;
+
+      bowling.innerHTML = `
+        <div class="player-card">
+          <div class="name">Jasprit Bumrah</div>
+          <div class="sub">Overs: 2.0 | Runs: 9 | Wkts: 1 | Bowling: 85 | Form: 78</div>
+        </div>
+        <div class="player-card">
+          <div class="name">Hardik Pandya</div>
+          <div class="sub">Overs: 1.0 | Runs: 6 | Wkts: 0 | Bowling: 72 | Form: 75</div>
+        </div>
+      `;
+    }
+
+    function addFakeCommentary(line) {
+      const log = document.getElementById("commentaryLog");
+      const entry = document.createElement("div");
+      entry.textContent = line;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    loadSimulationView();
+  </script>
+</body>
+</html>
