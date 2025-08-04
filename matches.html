@@ -142,9 +142,10 @@
       card.innerHTML = `
         <h4>🆚 vs ${opponent || 'Unknown'}</h4>
         <div class="match-meta">
-          ${match.is_friendly ? 'Friendly Match' : 'League Match'}<br/>
-          🗓 ${match.date} 🕒 ${match.time}
-        </div>
+  Match Type: <strong>${match.is_friendly ? 'FRIENDLY' : 'LEAGUE'}</strong><br/>
+  🗓 ${match.date} 🕒 ${match.time}
+</div>
+
         <div>Status: <strong>${match.status}</strong></div>
         <div class="match-actions">
           ${canSetLineup ? `<a href="team-lineup.html?match_id=${match.id}"><button class="btn">📝 Set Lineup</button></a>` : ''}
@@ -163,3 +164,4 @@
   </script>
 </body>
 </html>
+
