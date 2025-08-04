@@ -27,7 +27,7 @@ export function loadSharedUI({ manager_name, xp, coins, cash }) {
     const { data: profile, error: fetchError } = await supabase
       .from("profiles")
       .select("xp")
-      .eq("id", userId)
+      .eq("user_id", userId)
       .single();
 
     if (fetchError) {
@@ -41,7 +41,7 @@ export function loadSharedUI({ manager_name, xp, coins, cash }) {
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ xp: newXP, level: newLevel })
-      .eq("id", userId);
+      .eq("user_id", userId);
 
     if (updateError) {
       console.error("❌ XP Update Error:", updateError.message);
@@ -121,4 +121,5 @@ export function loadSharedUI({ manager_name, xp, coins, cash }) {
   window.getManagerLevel = getManagerLevel;
   window.updateTopbarXPLevel = updateTopbarXPLevel;
 }
+
 
