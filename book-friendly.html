@@ -74,90 +74,105 @@
 
   <button class="button" id="bookBtn" disabled>✅ Book Match</button>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    import { simulateFriendlyMatch } from './js/simulate-friendly.js';
+ <script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  import { simulateFriendlyMatch } from './js/simulate-friendly.js';
 
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
+  const supabase = createClient(
+    "https://iukofcmatlfhfwcechdq.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+  );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) window.location.href = "index.html";
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) window.location.href = "index.html";
 
-    const loadingDiv = document.getElementById("loading");
-    const select = document.getElementById("botSelect");
-    const previewBox = document.getElementById("botPreview");
-    const bookBtn = document.getElementById("bookBtn");
+  const loadingDiv = document.getElementById("loading");
+  const select = document.getElementById("botSelect");
+  const previewBox = document.getElementById("botPreview");
+  const bookBtn = document.getElementById("bookBtn");
 
-    const teamRes = await supabase.from("teams").select("id").eq("owner_id", user.id).single();
-    const myTeamId = teamRes?.data?.id;
+  const myTeamRes = await supabase.from("teams").select("id").eq("owner_id", user.id).single();
+  const myTeamId = myTeamRes?.data?.id;
 
-    let bots = [];
-    let selectedBot = null;
+  let opponents = [];
 
-    async function loadBots() {
-      const { data: botTeams } = await supabase
-        .from("teams")
-        .select("id, team_name")
-        .eq("is_bot", true)
-        .limit(20);
+  async function loadOpponents() {
+    const { data: botTeams } = await supabase
+      .from("teams")
+      .select("id, team_name, type")
+      .eq("type", "bot")
+      .limit(20);
 
-      bots = botTeams || [];
+    const { data: userTeams } = await supabase
+      .from("teams")
+      .select("id, team_name, type")
+      .eq("type", "user")
+      .neq("id", myTeamId) // Exclude self
+      .limit(20);
 
-      select.innerHTML = `<option value="">-- Select Bot Team --</option>`;
-      bots.forEach(bot => {
-        const opt = document.createElement("option");
-        opt.value = bot.id;
-        opt.textContent = bot.team_name;
-        select.appendChild(opt);
-      });
+    opponents = [...(botTeams || []), ...(userTeams || [])];
 
-      loadingDiv.style.display = "none";
+    select.innerHTML = `
+      <option value="">-- Select Opponent Team --</option>
+      <optgroup label="Bot Teams">
+        ${botTeams?.map(bot => `<option value="${bot.id}">${bot.team_name}</option>`).join("")}
+      </optgroup>
+      <optgroup label="User Teams">
+        ${userTeams?.map(user => `<option value="${user.id}">${user.team_name}</option>`).join("")}
+      </optgroup>
+    `;
+
+    loadingDiv.style.display = "none";
+  }
+
+  select.addEventListener("change", async (e) => {
+    const id = e.target.value;
+    const selectedTeam = opponents.find(t => t.id === id);
+    if (!selectedTeam) {
+      previewBox.style.display = "none";
+      bookBtn.disabled = true;
+      return;
     }
 
-    select.addEventListener("change", async (e) => {
-      const id = e.target.value;
-      selectedBot = bots.find(b => b.id === id);
-      if (!selectedBot) {
-        previewBox.style.display = "none";
-        bookBtn.disabled = true;
-        return;
-      }
+    const { data: players } = await supabase
+      .from("players")
+      .select("*")
+      .eq("team_id", selectedTeam.id);
 
-      const { data: players } = await supabase.from("players").select("*").eq("team_id", selectedBot.id);
-      const avgBat = (players.reduce((sum, p) => sum + p.batting, 0) / players.length).toFixed(1);
-      const avgBowl = (players.reduce((sum, p) => sum + p.bowling, 0) / players.length).toFixed(1);
+    const avgBat = (players.reduce((sum, p) => sum + p.batting, 0) / players.length).toFixed(1);
+    const avgBowl = (players.reduce((sum, p) => sum + p.bowling, 0) / players.length).toFixed(1);
 
-      document.getElementById("botTeamName").textContent = selectedBot.team_name;
-      document.getElementById("avgBat").textContent = avgBat;
-      document.getElementById("avgBowl").textContent = avgBowl;
+    document.getElementById("botTeamName").textContent = selectedTeam.team_name;
+    document.getElementById("avgBat").textContent = avgBat;
+    document.getElementById("avgBowl").textContent = avgBowl;
 
-      previewBox.style.display = "block";
+    previewBox.style.display = "block";
+    bookBtn.disabled = false;
+  });
+
+  bookBtn.addEventListener("click", async () => {
+    const selectedId = select.value;
+    const opponent = opponents.find(t => t.id === selectedId);
+
+    if (!opponent) return alert("Select a valid opponent.");
+
+    bookBtn.disabled = true;
+    bookBtn.textContent = "⌛ Booking...";
+
+    const matchId = await simulateFriendlyMatch(supabase, myTeamId, opponent.id);
+
+    if (matchId) {
+      alert("✅ Friendly Match Completed!");
+      window.location.href = `match-replay.html?match_id=${matchId}`;
+    } else {
+      alert("❌ Something went wrong.");
       bookBtn.disabled = false;
-    });
+      bookBtn.textContent = "✅ Book Match";
+    }
+  });
 
-    bookBtn.addEventListener("click", async () => {
-      if (!selectedBot) return alert("Select a bot opponent.");
+  loadOpponents();
+</script>
 
-      bookBtn.disabled = true;
-      bookBtn.textContent = "⌛ Booking...";
-
-      const matchId = await simulateFriendlyMatch(supabase, myTeamId, selectedBot.id, { skipSimulation: true });
-
-      if (matchId) {
-        localStorage.setItem("next_match_id", matchId);
-        alert("✅ Match booked! Now set your lineup.");
-        window.location.href = "team-lineup.html";
-      } else {
-        alert("❌ Something went wrong.");
-        bookBtn.disabled = false;
-        bookBtn.textContent = "✅ Book Match";
-      }
-    });
-
-    loadBots();
-  </script>
 </body>
 </html>
