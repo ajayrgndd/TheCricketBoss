@@ -1,3 +1,15 @@
+/* ==== RESET & BASE ==== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #1e1b3a;
+  color: white;
+}
+
 /* ==== GLOBAL NAVIGATION STYLES ==== */
 
 .top-bar, .bottom-nav {
@@ -26,7 +38,53 @@
   justify-content: space-around;
 }
 
+/* ==== LOGO + MANAGER SECTION ==== */
+
+.top-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-left img {
+  height: 28px;
+}
+
+.manager-name {
+  position: relative;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* ==== POPUP MENU ==== */
+.popup-menu {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  background: #fff;
+  color: #000;
+  border-radius: 8px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+  display: none;
+  flex-direction: column;
+  z-index: 1001;
+}
+
+.popup-menu button {
+  border: none;
+  background: none;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 500;
+}
+
+.popup-menu button:hover {
+  background: #eee;
+}
+
 /* ==== NAV LINKS ==== */
+
 a {
   color: white;
   text-decoration: none;
@@ -67,35 +125,9 @@ a:hover {
   text-shadow: 0 0 6px #00e676;
 }
 
-/* ==== MANAGER MENU ==== */
-.manager-name {
-  position: relative;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.popup-menu {
-  position: absolute;
-  top: 44px;
-  left: 0;
-  background: #fff;
-  color: #000;
-  border-radius: 8px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.25);
-  display: none;
-  flex-direction: column;
-  z-index: 1001;
-}
-
-.popup-menu button {
-  border: none;
-  background: none;
-  padding: 10px 16px;
-  cursor: pointer;
-  text-align: left;
-  font-weight: 500;
-}
-
-.popup-menu button:hover {
-  background: #eee;
+/* ==== MAIN CONTENT WRAPPER ==== */
+.main {
+  padding: 80px 16px 80px; /* top + bottom nav height spacing */
+  max-width: 700px;
+  margin: auto;
 }
