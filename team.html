@@ -42,6 +42,21 @@
       max-width: 100%;
     }
 
+    .default-lineup-action {
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .default-lineup-action button {
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #00e676;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
     .player-card {
       background: #2d2a4a;
       border-radius: 12px;
@@ -168,7 +183,19 @@
 </head>
 <body>
   <div class="main">
-    <h2 style="padding: 0 16px;">Your Team</h2>
+  <h2 style="padding: 0 16px;">Your Team</h2>
+
+  <!-- ✅ Set Default Lineup Button placed properly under the heading -->
+  <div class="default-lineup-action" style="text-align:center; margin: 16px 16px 0;">
+    <a href="team-lineup.html?mode=default">
+      <button style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
+        🛡️ Set Default Lineup
+      </button>
+    </a>
+  </div>
+
+  <!-- ... rest of the page content -->
+
 
     <div class="filter-bar">
       <select id="roleFilter">
