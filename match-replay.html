@@ -1,0 +1,20 @@
+<!-- match-replay.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Match Replay – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+</head>
+<body>
+  <h2>🏏 Match Replay</h2>
+  <p>Match ID: <span id="matchId"></span></p>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const matchId = urlParams.get('match_id');
+    document.getElementById('matchId').textContent = matchId ?? "Not found";
+  </script>
+</body>
+</html>
