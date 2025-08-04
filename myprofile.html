@@ -161,10 +161,10 @@
 
       const { data: matches } = await supabase
         .from("matches")
-        .select("*")
+        .select("result, home_team_id, away_team_id")
         .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`);
 
-      // Load top/bottom UI
+      // Shared top bar + nav
       loadSharedUI({
         manager_name: profile.manager_name,
         xp: profile.xp,
@@ -183,7 +183,7 @@
       const level = getManagerLevel(profile.xp);
       const levels = {
         Beginner: 0, Expert: 250, Professional: 750, Master: 1750,
-        Supreme: 3500, "World Class": 5500, Ultimate: 8500, "The Boss": 10000, Max: 13500
+        Supreme: 3500, "World Class": 5500, Ultimate: 8500, "The Boss": 13500
       };
       const nextLvlXP = Object.values(levels).find(x => x > profile.xp) || 13500;
       const prevLvlXP = Object.values(levels).reverse().find(x => x <= profile.xp) || 0;
@@ -210,20 +210,22 @@
         }
       });
 
-      // Last login + scout
+      // Activity snapshot
       document.getElementById("lastLogin").textContent = profile.last_xp_login_date || "—";
       document.getElementById("lastScout").textContent = profile.last_scout_date || "—";
+      document.getElementById("matchesPlayed").textContent = matches?.length ?? 0;
+      document.getElementById("matchesWon").textContent = matches?.filter(m => m.result === team.id).length ?? 0;
 
-      // Match stats
-      document.getElementById("matchesPlayed").textContent = matches.length;
-      document.getElementById("matchesWon").textContent = matches.filter(m => m.result === team.id).length;
+      // Avg Age
+      if (players?.length) {
+        const avgAge = players.reduce((acc, p) => acc + (p.age_years || 0), 0) / players.length;
+        document.getElementById("avgAge").textContent = avgAge.toFixed(1) + " yrs";
+      } else {
+        document.getElementById("avgAge").textContent = "—";
+      }
 
-      // Avg squad age
-      const avgAge = players.reduce((acc, p) => acc + p.age_years, 0) / players.length;
-      document.getElementById("avgAge").textContent = avgAge.toFixed(1) + " yrs";
-
-      // Total team value
-      const marketValue = players.reduce((acc, p) => acc + (p.market_value || 0), 0);
+      // Team Value
+      const marketValue = players?.reduce((acc, p) => acc + (p.market_value || 0), 0) || 0;
       const totalValue = marketValue + (team.cash || 0) + (profile.coins * 10) + (profile.xp * 0.25);
       document.getElementById("teamValue").textContent = `₹${Math.round(totalValue).toLocaleString()}`;
     }
