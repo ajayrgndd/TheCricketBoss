@@ -10,12 +10,12 @@
       background: #1e1b3a;
       color: white;
       font-family: sans-serif;
-      padding-bottom: 80px;
+      padding-bottom: 90px;
     }
 
     h2 {
       text-align: center;
-      margin-top: 20px;
+      margin: 20px 0 10px;
     }
 
     .player-card {
@@ -28,7 +28,6 @@
       align-items: center;
       box-shadow: 0 4px 10px rgba(0,0,0,0.4);
       border: 2px solid transparent;
-      cursor: pointer;
     }
 
     .player-card.selected {
@@ -49,12 +48,11 @@
     .meta h3 {
       margin: 0;
       font-size: 18px;
-      color: #fff;
     }
 
     .meta .sub {
       font-size: 13px;
-      color: #bbb;
+      color: #ccc;
     }
 
     .skills {
@@ -69,7 +67,21 @@
       padding: 4px 8px;
       border-radius: 6px;
       font-size: 13px;
-      color: #ccc;
+    }
+
+    .order-inputs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .order-inputs input {
+      width: 36px;
+      padding: 4px;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid #888;
     }
 
     .save-btn {
@@ -110,26 +122,27 @@
     const saveBtn = document.getElementById("saveBtn");
 
     const { data: players } = await supabase.from("players").select("*").eq("team_id", teamId);
-
-    // Fetch default lineup if exists
-    const { data: existing } = await supabase
-      .from("default_lineups")
-      .select("player_ids")
-      .eq("team_id", teamId)
-      .single();
+    const { data: existing } = await supabase.from("default_lineups").select("*").eq("team_id", teamId).single();
 
     let selectedPlayerIds = new Set();
+    let battingOrder = {};
+    let bowlingOrder = {};
 
-    if (existing?.player_ids?.length) {
+    if (existing?.player_ids?.length === 11) {
       selectedPlayerIds = new Set(existing.player_ids);
+      (existing.batting_order || []).forEach((id, idx) => battingOrder[id] = idx + 1);
+      (existing.bowling_order || []).forEach((id, idx) => bowlingOrder[id] = idx + 1);
     } else {
-      // Auto-select best top 11
-      const ranked = [...players].sort((a, b) => {
-        const aTotal = a.batting + a.bowling + a.keeping + a.experience + a.form + a.fitness;
-        const bTotal = b.batting + b.bowling + b.keeping + b.experience + b.form + b.fitness;
-        return bTotal - aTotal;
+      const ranked = [...players].sort((a, b) => (
+        (b.batting + b.bowling + b.experience + b.form + b.fitness) -
+        (a.batting + a.bowling + a.experience + a.form + a.fitness)
+      ));
+      const top11 = ranked.slice(0, 11);
+      top11.forEach((p, i) => {
+        selectedPlayerIds.add(p.id);
+        battingOrder[p.id] = i + 1;
+        if (i < 5) bowlingOrder[p.id] = i + 1;
       });
-      selectedPlayerIds = new Set(ranked.slice(0, 11).map(p => p.id));
     }
 
     function getSkillLevel(val) {
@@ -146,13 +159,17 @@
 
     function render() {
       playerList.innerHTML = "";
+
       for (const p of players) {
+        const isSelected = selectedPlayerIds.has(p.id);
         const div = document.createElement("div");
-        div.className = "player-card";
-        if (selectedPlayerIds.has(p.id)) div.classList.add("selected");
+        div.className = "player-card" + (isSelected ? " selected" : "");
+
+        const batVal = battingOrder[p.id] || "";
+        const bowlVal = bowlingOrder[p.id] || "";
 
         div.innerHTML = `
-          <img src="${p.image_url}" alt="${p.role}" />
+          <img src="${p.image_url}" />
           <div class="meta">
             <h3>${p.name}</h3>
             <div class="sub">Role: ${p.role} | Age: ${p.age_years}y ${p.age_days}d</div>
@@ -162,45 +179,78 @@
               <div class="skill">Skill1: ${p.skill1 || '–'}</div>
               <div class="skill">Skill2: ${p.skill2 || '–'}</div>
             </div>
+            ${isSelected ? `
+              <div class="order-inputs">
+                <label>Bat:</label>
+                <input type="number" min="1" max="11" value="${batVal}" data-type="bat" data-id="${p.id}">
+                <label>Bowl:</label>
+                <input type="number" min="1" max="5" value="${bowlVal}" data-type="bowl" data-id="${p.id}">
+              </div>
+            ` : ''}
           </div>
         `;
 
-        div.addEventListener("click", () => {
+        div.addEventListener("click", (e) => {
+          // ignore clicks on inputs
+          if (e.target.tagName === 'INPUT') return;
+
           if (selectedPlayerIds.has(p.id)) {
             selectedPlayerIds.delete(p.id);
+            delete battingOrder[p.id];
+            delete bowlingOrder[p.id];
           } else {
-            if (selectedPlayerIds.size >= 11) {
-              alert("❌ Only 11 players can be selected!");
-              return;
-            }
+            if (selectedPlayerIds.size >= 11) return alert("Only 11 players allowed.");
             selectedPlayerIds.add(p.id);
+            battingOrder[p.id] = selectedPlayerIds.size;
           }
           render();
         });
 
         playerList.appendChild(div);
       }
+
+      // Reattach input listeners
+      document.querySelectorAll('input[data-type]').forEach(input => {
+        input.addEventListener("input", (e) => {
+          const id = e.target.dataset.id;
+          const type = e.target.dataset.type;
+          const val = parseInt(e.target.value);
+          if (!val || val < 1 || (type === 'bat' && val > 11) || (type === 'bowl' && val > 5)) return;
+
+          if (type === 'bat') battingOrder[id] = val;
+          else bowlingOrder[id] = val;
+        });
+      });
     }
 
     saveBtn.addEventListener("click", async () => {
       if (selectedPlayerIds.size !== 11) {
-        alert("❌ You must select exactly 11 players.");
+        alert("❌ Select exactly 11 players.");
         return;
       }
 
-      const { error } = await supabase
-        .from("default_lineups")
-        .upsert({
-          team_id: teamId,
-          player_ids: [...selectedPlayerIds],
-          updated_at: new Date().toISOString()
-        });
+      const selectedIds = [...selectedPlayerIds];
+
+      const sortedBat = [...selectedIds].sort((a, b) => (battingOrder[a] || 99) - (battingOrder[b] || 99));
+      const sortedBowl = [...selectedIds].filter(id => bowlingOrder[id]).sort((a, b) => bowlingOrder[a] - bowlingOrder[b]);
+
+      if (new Set(Object.values(battingOrder)).size !== 11) {
+        return alert("❌ Batting order must have unique 1–11.");
+      }
+
+      const { error } = await supabase.from("default_lineups").upsert({
+        team_id: teamId,
+        player_ids: selectedIds,
+        batting_order: sortedBat,
+        bowling_order: sortedBowl,
+        updated_at: new Date().toISOString()
+      });
 
       if (error) {
+        console.error(error);
         alert("❌ Failed to save lineup.");
-        console.error(error.message);
       } else {
-        alert("✅ Default Lineup Saved!");
+        alert("✅ Default lineup saved!");
         window.location.href = "team.html";
       }
     });
