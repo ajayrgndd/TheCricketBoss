@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Your Matches – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #121212;
+      color: white;
+    }
+
+    .main {
+      padding-top: 80px;
+      padding-bottom: 90px;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    h2 {
+      padding: 0 16px;
+    }
+
+    .match-section {
+      margin: 30px 0;
+      padding: 0 16px;
+    }
+
+    .match-card {
+      background: #1e1e2f;
+      margin-bottom: 16px;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .match-card h4 {
+      margin: 0 0 8px;
+    }
+
+    .match-meta {
+      font-size: 14px;
+      color: #ccc;
+      margin-bottom: 8px;
+    }
+
+    .match-actions {
+      margin-top: 10px;
+    }
+
+    .btn {
+      background: #00e676;
+      color: black;
+      padding: 8px 14px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 8px;
+    }
+
+    .btn:disabled {
+      background: gray;
+      cursor: not-allowed;
+    }
+
+    .no-match {
+      color: #888;
+      font-style: italic;
+      text-align: center;
+      padding: 40px 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2>📅 Upcoming Matches</h2>
+    <div class="match-section" id="upcomingContainer"></div>
+
+    <h2>📜 Completed Matches</h2>
+    <div class="match-section" id="completedContainer"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { loadSharedUI } from './js/shared-ui.js';
+
+    const supabase = createClient(
+      'https://iukofcmatlfhfwcechdq.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) window.location.href = 'login.html';
+
+    const profileRes = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    loadSharedUI({
+      manager_name: profileRes.data.manager_name,
+      xp: profileRes.data.xp,
+      coins: profileRes.data.coins,
+      cash: profileRes.data.cash
+    });
+
+    const teamRes = await supabase
+      .from('teams')
+      .select('id, team_name')
+      .eq('owner_id', user.id)
+      .single();
+
+    const myTeamId = teamRes.data.id;
+
+    const { data: matches } = await supabase
+      .from('matches')
+      .select('*, home_team:home_team_id(team_name), away_team:away_team_id(team_name)')
+      .or(`home_team_id.eq.${myTeamId},away_team_id.eq.${myTeamId}`)
+      .order('date', { ascending: false });
+
+    const upcomingContainer = document.getElementById('upcomingContainer');
+    const completedContainer = document.getElementById('completedContainer');
+
+    const now = new Date();
+
+    matches.forEach(match => {
+      const matchDate = new Date(`${match.date}T${match.time}`);
+      const opponent = match.home_team_id === myTeamId ? match.away_team?.team_name : match.home_team?.team_name;
+      const isHome = match.home_team_id === myTeamId;
+      const isUpcoming = matchDate > now;
+      const lockedTime = new Date(matchDate.getTime() - 75 * 60000); // 1h15m before
+      const canSetLineup = isHome && now < lockedTime && match.status === 'scheduled';
+
+      const container = isUpcoming ? upcomingContainer : completedContainer;
+      const card = document.createElement('div');
+      card.className = 'match-card';
+      card.innerHTML = `
+        <h4>🆚 vs ${opponent || 'Unknown'}</h4>
+        <div class="match-meta">
+          ${match.is_friendly ? 'Friendly Match' : 'League Match'}<br/>
+          🗓 ${match.date} 🕒 ${match.time}
+        </div>
+        <div>Status: <strong>${match.status}</strong></div>
+        <div class="match-actions">
+          ${canSetLineup ? `<a href="team-lineup.html?match_id=${match.id}"><button class="btn">📝 Set Lineup</button></a>` : ''}
+          ${!isUpcoming && match.match_result ? `<a href="match-replay.html?match_id=${match.id}"><button class="btn">🎥 View Replay</button></a>` : ''}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    if (!upcomingContainer.children.length) {
+      upcomingContainer.innerHTML = '<div class="no-match">No upcoming matches.</div>';
+    }
+    if (!completedContainer.children.length) {
+      completedContainer.innerHTML = '<div class="no-match">No matches played yet.</div>';
+    }
+  </script>
+</body>
+</html>
