@@ -7,10 +7,10 @@
   <link rel="stylesheet" href="styles/global.css" />
   <style>
     body {
+      margin: 0;
       background: #1e1b3a;
       color: white;
       font-family: 'Segoe UI', sans-serif;
-      margin: 0;
     }
     .main {
       padding: 80px 16px 90px;
@@ -18,173 +18,228 @@
       margin: auto;
     }
     h2 {
-      margin-bottom: 20px;
       text-align: center;
+      margin-bottom: 20px;
     }
-    .profile-info {
+    .section {
       background: #2d2a4a;
-      padding: 20px;
+      padding: 16px;
       border-radius: 10px;
       margin-bottom: 20px;
     }
-    .profile-info div {
-      margin-bottom: 10px;
+    .section h3 {
+      margin-top: 0;
+      border-bottom: 1px solid #444;
+      padding-bottom: 6px;
     }
-    .label {
-      color: #bbb;
-      font-size: 14px;
-    }
-    .value {
-      font-size: 16px;
-      font-weight: bold;
-      color: #00e676;
-    }
-    .actions {
+    .info-row {
       display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 30px;
+      justify-content: space-between;
+      margin: 6px 0;
     }
-    .actions button {
-      padding: 10px 16px;
-      font-size: 15px;
-      border: none;
+    .progress-bar {
+      height: 10px;
+      background: #444;
       border-radius: 6px;
-      cursor: pointer;
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #00e676;
+      transition: width 0.5s ease;
+    }
+    #logoPreview {
+      display: block;
+      margin: 10px auto;
+      height: 100px;
+      border-radius: 10px;
+      border: 0px solid #00e676;
+    }
+    #logoInput {
+      display: none;
+    }
+    .btn {
       background: #00e676;
       color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn-block {
+      width: 100%;
+      margin-top: 14px;
     }
   </style>
 </head>
 <body>
+  <!-- Top & Bottom bar auto-loaded -->
   <div class="main">
     <h2>👤 Manager Profile</h2>
-    <div class="profile-info">
-      <div><span class="label">Manager Name:</span><br><span id="managerName" class="value">...</span></div>
-      <div><span class="label">Date of Birth:</span><br><span id="dob" class="value">...</span></div>
-      <div><span class="label">Manager Level:</span><br><span id="level" class="value">...</span></div>
-      <div><span class="label">XP Progress:</span><br><progress id="xpProgress" value="0" max="100"></progress></div>
-      <div><span class="label">Avg Squad Age:</span><br><span id="avgAge" class="value">...</span></div>
-      <div><span class="label">Total Team Value:</span><br><span id="teamValue" class="value">...</span></div>
+
+    <div class="section" id="profileSection">
+      <h3>Profile Info</h3>
+      <div class="info-row"><span>Manager:</span> <span id="managerName">–</span></div>
+      <div class="info-row"><span>Team:</span> <span id="teamName">–</span></div>
+      <div class="info-row"><span>Region:</span> <span id="region">–</span></div>
+      <div class="info-row"><span>Age:</span> <span id="age">–</span></div>
+      <div class="info-row"><span>Level:</span> <span id="level">–</span></div>
+      <div class="info-row"><span>XP:</span> <span id="xpValue">–</span></div>
+      <div class="progress-bar"><div id="xpBar" class="progress-fill"></div></div>
     </div>
 
-    <div class="actions">
-      <button onclick="window.location.href='change-password.html'">Change Password</button>
-      <button onclick="document.getElementById('logoInput').click()">Change Team Logo</button>
-      <input type="file" id="logoInput" accept="image/*" style="display:none" />
-      <button onclick="logout()">Logout</button>
+    <div class="section">
+      <h3>Team Logo</h3>
+      <img id="logoPreview" src="" alt="Team Logo" />
+      <input type="file" id="logoInput" accept="image/*" />
+      <button class="btn" onclick="document.getElementById('logoInput').click()">Change Logo</button>
+    </div>
+
+    <div class="section">
+      <h3>Activity Snapshot</h3>
+      <div class="info-row"><span>Last Login:</span> <span id="lastLogin">–</span></div>
+      <div class="info-row"><span>Last Scout:</span> <span id="lastScout">–</span></div>
+      <div class="info-row"><span>Matches Played:</span> <span id="matchesPlayed">–</span></div>
+      <div class="info-row"><span>Matches Won:</span> <span id="matchesWon">–</span></div>
+      <div class="info-row"><span>Avg Squad Age:</span> <span id="avgAge">–</span></div>
+      <div class="info-row"><span>Total Team Value:</span> <span id="teamValue">–</span></div>
+    </div>
+
+    <div class="section">
+      <button class="btn btn-block" onclick="window.location.href='change-password.html'">Change Password</button>
+      <button class="btn btn-block" onclick="logout()">Logout</button>
     </div>
   </div>
 
   <script type="module">
+    import { loadSharedUI } from './js/shared-ui.js';
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI } from "./js/shared-ui.js";
+    
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
 
-    const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) location.href = "login.html";
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    const { data: team } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("owner_id", user.id)
-      .single();
-
-    const { data: players } = await supabase
-      .from("players")
-      .select("age_years, age_days, market_value")
-      .eq("team_id", team.id);
-
-    // Load shared top/bottom UI
-    loadSharedUI({
-      manager_name: profile.manager_name,
-      xp: profile.xp ?? 0,
-      coins: profile.coins ?? 0,
-      cash: profile.cash ?? 0
-    });
-
-    // Set Manager info
-    document.getElementById("managerName").textContent = profile.manager_name;
-    document.getElementById("dob").textContent = profile.dob || "N/A";
-    document.getElementById("level").textContent = profile.level || "Beginner";
-
-    // XP Progress Bar
-    const currentXP = profile.xp || 0;
-    const levelXP = {
-      "Beginner": 0,
-      "Expert": 250,
-      "Professional": 750,
-      "Master": 1750,
-      "Supreme": 3500,
-      "World Class": 5500,
-      "Ultimate": 8500,
-      "The Boss": 10000
-    };
-
-    const level = profile.level || "Beginner";
-    const nextLevel = Object.entries(levelXP).find(([lvl, xp]) => xp > currentXP);
-    const maxXP = nextLevel ? nextLevel[1] : currentXP + 1000;
-    const progress = ((currentXP - levelXP[level]) / (maxXP - levelXP[level])) * 100;
-
-    document.getElementById("xpProgress").value = progress;
-    document.getElementById("xpProgress").max = 100;
-
-    // Average Age Calculation
-    if (players?.length > 0) {
-      let totalYears = 0;
-      players.forEach(p => {
-        totalYears += (p.age_years + p.age_days / 63);
-      });
-      const avg = totalYears / players.length;
-      document.getElementById("avgAge").textContent = `${avg.toFixed(1)} yrs`;
+    function getManagerLevel(xp) {
+      if (xp >= 13500) return "The Boss";
+      if (xp >= 8500) return "Ultimate";
+      if (xp >= 5500) return "World Class";
+      if (xp >= 3500) return "Supreme";
+      if (xp >= 1750) return "Master";
+      if (xp >= 750) return "Professional";
+      if (xp >= 250) return "Expert";
+      return "Beginner";
     }
 
-    // Total Team Value = market_value sum + virtual_cash + coins*10 + xp/100
-    const playerValue = players.reduce((sum, p) => sum + (p.market_value || 0), 0);
-    const totalValue = playerValue + (profile.cash || 0) + (profile.coins * 10) + Math.floor(profile.xp / 100);
-    document.getElementById("teamValue").textContent = `₹${totalValue.toLocaleString()}`;
-
-    // Logo upload
-    document.getElementById("logoInput").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const fileName = `team-logos/${user.id}-${Date.now()}.png`;
-      const { error: uploadErr } = await supabase.storage
-        .from("public")
-        .upload(fileName, file, {
-          contentType: file.type,
-          upsert: true
-        });
-
-      if (uploadErr) {
-        alert("❌ Upload failed.");
-        return;
-      }
-
-      const logoUrl = `https://iukofcmatlfhfwcechdq.supabase.co/storage/v1/object/public/public/${fileName}`;
-
-      await supabase
-        .from("teams")
-        .update({ logo_url: logoUrl })
-        .eq("id", team.id);
-
-      alert("✅ Logo updated!");
-    });
-
-    // Logout
     async function logout() {
       await supabase.auth.signOut();
-      location.href = "login.html";
+      window.location.href = "login.html";
     }
+
+    async function main() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return location.href = "login.html";
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id).single();
+
+      const { data: team } = await supabase
+        .from("teams")
+        .select("*")
+        .eq("owner_id", user.id).single();
+
+      const { data: players } = await supabase
+        .from("players")
+        .select("age_years, market_value")
+        .eq("team_id", team.id);
+
+      const { data: matches } = await supabase
+        .from("matches")
+        .select("*")
+        .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`);
+
+      // Load top/bottom UI
+      loadSharedUI({
+        manager_name: profile.manager_name,
+        xp: profile.xp,
+        coins: profile.coins,
+        cash: profile.cash,
+      });
+
+      // Fill profile info
+      document.getElementById("managerName").textContent = profile.manager_name;
+      document.getElementById("teamName").textContent = profile.team_name;
+      document.getElementById("region").textContent = profile.region;
+      document.getElementById("age").textContent = calculateAge(profile.dob);
+      document.getElementById("level").textContent = getManagerLevel(profile.xp);
+      document.getElementById("xpValue").textContent = `${profile.xp} XP`;
+
+      const level = getManagerLevel(profile.xp);
+      const levels = {
+        Beginner: 0, Expert: 250, Professional: 750, Master: 1750,
+        Supreme: 3500, "World Class": 5500, Ultimate: 8500, "The Boss": 10000, Max: 13500
+      };
+      const nextLvlXP = Object.values(levels).find(x => x > profile.xp) || 13500;
+      const prevLvlXP = Object.values(levels).reverse().find(x => x <= profile.xp) || 0;
+      const pct = Math.round(((profile.xp - prevLvlXP) / (nextLvlXP - prevLvlXP)) * 100);
+      document.getElementById("xpBar").style.width = `${pct}%`;
+
+      // Logo
+      document.getElementById("logoPreview").src = team.logo_url || "assets/default-logo.png";
+      document.getElementById("logoInput").addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const path = `${team.id}/${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from("team-logos")
+          .upload(path, file, { upsert: true });
+
+        if (!uploadError) {
+          const { data: publicUrl } = supabase.storage
+            .from("team-logos")
+            .getPublicUrl(path);
+
+          await supabase.from("teams").update({ logo_url: publicUrl.publicUrl }).eq("id", team.id);
+          document.getElementById("logoPreview").src = publicUrl.publicUrl;
+        }
+      });
+
+      // Last login + scout
+      document.getElementById("lastLogin").textContent = profile.last_xp_login_date || "—";
+      document.getElementById("lastScout").textContent = profile.last_scout_date || "—";
+
+      // Match stats
+      document.getElementById("matchesPlayed").textContent = matches.length;
+      document.getElementById("matchesWon").textContent = matches.filter(m => m.result === team.id).length;
+
+      // Avg squad age
+      const avgAge = players.reduce((acc, p) => acc + p.age_years, 0) / players.length;
+      document.getElementById("avgAge").textContent = avgAge.toFixed(1) + " yrs";
+
+      // Total team value
+      const marketValue = players.reduce((acc, p) => acc + (p.market_value || 0), 0);
+      const totalValue = marketValue + (team.cash || 0) + (profile.coins * 10) + (profile.xp * 0.25);
+      document.getElementById("teamValue").textContent = `₹${Math.round(totalValue).toLocaleString()}`;
+    }
+
+    function calculateAge(dobStr) {
+      const dob = new Date(dobStr);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      if (
+        today.getMonth() < dob.getMonth() ||
+        (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())
+      ) age--;
+      return `${age} yrs`;
+    }
+
+    main();
   </script>
 </body>
 </html>
