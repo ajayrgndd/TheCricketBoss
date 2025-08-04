@@ -6,7 +6,43 @@
   <title>Home – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    /* [Style unchanged — can keep your original styles here] */
+    body { background-color: #121212; color: #fff; font-family: sans-serif; }
+
+    .main {
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background: #00e676;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:disabled {
+      background: gray;
+      cursor: not-allowed;
+    }
+
+    .preparation-section, .friendly-section {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .friendly-section h3 {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -15,10 +51,16 @@
 
   <div class="main">
     <h2>Welcome back!</h2>
+
     <div class="preparation-section">
       <h3>Match Preparation</h3>
       <div id="trainingStatus">Checking training status...</div>
       <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
+    </div>
+
+    <div class="friendly-section">
+      <h3>Want a Practice Game?</h3>
+      <a href="book-friendly.html"><button>📖 Book Friendly Match</button></a>
     </div>
   </div>
 
@@ -80,7 +122,6 @@
         return;
       }
 
-      // ✅ Load shared UI with supabase passed in
       loadSharedUI({
         supabase,
         manager_name: profile.manager_name,
@@ -89,7 +130,6 @@
         cash: profile.cash ?? 0
       });
 
-      // ✅ Grant daily login XP
       await distributeDailyLoginXP(user.id);
 
       const { data: team } = await supabase
