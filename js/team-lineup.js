@@ -1,5 +1,21 @@
+import { loadSharedUI } from './shared-ui.js';
+
 document.addEventListener("DOMContentLoaded", async () => {
-  loadSharedUI();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("manager_name, xp, coins, cash")
+    .eq("user_id", user.id)
+    .single();
+
+  loadSharedUI({
+    supabase,
+    manager_name: profile.manager_name,
+    xp: profile.xp,
+    coins: profile.coins,
+    cash: profile.cash,
+  });
 
   const players = await fetchUserPlayers();
   if (!players.length) return;
@@ -12,13 +28,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function fetchUserPlayers() {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    alert("Please log in first.");
-    window.location.href = "login.html";
-    return [];
-  }
+  const { data: { user } } = await supabase.auth.getUser();
 
   const { data, error } = await supabase
     .from("players")
