@@ -1,12 +1,14 @@
 // team-lineup.js
 
 document.addEventListener("DOMContentLoaded", async () => {
-  loadSharedUI(); // Load header and footer
+  loadSharedUI();
 
   const players = await fetchUserPlayers();
   if (!players.length) return;
 
-  renderPlayers(players);
+  const lineupData = await fetchSavedLineup();
+  renderPlayers(players, lineupData);
+  enableDragDrop();
 
   document.getElementById("save-lineup-btn").addEventListener("click", () => saveLineup(players));
 });
@@ -26,22 +28,38 @@ async function fetchUserPlayers() {
     .eq("user_id", user.id);
 
   if (error) {
-    console.error("❌ Error fetching players:", error);
-    alert("Failed to load your players.");
-    return [];
-  }
-
-  if (data.length < 11) {
-    alert("You need at least 11 players to set your lineup.");
+    alert("Failed to load players.");
     return [];
   }
 
   return data;
 }
 
-function renderPlayers(allPlayers) {
-  const playing11 = allPlayers.slice(0, 11);
-  const bench = allPlayers.slice(11);
+async function fetchSavedLineup() {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: teamData } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  const { data: lineup } = await supabase
+    .from("lineups")
+    .select("*")
+    .eq("team_id", teamData.id)
+    .single();
+
+  return lineup || null;
+}
+
+function renderPlayers(players, lineupData) {
+  let playing11 = players.slice(0, 11);
+  const bench = players.slice(11);
+
+  if (lineupData?.batting_order?.length > 0) {
+    const idToPlayer = Object.fromEntries(players.map(p => [p.id, p]));
+    playing11 = lineupData.batting_order.map(id => idToPlayer[id]).filter(Boolean);
+  }
 
   const playingContainer = document.getElementById("playing11-list");
   const benchContainer = document.getElementById("bench-list");
@@ -58,6 +76,11 @@ function renderPlayers(allPlayers) {
     const card = createPlayerCard(player, false);
     benchContainer.appendChild(card);
   });
+
+  if (lineupData?.locked) {
+    document.getElementById("save-lineup-btn").disabled = true;
+    document.getElementById("save-lineup-btn").innerText = "Lineup Locked";
+  }
 }
 
 function createPlayerCard(player, allowWK = true) {
@@ -87,7 +110,6 @@ function createPlayerCard(player, allowWK = true) {
         </div>
       </div>
     </div>
-
     ${allowWK ? `
       <div class="player-role">
         <label>
@@ -99,6 +121,22 @@ function createPlayerCard(player, allowWK = true) {
   `;
 
   return card;
+}
+
+function enableDragDrop() {
+  const playingContainer = document.getElementById("playing11-list");
+  Sortable.create(playingContainer, {
+    animation: 150,
+    ghostClass: 'drag-ghost'
+  });
+}
+
+function isAfter8PMIST() {
+  const now = new Date();
+  const istOffset = 5.5 * 60;
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const istTime = new Date(utc + (istOffset * 60000));
+  return istTime.getHours() >= 20;
 }
 
 async function saveLineup(allPlayers) {
@@ -113,54 +151,47 @@ async function saveLineup(allPlayers) {
   const playingCards = document.querySelectorAll("#playing11-list .player-card");
   const playing11Ids = [...playingCards].map(card => card.dataset.playerId);
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    alert("Login expired.");
-    return;
-  }
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Get user's team_id
-  const { data: teamData, error: teamError } = await supabase
+  const { data: teamData } = await supabase
     .from("teams")
     .select("id")
     .eq("user_id", user.id)
     .single();
 
-  if (teamError || !teamData) {
-    alert("Team not found.");
-    return;
-  }
-
   const teamId = teamData.id;
+  const isLocked = isAfter8PMIST();
 
-  // Save or update lineup
-  const { error: lineupError } = await supabase
+  const { error } = await supabase
     .from("lineups")
     .upsert({
       team_id: teamId,
       playing_xi: playing11Ids,
       batting_order: playing11Ids,
-      bowling_order: playing11Ids.slice(5), // last 6 as bowlers
-      locked: false
+      bowling_order: playing11Ids.slice(5),
+      locked: isLocked
     }, { onConflict: ['team_id'] });
 
-  if (lineupError) {
-    console.error("❌ Failed to save lineup:", lineupError);
-    alert("Lineup save failed.");
+  if (error) {
+    alert("Failed to save lineup.");
+    console.error(error);
     return;
   }
 
-  // Update is_wk for selected player
   await supabase
     .from("players")
     .update({ is_wk: true })
     .eq("id", wkId);
 
-  // Set is_wk = false for other 10 players
   await supabase
     .from("players")
     .update({ is_wk: false })
     .in("id", playing11Ids.filter(id => id !== wkId));
 
-  alert("✅ Lineup saved successfully!");
+  alert(isLocked ? "✅ Lineup saved & locked!" : "✅ Lineup saved!");
+
+  if (isLocked) {
+    document.getElementById("save-lineup-btn").disabled = true;
+    document.getElementById("save-lineup-btn").innerText = "Lineup Locked";
+  }
 }
