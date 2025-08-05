@@ -1,14 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
-import { loadSharedUI } from './shared-ui.js';
+import { loadSharedUI } from './js/shared-ui.js'; // Adjust path as needed
 
 // ✅ Supabase setup
 const supabase = createClient(
-  "https://iukofcmatlfhfwcechdq.supabase.co", // ⛳ Replace with your Supabase project URL
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"                        // ⛳ Replace with your anon public key
+  "https://iukofcmatlfhfwcechdq.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // ✅ Session check
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
   if (userError || !user) {
@@ -17,7 +16,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // ✅ Load manager profile
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("manager_name, xp, coins, cash")
@@ -38,7 +36,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     cash: profile.cash,
   });
 
-  // ✅ Load players and saved lineup
   const players = await fetchUserPlayers(user.id);
   const lineupData = await fetchSavedLineup(user.id);
   renderPlayers(players, lineupData);
@@ -48,7 +45,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function fetchUserPlayers(userId) {
-  // Step 1: Get team_id from teams table
   const { data: teamData, error: teamError } = await supabase
     .from("teams")
     .select("id")
@@ -60,7 +56,6 @@ async function fetchUserPlayers(userId) {
     return [];
   }
 
-  // Step 2: Get players using team_id
   const { data: players, error: playerError } = await supabase
     .from("players")
     .select("*")
@@ -134,19 +129,22 @@ function createPlayerCard(player, allowWK = true) {
 
   card.innerHTML = `
     <div class="player-info">
-      <img src="images/avatar.png" alt="Player" />
+      <img src="${player.image_url || 'images/avatar.png'}" alt="Player" />
       <div>
         <div><strong>${player.name}</strong></div>
-        <div class="role-short">${player.role_short}</div>
+        <div class="role-short">
+          ${player.batting_style || ""}${player.batting_style ? " " : ""}${player.bowling_style || ""}
+          ${player.is_wk ? " | WK" : ""}
+        </div>
         <div class="skills">
-          🏏 ${player.batting} 🎯 ${player.bowling} 🧤 ${player.wk}
+          🏏 ${player.batting} 🎯 ${player.bowling} 🧤 ${player.keeping}
         </div>
         <div class="player-stats">
           Form: ${player.form} | Fitness: ${player.fitness} | XP: ${player.experience}
         </div>
         <div class="skills-extra">
-          <span class="skill-tag">${player.skill1}</span>
-          <span class="skill-tag">${player.skill2}</span>
+          <span class="skill-tag">${player.skill1 || ""}</span>
+          <span class="skill-tag">${player.skill2 || ""}</span>
         </div>
       </div>
     </div>
