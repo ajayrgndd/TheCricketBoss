@@ -67,11 +67,10 @@ h2, h3 {
 }
 
 .player-list {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
+
 
 .player-card {
   background: #fff;
