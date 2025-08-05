@@ -46,10 +46,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function fetchUserPlayers(userId) {
   const { data: teamData, error: teamError } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("user_id", userId)
-    .single();
+  .from("teams")
+  .select("id")
+  .eq("user_id", userId)
+  .maybeSingle(); // ✅ avoids crash if no data
+
 
   if (teamError || !teamData) {
     console.warn("⚠️ Team not found.");
