@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Team Lineup</title>
-  <link rel="stylesheet" href="shared-ui.css">
+  <link rel="stylesheet" href="css/shared-ui.css" />
   <style>
     body {
       margin: 0;
@@ -13,28 +13,27 @@
     }
 
     .lineup-container {
-      padding: 80px 16px 100px; /* Adjust for header and footer */
+      padding: 80px 16px 100px; /* Space for top and bottom bars */
     }
 
     h2, h3 {
       text-align: center;
-      margin-bottom: 12px;
       color: #333;
     }
 
     .player-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
       justify-content: center;
-      margin-bottom: 24px;
+      gap: 10px;
+      margin: 16px 0;
     }
 
     .player-card {
-      background: white;
+      background: #fff;
       border: 1px solid #ccc;
-      padding: 10px;
       border-radius: 8px;
+      padding: 10px;
       width: calc(48% - 10px);
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
@@ -47,6 +46,7 @@
     .player-info img {
       width: 50px;
       height: 50px;
+      border-radius: 50%;
     }
 
     .skills, .player-stats, .skills-extra {
@@ -86,7 +86,8 @@
   </style>
 </head>
 <body>
-  <!-- Top bar (loaded from shared-ui.js) -->
+
+  <!-- Top bar (dynamically loaded) -->
   <div id="top-bar"></div>
 
   <div class="lineup-container">
@@ -99,12 +100,12 @@
     <button id="save-lineup-btn">Save Lineup</button>
   </div>
 
-  <!-- Bottom nav (loaded from shared-ui.js) -->
+  <!-- Bottom nav (dynamically loaded) -->
   <div id="bottom-nav"></div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script src="shared-ui.js"></script>
-  <script src="team-lineup.js"></script>
+  <script src="js/shared-ui.js"></script>
+  <script src="js/team-lineup.js"></script>
 </body>
 </html>
