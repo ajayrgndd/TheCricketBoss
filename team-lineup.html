@@ -10,9 +10,10 @@
 <body>
 
   <!-- Top Bar -->
-  <div id="top-bar"></div>
+  <div id="top-bar" class="fixed-top-bar"></div>
 
-  <div class="lineup-container">
+  <!-- Content Area -->
+  <div class="content-area lineup-container">
 
     <h2>Set Your Playing 11</h2>
     <div id="lineup-status" class="status-text">Loading...</div>
@@ -32,12 +33,12 @@
   </div>
 
   <!-- Bottom Nav -->
-  <div id="bottom-nav"></div>
+  <div id="bottom-nav" class="fixed-bottom-nav"></div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script type="module" src="js/team-lineup.js"></script>
   <script type="module" src="js/shared-ui.js"></script>
+  <script type="module" src="js/team-lineup.js"></script>
 
 </body>
 </html>
