@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
-import { loadSharedUI } from './js/shared-ui.js';
+import { loadSharedUI } from './shared-ui.js';
 
 // ✅ Supabase setup
 const supabase = createClient(
