@@ -6,13 +6,14 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
+let currentLineup = [];
+let currentBowlers = [];
+let overAssignments = new Array(20).fill(null);
+let locked = false;
+
 document.addEventListener("DOMContentLoaded", async () => {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    alert("Session expired. Please log in again.");
-    location.href = "login.html";
-    return;
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return location.href = "login.html";
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -28,190 +29,211 @@ document.addEventListener("DOMContentLoaded", async () => {
     cash: profile.cash,
   });
 
-  const players = await fetchUserPlayers(user.id);
-  const lineupData = await fetchSavedLineup(user.id);
+  const players = await fetchPlayers(user.id);
+  const teamId = await fetchTeamId(user.id);
+  const lineup = await fetchLineup(teamId);
+  const now = new Date();
+  const lockTime = new Date(now);
+  lockTime.setHours(20, 0, 0, 0); // 8 PM IST
 
-  const isLocked = isLineupLocked();
-  updateLockStatus(isLocked);
-  renderPlayers(players, lineupData, isLocked);
-  enableDragDrop();
+  locked = now >= lockTime;
 
-  document.getElementById("save-lineup-btn").addEventListener("click", () => {
-    saveLineup(players);
-  });
+  renderLineup(players, lineup);
+  setupSaveHandler(user.id, teamId);
+  setupCountdown(lockTime);
 });
 
-function isLineupLocked() {
-  const now = new Date();
-  const ist = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  return ist.getHours() >= 20;
+async function fetchTeamId(userId) {
+  const { data } = await supabase.from("teams").select("id").eq("owner_id", userId).single();
+  return data?.id;
 }
 
-function updateLockStatus(isLocked) {
-  const lockStatus = document.getElementById("lock-status");
-  if (isLocked) {
-    lockStatus.innerHTML = `🔒 Lineup Locked`;
-    document.getElementById("save-lineup-btn").disabled = true;
-  } else {
-    const now = new Date();
-    const ist = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-    const lockTime = new Date(ist);
-    lockTime.setHours(20, 0, 0, 0);
-    const diffMs = lockTime - ist;
-    const minutes = Math.floor(diffMs / 60000);
-    const hrs = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    lockStatus.innerHTML = `🔓 Lineup locks in ${hrs}h ${mins}m`;
-  }
+async function fetchPlayers(userId) {
+  const { data: team } = await supabase.from("teams").select("id").eq("owner_id", userId).single();
+  const { data } = await supabase.from("players").select("*").eq("team_id", team.id);
+  return data || [];
 }
 
-async function fetchUserPlayers(userId) {
-  const { data: teamData } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("owner_id", userId)
-    .single();
-
-  if (!teamData) return [];
-
-  const { data: players } = await supabase
-    .from("players")
-    .select("*")
-    .eq("team_id", teamData.id);
-
-  return players;
+async function fetchLineup(teamId) {
+  const { data } = await supabase.from("lineups").select("*").eq("team_id", teamId).maybeSingle();
+  return data || null;
 }
 
-async function fetchSavedLineup(userId) {
-  const { data: teamData } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("owner_id", userId)
-    .single();
-
-  if (!teamData) return null;
-
-  const { data: lineup } = await supabase
-    .from("lineups")
-    .select("*")
-    .eq("team_id", teamData.id)
-    .maybeSingle();
-
-  return lineup || null;
-}
-
-function renderPlayers(players, lineupData, isLocked) {
+function renderLineup(players, lineup) {
+  const xi = lineup?.playing_xi || players.slice(0, 11).map(p => p.id);
   const idMap = Object.fromEntries(players.map(p => [p.id, p]));
-  let playing11 = players.slice(0, 11);
-  const bench = players.slice(11);
-  let captainId = null;
 
-  if (lineupData?.batting_order?.length > 0) {
-    playing11 = lineupData.batting_order.map(id => idMap[id]).filter(Boolean);
-    captainId = lineupData.captain_id;
-  }
+  currentLineup = xi.map(id => idMap[id]).filter(Boolean);
+  const bench = players.filter(p => !xi.includes(p.id));
+  currentBowlers = currentLineup.filter(p => p.bowling > 5).slice(0, 6);
 
-  const playingContainer = document.getElementById("playing11-list");
-  const benchContainer = document.getElementById("bench-list");
-  playingContainer.innerHTML = "";
-  benchContainer.innerHTML = "";
-
-  playing11.forEach(player => {
-    const card = createPlayerCard(player, true, isLocked, captainId === player.id);
-    playingContainer.appendChild(card);
+  document.getElementById("playing11-list").innerHTML = "";
+  currentLineup.forEach(p => {
+    document.getElementById("playing11-list").appendChild(makePlayerCard(p));
   });
 
-  bench.forEach(player => {
-    const card = createPlayerCard(player, false, isLocked, false);
-    benchContainer.appendChild(card);
+  document.getElementById("bench-list").innerHTML = "";
+  bench.forEach(p => {
+    document.getElementById("bench-list").appendChild(makePlayerCard(p));
   });
+
+  renderCaptainPicker();
+  renderBowlingSection();
 }
 
-function createPlayerCard(player, isPlayingXI, isLocked, isCaptain) {
+function makePlayerCard(p) {
   const card = document.createElement("div");
-  card.className = "player-card";
-  card.dataset.playerId = player.id;
+  card.className = "player-card compact";
+  card.dataset.playerId = p.id;
 
-  const roleShort = player.role;
-  const skillText = `🏏 ${player.batting} 🎯 ${player.bowling} 🧤 ${player.keeping}`;
+  const bowStyle = `${p.bowling_style?.split(" ").map(s => s[0]).join("") || "-"}`;
+  const expandedHTML = `
+    <div class="player-expanded">
+      <div>Form: ${p.form}</div>
+      <div>Fitness: ${p.fitness}</div>
+      <div>XP: ${p.experience}</div>
+      <div>Skills: ${[p.skill1, p.skill2].filter(Boolean).join(", ")}</div>
+    </div>`;
 
   card.innerHTML = `
     <div class="player-header">
-      <div>
-        <div class="player-name">${player.name}</div>
-        <div>${roleShort} | ${skillText}</div>
-      </div>
-      ${isPlayingXI && !isLocked ? `
-        <div class="captain-radio">
-          <label>
-            <input type="radio" name="captain" value="${player.id}" ${isCaptain ? "checked" : ""}/> C
-          </label>
-        </div>` : ""
-      }
+      <div><strong>${p.name}</strong></div>
+      <div>${p.role} (${bowStyle})</div>
+      <div>🏏 ${p.batting} 🎯 ${p.bowling} 🧤 ${p.keeping}</div>
     </div>
-    <div class="player-details">
-      <div>Form: ${player.form} | Fitness: ${player.fitness}</div>
-      <div>XP: ${player.experience} | Age: ${player.age_years}y ${player.age_days}d</div>
-      <div>
-        <span class="skill-tag">${player.skill1 || ""}</span>
-        <span class="skill-tag">${player.skill2 || ""}</span>
-      </div>
-    </div>
+    ${expandedHTML}
   `;
 
   card.addEventListener("click", () => {
+    card.classList.toggle("compact");
     card.classList.toggle("expanded");
   });
 
   return card;
 }
 
-function enableDragDrop() {
-  Sortable.create(document.getElementById("playing11-list"), {
-    animation: 150,
-    ghostClass: "drag-ghost"
+function renderCaptainPicker() {
+  const container = document.getElementById("captain-picker");
+  container.innerHTML = `<h3>Pick Captain</h3>`;
+  currentLineup.forEach(player => {
+    const label = document.createElement("label");
+    label.innerHTML = `
+      <input type="radio" name="captain" value="${player.id}">
+      ${player.name}
+    `;
+    container.appendChild(label);
   });
 }
 
-async function saveLineup(players) {
-  const selectedCaptain = document.querySelector('input[name="captain"]:checked');
-  if (!selectedCaptain) {
-    alert("Please select a captain.");
+function renderBowlingSection() {
+  const container = document.getElementById("bowling-lineup");
+  container.innerHTML = "<h3>Assign Bowling Overs</h3>";
+
+  currentBowlers.forEach((p, idx) => {
+    const div = document.createElement("div");
+    div.className = "bowler-row";
+    div.innerHTML = `<div class="bowler-name">${p.name}</div>`;
+    for (let i = 0; i < 4; i++) {
+      const box = document.createElement("div");
+      box.className = "over-box";
+      box.dataset.bowlerId = p.id;
+      box.dataset.index = idx;
+      box.onclick = () => assignOver(p.id);
+      div.appendChild(box);
+    }
+    container.appendChild(div);
+  });
+
+  updateOverBoxes();
+}
+
+function assignOver(bowlerId) {
+  const index = overAssignments.findIndex(v => v === null);
+  if (index === -1) {
+    alert("All 20 overs assigned.");
     return;
   }
 
-  const playingCards = document.querySelectorAll("#playing11-list .player-card");
-  const playing11Ids = [...playingCards].map(card => card.dataset.playerId);
-  const captainId = selectedCaptain.value;
-
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: teamData } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("owner_id", user.id)
-    .single();
-
-  if (!teamData) {
-    alert("Team not found.");
+  if (overAssignments[index - 1] === bowlerId) {
+    alert("No consecutive overs for same bowler.");
     return;
   }
 
-  const { error } = await supabase
-    .from("lineups")
-    .upsert({
-      team_id: teamData.id,
-      playing_xi: playing11Ids,
-      batting_order: playing11Ids,
-      bowling_order: playing11Ids.slice(5),
-      captain_id: captainId,
-      locked: isLineupLocked()
+  overAssignments[index] = bowlerId;
+  updateOverBoxes();
+}
+
+function updateOverBoxes() {
+  const boxes = document.querySelectorAll(".over-box");
+  boxes.forEach(box => {
+    box.classList.remove("filled");
+    box.textContent = "";
+  });
+
+  overAssignments.forEach((bowlerId, i) => {
+    if (bowlerId) {
+      const box = document.querySelector(`.over-box[data-bowler-id="${bowlerId}"]:not(.filled)`);
+      if (box) {
+        box.textContent = i + 1;
+        box.classList.add("filled");
+      }
+    }
+  });
+
+  document.getElementById("overs-count").textContent = `${overAssignments.filter(v => v).length}/20 overs set`;
+}
+
+function setupCountdown(lockTime) {
+  const status = document.getElementById("lineup-status");
+  const interval = setInterval(() => {
+    const now = new Date();
+    if (now >= lockTime) {
+      locked = true;
+      status.textContent = "🔒 Lineup Locked";
+      clearInterval(interval);
+    } else {
+      const diffMs = lockTime - now;
+      const mins = Math.floor((diffMs / 1000 / 60) % 60);
+      const hrs = Math.floor((diffMs / 1000 / 60 / 60));
+      status.textContent = `🔓 Lineup locks in ${hrs}h ${mins}m`;
+    }
+  }, 60000);
+
+  if (new Date() >= lockTime) {
+    locked = true;
+    status.textContent = "🔒 Lineup Locked";
+  }
+}
+
+function setupSaveHandler(userId, teamId) {
+  document.getElementById("save-lineup-btn").onclick = async () => {
+    if (locked) {
+      alert("Lineup is locked.");
+      return;
+    }
+
+    if (overAssignments.filter(Boolean).length < 20) {
+      alert("Please assign all 20 overs.");
+      return;
+    }
+
+    const xiIds = currentLineup.map(p => p.id);
+    const captainId = document.querySelector('input[name="captain"]:checked')?.value;
+    if (!captainId) {
+      alert("Select a captain.");
+      return;
+    }
+
+    const { error } = await supabase.from("lineups").upsert({
+      team_id: teamId,
+      playing_xi: xiIds,
+      batting_order: xiIds,
+      bowling_order: overAssignments,
+      captain: captainId,
+      locked: false
     }, { onConflict: ['team_id'] });
 
-  if (error) {
-    console.error("Failed to save lineup", error);
-    alert("Failed to save lineup.");
-    return;
-  }
-
-  alert("✅ Lineup saved!");
+    if (!error) alert("✅ Lineup saved.");
+    else alert("❌ Failed to save.");
+  };
 }
