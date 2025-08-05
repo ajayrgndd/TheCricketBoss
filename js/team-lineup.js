@@ -64,16 +64,26 @@ function setupDragAndDrop() {
   const bench = document.getElementById("bench-list");
 
   new Sortable(xi, {
-    group: "players",
+    group: {
+      name: "players",
+      pull: true,
+      put: (to, from, dragEl) => {
+        // Limit to 11 players
+        return xi.children.length < 11 || from.el === xi;
+      }
+    },
     animation: 150,
-    onAdd: () => updateFromDOM()
+    onAdd: () => updateFromDOM(),
+    touchStartThreshold: 8
   });
 
   new Sortable(bench, {
     group: "players",
     animation: 150,
-    onAdd: () => updateFromDOM()
+    onAdd: () => updateFromDOM(),
+    touchStartThreshold: 8
   });
+
 }
 
 function updateFromDOM() {
@@ -153,30 +163,43 @@ function renderBowlingLineup() {
 }
 
 function assignOver(bowlerId) {
+  // Tap again to unassign the most recent over from this bowler
+  const lastIndex = overAssignments.lastIndexOf(bowlerId);
+  if (lastIndex !== -1) {
+    overAssignments[lastIndex] = null;
+    updateOverBoxes();
+    return;
+  }
+
+  // Find next available slot
   const index = overAssignments.findIndex(v => v === null);
   if (index === -1) return alert("All 20 overs assigned.");
-  if (overAssignments[index - 1] === bowlerId) return alert("No consecutive overs.");
+  if (index > 0 && overAssignments[index - 1] === bowlerId)
+    return alert("No consecutive overs.");
 
   overAssignments[index] = bowlerId;
   updateOverBoxes();
 }
 
 function updateOverBoxes() {
+  // Clear all boxes first
   document.querySelectorAll(".over-box").forEach(box => {
     box.classList.remove("filled");
     box.innerText = "";
   });
 
-  overAssignments.forEach((id, i) => {
-    if (id) {
-      const box = document.querySelector(`.over-box[data-bowler-id="${id}"]:not(.filled)`);
+  // Re-assign based on overAssignments array
+  overAssignments.forEach((bowlerId, i) => {
+    if (bowlerId) {
+      const box = document.querySelector(
+        `.over-box[data-bowler-id="${bowlerId}"]:not(.filled)`
+      );
       if (box) {
         box.innerText = i + 1;
         box.classList.add("filled");
       }
     }
   });
-
   document.getElementById("overs-count").innerText = `${overAssignments.filter(v => v).length}/20 overs set`;
 }
 
