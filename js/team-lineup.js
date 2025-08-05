@@ -1,4 +1,9 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js";
 import { loadSharedUI } from './shared-ui.js';
+
+const supabase = createClient(
+  "https://https://iukofcmatlfhfwcechdq.supabase.co", // ← replace this
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" 
 
 document.addEventListener("DOMContentLoaded", async () => {
   const { data: { user } } = await supabase.auth.getUser();
