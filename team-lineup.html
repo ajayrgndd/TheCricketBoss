@@ -147,34 +147,25 @@
   </style>
 </head>
 <body>
-
-  <!-- Top Bar (loaded by shared-ui.js) -->
   <div id="top-bar"></div>
 
   <div class="lineup-container">
-    <div class="lineup-title">Set Your Playing 11</div>
+    <h2>Set Your Playing 11</h2>
 
-    <!-- Playing 11 Section -->
-    <div id="playing11-list">
-      <!-- JS will populate 11 players -->
-    </div>
+    <div id="playing11-list" class="player-list"></div>
 
-    <!-- Bench Section -->
-    <div class="bench-container">
-      <h3>Bench</h3>
-      <div id="bench-list">
-        <!-- JS will populate bench players -->
-      </div>
-    </div>
+    <h3>Bench</h3>
+    <div id="bench-list" class="player-list bench"></div>
 
-    <!-- Save Lineup Button -->
-    <button class="save-btn" id="save-lineup-btn">Save Lineup</button>
+    <button id="save-lineup-btn">Save Lineup</button>
   </div>
 
-  <!-- Bottom Bar (loaded by shared-ui.js) -->
   <div id="bottom-nav"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="shared-ui.js"></script>
   <script src="team-lineup.js"></script>
 </body>
+
 </html>
+
