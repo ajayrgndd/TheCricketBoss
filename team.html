@@ -3,345 +3,130 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Team – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css" />
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+  <title>Team Lineup</title>
+  <link rel="stylesheet" href="css/shared-ui.css" />
+<link rel="stylesheet" href="css/team-lineup.css" />
 
+  <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
-      background: #1e1b3a;
-      color: white;
+      background: #f4f4f4;
     }
 
-    .main {
-      padding-top: 80px;
-      padding-bottom: 90px;
-      max-width: 900px;
-      margin: 0 auto;
+    .lineup-container {
+      padding: 80px 16px 100px;
     }
 
-    .filter-bar {
-      display: flex;
-      gap: 12px;
-      padding: 0 16px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .filter-bar select,
-    .filter-bar input {
-      padding: 8px 10px;
-      font-size: 14px;
-      border-radius: 6px;
-      border: none;
-      width: 160px;
-      max-width: 100%;
-    }
-
-    .default-lineup-action {
+    h2, h3 {
       text-align: center;
-      margin: 16px 0;
+      margin: 8px 0;
+      color: #222;
     }
 
-    .default-lineup-action button {
-      padding: 12px 20px;
-      font-size: 16px;
-      background-color: #00e676;
-      color: black;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
+    #lock-status {
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .player-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
     }
 
     .player-card {
-      background: #2d2a4a;
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      gap: 14px;
-      margin: 12px 16px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-      color: white;
-      position: relative;
-    }
-
-    .player-card img {
-      height: 100px;
+      width: calc(48% - 8px);
+      background: #fff;
+      border: 1px solid #ccc;
       border-radius: 8px;
-      border: 2px solid #00e676;
-    }
-
-    .player-meta {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .player-meta strong {
-      font-size: 18px;
-      color: #fff;
-    }
-
-    .sub {
+      padding: 8px;
       font-size: 13px;
-      color: #ccc;
+      transition: all 0.2s ease;
     }
 
-    .salary-market {
-      font-size: 13px;
-      margin: 6px 0;
+    .player-card.expanded {
+      background: #f0f0f0;
     }
 
-    .bar-label {
-      font-size: 13px;
-      margin-top: 8px;
+    .player-header {
       display: flex;
       justify-content: space-between;
-    }
-
-    .bar {
-      background: #444;
-      height: 10px;
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .bar::before {
-      content: '';
-      position: absolute;
-      height: 100%;
-      width: calc(var(--value, 50) * 1%);
-      background: linear-gradient(90deg, #00e676, #00bcd4);
-      border-radius: 6px;
-      transition: width 0.3s ease;
-    }
-
-    .sell-btn {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      background: #ff4081;
-      color: white;
-      border: none;
-      padding: 4px 10px;
-      font-size: 12px;
-      border-radius: 4px;
+      align-items: center;
       cursor: pointer;
     }
 
-    .skills {
-      display: flex;
-      gap: 8px;
-      margin: 8px 0 6px;
+    .player-name {
+      font-weight: bold;
+      font-size: 14px;
     }
 
-    .skill-slot {
-      width: 34px;
-      height: 34px;
-      background: #1c1a30;
-      border: 1px solid #666;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      color: #999;
+    .captain-radio {
+      font-size: 12px;
     }
 
-    @media (max-width: 600px) {
-      .player-card {
-        flex-direction: column;
-        align-items: flex-start;
-      }
+    .player-details {
+      margin-top: 6px;
+      display: none;
+    }
 
-      .player-meta {
-        width: 100%;
-      }
+    .player-card.expanded .player-details {
+      display: block;
+    }
 
-      .player-card img {
-        height: 90px;
-      }
+    .skill-tag {
+      background: #ddd;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-right: 4px;
+      display: inline-block;
+    }
 
-      .filter-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
+    #save-lineup-btn {
+      margin: 16px auto 40px;
+      display: block;
+      max-width: 400px;
+      width: 90%;
+      padding: 14px;
+      background: #4CAF50;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
 
-      .sell-btn {
-        top: 8px;
-        right: 10px;
-        padding: 3px 8px;
-        font-size: 11px;
-      }
+    #save-lineup-btn[disabled] {
+      background: #aaa;
+      cursor: not-allowed;
     }
   </style>
 </head>
 <body>
-  <div class="main">
-  <h2 style="padding: 0 16px;">Your Team</h2>
 
-  <!-- ✅ Set Default Lineup Button placed properly under the heading -->
-  <div class="default-lineup-action" style="text-align:center; margin: 16px 16px 0;">
-    <a href="team-lineup.html?mode=default">
-      <button style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
-        🛡️ Set Default Lineup
-      </button>
-    </a>
+  <!-- Top bar -->
+  <div id="top-bar"></div>
+
+  <div class="lineup-container">
+    <h2>Set Your Playing 11</h2>
+    <div id="lock-status">Checking lock status...</div>
+    <div id="playing11-list" class="player-list"></div>
+
+    <h3>Bench</h3>
+    <div id="bench-list" class="player-list"></div>
+
+    <button id="save-lineup-btn">Save Lineup</button>
   </div>
 
-  <!-- ... rest of the page content -->
+  <!-- Bottom bar -->
+  <div id="bottom-nav"></div>
 
-
-    <div class="filter-bar">
-      <select id="roleFilter">
-        <option value="">All Roles</option>
-        <option value="Batsman">Batsman</option>
-        <option value="Bowler">Bowler</option>
-        <option value="All-Rounder">All-Rounder</option>
-        <option value="Wicket Keeper">Wicket Keeper</option>
-      </select>
-      <input type="text" id="searchInput" placeholder="Search name..." />
-    </div>
-
-    <div id="teamContainer"></div>
-  </div>
-
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI } from "./js/shared-ui.js";
-
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) window.location.href = "login.html";
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!profile || !profile.manager_name?.trim()) {
-      window.location.href = "profile-setup.html";
-    }
-
-    loadSharedUI({
-      manager_name: profile.manager_name,
-      xp: profile.xp,
-      coins: profile.coins,
-      cash: profile.cash
-    });
-
-    const { data: team } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("owner_id", user.id)
-      .single();
-
-    const { data: players } = await supabase
-      .from("players")
-      .select("*")
-      .eq("team_id", team.id);
-
-    const container = document.getElementById("teamContainer");
-    const searchInput = document.getElementById("searchInput");
-    const roleFilter = document.getElementById("roleFilter");
-
-    function getSkillLevel(value) {
-      if (value >= 101) return "The Boss";
-      if (value >= 81) return "Titan";
-      if (value >= 61) return "World Class";
-      if (value >= 51) return "Supreme";
-      if (value >= 41) return "National";
-      if (value >= 31) return "Professional";
-      if (value >= 21) return "Domestic";
-      if (value >= 11) return "Trainee";
-      return "Newbie";
-    }
-
-    function getFitnessLevel(value) {
-      if (value >= 96) return "Excellent";
-      if (value >= 71) return "Good";
-      if (value >= 51) return "Average";
-      return "Poor";
-    }
-
-    function renderPlayers(filtered) {
-      container.innerHTML = "";
-      for (const p of filtered) {
-        const div = document.createElement("div");
-        div.className = "player-card";
-        div.innerHTML = `
-          <button class="sell-btn">SELL</button>
-          <img src="${p.image_url}" alt="${p.role}" />
-          <div class="player-meta">
-            <strong>${p.name}</strong>
-            <div class="sub">Role: ${p.role} | Region: ${p.region}</div>
-            <div class="sub">Style: ${p.batting_style || "–"} | ${p.bowling_style || "–"}</div>
-            <div class="sub">Age: ${p.age_years}y ${p.age_days}d</div>
-            <div class="sub">Form: ${p.form} | Fitness: ${getFitnessLevel(p.fitness)}</div>
-            <div class="salary-market">Salary: ₹${p.salary?.toLocaleString() || 0} | Market: ₹${p.market_price?.toLocaleString() || 0}</div>
-
-            <div class="skills">
-              <div class="skill-slot" title="Skill 1">${p.skill1 || '🔒'}</div>
-              <div class="skill-slot" title="Skill 2">${p.skill2 || '🔒'}</div>
-            </div>
-
-            <div class="bar-label">
-              <span>Batting</span>
-              <span>${getSkillLevel(p.batting)}</span>
-            </div>
-            <div class="bar" style="--value:${p.batting}"></div>
-
-            <div class="bar-label">
-              <span>Bowling</span>
-              <span>${getSkillLevel(p.bowling)}</span>
-            </div>
-            <div class="bar" style="--value:${p.bowling}"></div>
-
-            ${p.keeping > 0 ? `
-              <div class="bar-label">
-                <span>Keeping</span>
-                <span>${getSkillLevel(p.keeping)}</span>
-              </div>
-              <div class="bar" style="--value:${p.keeping}"></div>
-            ` : ''}
-
-            <div class="bar-label">
-              <span>Experience</span>
-              <span>${getSkillLevel(p.experience)}</span>
-            </div>
-            <div class="bar" style="--value:${p.experience}"></div>
-          </div>
-        `;
-        container.appendChild(div);
-      }
-    }
-
-    function applyFilters() {
-      const nameQuery = searchInput.value.trim().toLowerCase();
-      const role = roleFilter.value;
-
-      const filtered = players.filter(p => {
-        const matchesRole = role ? p.role === role : true;
-        const matchesName = p.name.toLowerCase().includes(nameQuery);
-        return matchesRole && matchesName;
-      });
-
-      renderPlayers(filtered);
-    }
-
-    searchInput.addEventListener("input", applyFilters);
-    roleFilter.addEventListener("change", applyFilters);
-    renderPlayers(players);
-  </script>
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script type="module" src="js/shared-ui.js"></script>
+  <script type="module" src="js/team-lineup.js"></script>
 </body>
 </html>
+
