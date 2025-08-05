@@ -1,5 +1,3 @@
-// team-lineup.js
-
 document.addEventListener("DOMContentLoaded", async () => {
   loadSharedUI();
 
