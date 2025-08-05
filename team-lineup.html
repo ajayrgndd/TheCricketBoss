@@ -5,128 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Team Lineup</title>
   <link rel="stylesheet" href="css/shared-ui.css" />
-<link rel="stylesheet" href="css/team-lineup.css" />
-
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-    }
-
-    .lineup-container {
-      padding: 80px 16px 100px;
-    }
-
-    h2, h3 {
-      text-align: center;
-      margin: 8px 0;
-      color: #222;
-    }
-
-    #lock-status {
-      text-align: center;
-      font-size: 14px;
-      margin-bottom: 8px;
-    }
-
-    .player-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      justify-content: center;
-    }
-
-    .player-card {
-      width: calc(48% - 8px);
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      padding: 8px;
-      font-size: 13px;
-      transition: all 0.2s ease;
-    }
-
-    .player-card.expanded {
-      background: #f0f0f0;
-    }
-
-    .player-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-    }
-
-    .player-name {
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .captain-radio {
-      font-size: 12px;
-    }
-
-    .player-details {
-      margin-top: 6px;
-      display: none;
-    }
-
-    .player-card.expanded .player-details {
-      display: block;
-    }
-
-    .skill-tag {
-      background: #ddd;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-right: 4px;
-      display: inline-block;
-    }
-
-    #save-lineup-btn {
-      margin: 16px auto 40px;
-      display: block;
-      max-width: 400px;
-      width: 90%;
-      padding: 14px;
-      background: #4CAF50;
-      color: white;
-      font-size: 16px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    #save-lineup-btn[disabled] {
-      background: #aaa;
-      cursor: not-allowed;
-    }
-  </style>
+  <link rel="stylesheet" href="css/team-lineup.css" />
 </head>
 <body>
 
-  <!-- Top bar -->
+  <!-- Top Bar -->
   <div id="top-bar"></div>
 
   <div class="lineup-container">
+
     <h2>Set Your Playing 11</h2>
-    <div id="lock-status">Checking lock status...</div>
+    <div id="lineup-status" class="status-text">Loading...</div>
+
     <div id="playing11-list" class="player-list"></div>
 
     <h3>Bench</h3>
     <div id="bench-list" class="player-list"></div>
 
-    <button id="save-lineup-btn">Save Lineup</button>
+    <div id="captain-picker" class="captain-section"></div>
+
+    <h3>Bowling Lineup</h3>
+    <div id="bowling-lineup" class="bowling-section"></div>
+    <div class="overs-counter">🎯 <span id="overs-count">0/20 overs set</span></div>
+
+    <button id="save-lineup-btn">💾 Save Lineup</button>
   </div>
 
-  <!-- Bottom bar -->
+  <!-- Bottom Nav -->
   <div id="bottom-nav"></div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script type="module" src="js/shared-ui.js"></script>
   <script type="module" src="js/team-lineup.js"></script>
+  <script type="module" src="js/shared-ui.js"></script>
+
 </body>
 </html>
-
