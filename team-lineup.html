@@ -3,259 +3,185 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Set Default Lineup – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css" />
+  <title>Set Team Lineup</title>
+  <link rel="stylesheet" href="styles.css" />
   <style>
     body {
-      background: #1e1b3a;
-      color: white;
-      font-family: sans-serif;
-      padding-bottom: 90px;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f9f9f9;
     }
 
-    h2 {
+    .lineup-container {
+      padding: 70px 16px 90px; /* space for fixed bars */
+    }
+
+    .lineup-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin-bottom: 16px;
       text-align: center;
-      margin: 20px 0 10px;
     }
 
     .player-card {
-      background: #2d2a4a;
-      margin: 12px;
-      border-radius: 12px;
-      padding: 16px;
       display: flex;
-      gap: 14px;
-      align-items: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-      border: 2px solid transparent;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 12px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 12px;
     }
 
-    .player-card.selected {
-      border-color: #00e676;
+    .player-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
     }
 
-    .player-card img {
-      width: 80px;
-      height: 80px;
-      border-radius: 10px;
+    .player-info img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
       object-fit: cover;
     }
 
-    .meta {
-      flex: 1;
+    .player-info div {
+      display: flex;
+      flex-direction: column;
     }
 
-    .meta h3 {
-      margin: 0;
-      font-size: 18px;
-    }
-
-    .meta .sub {
-      font-size: 13px;
-      color: #ccc;
+    .role-short {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #555;
     }
 
     .skills {
+      margin-top: 4px;
+      font-size: 0.9rem;
+    }
+
+    .skills span {
+      margin-right: 8px;
+    }
+
+    .player-stats {
+      font-size: 0.8rem;
+      color: #777;
+      margin-top: 4px;
+    }
+
+    .player-stats span {
+      margin-right: 12px;
+    }
+
+    .skills-extra {
+      margin-top: 4px;
+    }
+
+    .skill-tag {
+      background-color: #e0e0e0;
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      margin-right: 6px;
+      display: inline-block;
+    }
+
+    .player-role {
       display: flex;
-      gap: 8px;
-      margin-top: 6px;
+      flex-direction: column;
+      align-items: flex-end;
     }
 
-    .skill {
-      background: #1c1a30;
-      border: 1px solid #666;
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 13px;
+    .player-role-label {
+      font-size: 0.9rem;
+      margin-bottom: 4px;
     }
 
-    .order-inputs {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-top: 8px;
+    .wk-radio {
+      transform: scale(1.2);
     }
 
-    .order-inputs input {
-      width: 36px;
-      padding: 4px;
-      text-align: center;
-      border-radius: 6px;
-      border: 1px solid #888;
+    .bench-container {
+      margin-top: 24px;
+    }
+
+    .bench-container h3 {
+      margin-bottom: 8px;
     }
 
     .save-btn {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #00e676;
-      color: black;
+      width: 100%;
+      padding: 12px;
+      font-weight: bold;
+      font-size: 1rem;
+      background-color: #4CAF50;
+      color: white;
       border: none;
-      padding: 14px 24px;
-      font-size: 16px;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
-      z-index: 10;
+      margin-top: 16px;
+    }
+
+    .save-btn:disabled {
+      background-color: gray;
+      cursor: not-allowed;
+    }
+
+    #top-bar, #bottom-nav {
+      position: fixed;
+      width: 100%;
+      left: 0;
+      background-color: #fff;
+      z-index: 999;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    #top-bar {
+      top: 0;
+      height: 50px;
+    }
+
+    #bottom-nav {
+      bottom: 0;
+      height: 60px;
     }
   </style>
 </head>
 <body>
-  <h2>🛡️ Set Default Lineup</h2>
-  <div id="playerList"></div>
-  <button class="save-btn" id="saveBtn">💾 Save Default Lineup</button>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+  <!-- Top Bar -->
+  <div id="top-bar"></div>
 
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
+  <!-- Main Container -->
+  <div class="lineup-container">
+    <div class="lineup-title">Set Your Playing 11</div>
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) window.location.href = "login.html";
+    <!-- Playing 11 Section -->
+    <div id="playing11-list">
+      <!-- JS will populate 11 players -->
+    </div>
 
-    const teamRes = await supabase.from("teams").select("id").eq("owner_id", user.id).single();
-    const teamId = teamRes?.data?.id;
-    const playerList = document.getElementById("playerList");
-    const saveBtn = document.getElementById("saveBtn");
+    <!-- Bench Section -->
+    <div class="bench-container">
+      <h3>Bench</h3>
+      <div id="bench-list">
+        <!-- JS will populate bench players -->
+      </div>
+    </div>
 
-    const { data: players } = await supabase.from("players").select("*").eq("team_id", teamId);
-    const { data: existing } = await supabase.from("default_lineups").select("*").eq("team_id", teamId).single();
+    <!-- Save Lineup Button -->
+    <button class="save-btn" id="save-lineup-btn">Save Lineup</button>
+  </div>
 
-    let selectedPlayerIds = new Set();
-    let battingOrder = {};
-    let bowlingOrder = {};
+  <!-- Bottom Navigation -->
+  <div id="bottom-nav"></div>
 
-    if (existing?.player_ids?.length === 11) {
-      selectedPlayerIds = new Set(existing.player_ids);
-      (existing.batting_order || []).forEach((id, idx) => battingOrder[id] = idx + 1);
-      (existing.bowling_order || []).forEach((id, idx) => bowlingOrder[id] = idx + 1);
-    } else {
-      const ranked = [...players].sort((a, b) => (
-        (b.batting + b.bowling + b.experience + b.form + b.fitness) -
-        (a.batting + a.bowling + a.experience + a.form + a.fitness)
-      ));
-      const top11 = ranked.slice(0, 11);
-      top11.forEach((p, i) => {
-        selectedPlayerIds.add(p.id);
-        battingOrder[p.id] = i + 1;
-        if (i < 5) bowlingOrder[p.id] = i + 1;
-      });
-    }
-
-    function getSkillLevel(val) {
-      if (val >= 101) return "The Boss";
-      if (val >= 81) return "Titan";
-      if (val >= 61) return "World Class";
-      if (val >= 51) return "Supreme";
-      if (val >= 41) return "National";
-      if (val >= 31) return "Professional";
-      if (val >= 21) return "Domestic";
-      if (val >= 11) return "Trainee";
-      return "Newbie";
-    }
-
-    function render() {
-      playerList.innerHTML = "";
-
-      for (const p of players) {
-        const isSelected = selectedPlayerIds.has(p.id);
-        const div = document.createElement("div");
-        div.className = "player-card" + (isSelected ? " selected" : "");
-
-        const batVal = battingOrder[p.id] || "";
-        const bowlVal = bowlingOrder[p.id] || "";
-
-        div.innerHTML = `
-          <img src="${p.image_url}" />
-          <div class="meta">
-            <h3>${p.name}</h3>
-            <div class="sub">Role: ${p.role} | Age: ${p.age_years}y ${p.age_days}d</div>
-            <div class="sub">Bat: ${getSkillLevel(p.batting)} | Bowl: ${getSkillLevel(p.bowling)} | Keep: ${getSkillLevel(p.keeping)}</div>
-            <div class="sub">Exp: ${getSkillLevel(p.experience)} | Form: ${p.form} | Fitness: ${p.fitness}</div>
-            <div class="skills">
-              <div class="skill">Skill1: ${p.skill1 || '–'}</div>
-              <div class="skill">Skill2: ${p.skill2 || '–'}</div>
-            </div>
-            ${isSelected ? `
-              <div class="order-inputs">
-                <label>Bat:</label>
-                <input type="number" min="1" max="11" value="${batVal}" data-type="bat" data-id="${p.id}">
-                <label>Bowl:</label>
-                <input type="number" min="1" max="5" value="${bowlVal}" data-type="bowl" data-id="${p.id}">
-              </div>
-            ` : ''}
-          </div>
-        `;
-
-        div.addEventListener("click", (e) => {
-          // ignore clicks on inputs
-          if (e.target.tagName === 'INPUT') return;
-
-          if (selectedPlayerIds.has(p.id)) {
-            selectedPlayerIds.delete(p.id);
-            delete battingOrder[p.id];
-            delete bowlingOrder[p.id];
-          } else {
-            if (selectedPlayerIds.size >= 11) return alert("Only 11 players allowed.");
-            selectedPlayerIds.add(p.id);
-            battingOrder[p.id] = selectedPlayerIds.size;
-          }
-          render();
-        });
-
-        playerList.appendChild(div);
-      }
-
-      // Reattach input listeners
-      document.querySelectorAll('input[data-type]').forEach(input => {
-        input.addEventListener("input", (e) => {
-          const id = e.target.dataset.id;
-          const type = e.target.dataset.type;
-          const val = parseInt(e.target.value);
-          if (!val || val < 1 || (type === 'bat' && val > 11) || (type === 'bowl' && val > 5)) return;
-
-          if (type === 'bat') battingOrder[id] = val;
-          else bowlingOrder[id] = val;
-        });
-      });
-    }
-
-    saveBtn.addEventListener("click", async () => {
-      if (selectedPlayerIds.size !== 11) {
-        alert("❌ Select exactly 11 players.");
-        return;
-      }
-
-      const selectedIds = [...selectedPlayerIds];
-
-      const sortedBat = [...selectedIds].sort((a, b) => (battingOrder[a] || 99) - (battingOrder[b] || 99));
-      const sortedBowl = [...selectedIds].filter(id => bowlingOrder[id]).sort((a, b) => bowlingOrder[a] - bowlingOrder[b]);
-
-      if (new Set(Object.values(battingOrder)).size !== 11) {
-        return alert("❌ Batting order must have unique 1–11.");
-      }
-
-      const { error } = await supabase.from("default_lineups").upsert({
-        team_id: teamId,
-        player_ids: selectedIds,
-        batting_order: sortedBat,
-        bowling_order: sortedBowl,
-        updated_at: new Date().toISOString()
-      });
-
-      if (error) {
-        console.error(error);
-        alert("❌ Failed to save lineup.");
-      } else {
-        alert("✅ Default lineup saved!");
-        window.location.href = "team.html";
-      }
-    });
-
-    render();
-  </script>
+  <!-- JS Files -->
+  <script src="shared-ui.js"></script>
+  <script src="team-lineup.js"></script>
 </body>
 </html>
