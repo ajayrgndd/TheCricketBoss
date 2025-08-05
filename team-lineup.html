@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Team Lineup</title>
   <link rel="stylesheet" href="css/shared-ui.css" />
+
   <style>
     body {
       margin: 0;
@@ -13,7 +14,7 @@
     }
 
     .lineup-container {
-      padding: 80px 16px 100px; /* space for top and bottom bars */
+      padding: 80px 16px 100px; /* Space for top and bottom bars */
     }
 
     h2, h3 {
@@ -47,6 +48,7 @@
       width: 50px;
       height: 50px;
       border-radius: 50%;
+      object-fit: cover;
     }
 
     .skills, .player-stats, .skills-extra {
@@ -59,6 +61,7 @@
       padding: 2px 6px;
       border-radius: 4px;
       margin-right: 4px;
+      font-size: 12px;
     }
 
     .player-role {
@@ -87,7 +90,7 @@
 </head>
 <body>
 
-  <!-- Top bar (loaded by shared-ui.js) -->
+  <!-- Top bar (auto-loaded by shared-ui.js) -->
   <div id="top-bar"></div>
 
   <div class="lineup-container">
@@ -100,12 +103,15 @@
     <button id="save-lineup-btn">Save Lineup</button>
   </div>
 
-  <!-- Bottom bar (loaded by shared-ui.js) -->
+  <!-- Bottom nav bar (auto-loaded by shared-ui.js) -->
   <div id="bottom-nav"></div>
 
-  <!-- Scripts -->
+  <!-- SortableJS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+  <!-- Main modules -->
   <script type="module" src="js/shared-ui.js"></script>
   <script type="module" src="js/team-lineup.js"></script>
+
 </body>
 </html>
