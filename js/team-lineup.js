@@ -1,30 +1,29 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
-import { loadSharedUI } from './shared-ui.js';
+import { loadSharedUI } from "./shared-ui.js";
 
 // ✅ Supabase setup
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // 🔐 Replace with your real key
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // ✅ Check auth
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
     alert("Session expired. Please log in again.");
     window.location.href = "login.html";
     return;
   }
 
-  // ✅ Load profile (includes team_id now)
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("manager_name, xp, coins, cash, team_id")
+    .select("manager_name, xp, coins, cash")
     .eq("user_id", user.id)
     .single();
 
-  if (profileError || !profile || !profile.team_id) {
-    alert("Profile or team not found. Please complete setup.");
+  if (!profile) {
+    alert("Profile not found. Please complete setup.");
     window.location.href = "profile-setup.html";
     return;
   }
@@ -37,36 +36,93 @@ document.addEventListener("DOMContentLoaded", async () => {
     cash: profile.cash,
   });
 
-  const teamId = profile.team_id;
+  updateLockCountdown(); // 🔄 Update countdown and lock status
 
-  const players = await fetchUserPlayers(teamId);
-  const lineupData = await fetchSavedLineup(teamId);
+  const players = await fetchUserPlayers(user.id);
+  const lineupData = await fetchSavedLineup(user.id);
   renderPlayers(players, lineupData);
   enableDragDrop();
 
-  document.getElementById("save-lineup-btn").addEventListener("click", () => saveLineup(players, teamId));
+  document.getElementById("save-lineup-btn").addEventListener("click", () => saveLineup(players));
 });
 
-async function fetchUserPlayers(teamId) {
-  const { data: players, error: playerError } = await supabase
-    .from("players")
-    .select("*")
-    .eq("team_id", teamId);
+// 🧠 Helper: Check if today is matchday (Mon or Thu)
+function isMatchDay() {
+  const day = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata", weekday: "short" });
+  return ["Mon", "Thu"].includes(day);
+}
 
-  if (playerError) {
-    console.error("❌ Failed to fetch players:", playerError);
+// ⏱️ Update lock countdown + icon
+function updateLockCountdown() {
+  const info = document.createElement("div");
+  info.style.textAlign = "center";
+  info.style.margin = "10px 0";
+  info.style.fontWeight = "bold";
+  const icon = document.createElement("span");
+
+  const now = new Date();
+  const istOffset = 5.5 * 60;
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const ist = new Date(utc + istOffset * 60000);
+
+  const lockHour = 20; // 8PM IST
+
+  if (isMatchDay()) {
+    if (ist.getHours() < lockHour) {
+      const hoursLeft = lockHour - ist.getHours() - 1;
+      const minutesLeft = 60 - ist.getMinutes();
+      icon.textContent = "🔓";
+      info.innerHTML = `${icon.outerHTML} Lineup locks in ${hoursLeft}h ${minutesLeft}m`;
+    } else {
+      icon.textContent = "🔒";
+      info.innerHTML = `${icon.outerHTML} Lineup is now locked`;
+      document.getElementById("save-lineup-btn").disabled = true;
+      document.getElementById("save-lineup-btn").innerText = "Lineup Locked";
+    }
+  } else {
+    icon.textContent = "🔓";
+    info.innerHTML = `${icon.outerHTML} Lineup is unlocked`;
+    document.getElementById("save-lineup-btn").disabled = false;
+    document.getElementById("save-lineup-btn").innerText = "Save Lineup";
+  }
+
+  document.querySelector(".lineup-container").prepend(info);
+}
+
+async function fetchUserPlayers(userId) {
+  const { data: teamData } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("owner_id", userId)
+    .single();
+
+  if (!teamData) {
+    console.warn("⚠️ Team not found.");
     return [];
   }
 
-  return players;
+  const { data: players } = await supabase
+    .from("players")
+    .select("*")
+    .eq("team_id", teamData.id);
+
+  return players || [];
 }
 
-async function fetchSavedLineup(teamId) {
-  const { data: lineup, error } = await supabase
+async function fetchSavedLineup(userId) {
+  const { data: teamData } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("owner_id", userId)
+    .single();
+
+  if (!teamData) return null;
+
+  const { data: lineup } = await supabase
     .from("lineups")
     .select("*")
-    .eq("team_id", teamId)
-    .single();
+    .eq("team_id", teamData.id)
+    .maybeSingle();
 
   return lineup || null;
 }
@@ -95,12 +151,6 @@ function renderPlayers(players, lineupData) {
     const card = createPlayerCard(player, false);
     benchContainer.appendChild(card);
   });
-
-  if (lineupData?.locked) {
-    const btn = document.getElementById("save-lineup-btn");
-    btn.disabled = true;
-    btn.innerText = "Lineup Locked";
-  }
 }
 
 function createPlayerCard(player, allowWK = true) {
@@ -110,18 +160,15 @@ function createPlayerCard(player, allowWK = true) {
 
   card.innerHTML = `
     <div class="player-info">
-      <img src="${player.image_url || 'images/avatar.png'}" alt="Player" />
+      <img src="images/avatar.png" alt="Player" />
       <div>
         <div><strong>${player.name}</strong></div>
-        <div class="role-short">
-          ${player.batting_style || ""}${player.batting_style ? " " : ""}${player.bowling_style || ""}
-          ${player.is_wk ? " | WK" : ""}
-        </div>
+        <div>${player.role}</div>
         <div class="skills">
           🏏 ${player.batting} 🎯 ${player.bowling} 🧤 ${player.keeping}
         </div>
         <div class="player-stats">
-          Form: ${player.form} | Fitness: ${player.fitness} | XP: ${player.experience}
+          Form: ${player.form} | Fitness: ${player.fitness}
         </div>
         <div class="skills-extra">
           <span class="skill-tag">${player.skill1 || ""}</span>
@@ -150,15 +197,7 @@ function enableDragDrop() {
   });
 }
 
-function isAfter8PMIST() {
-  const now = new Date();
-  const istOffset = 5.5 * 60;
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const ist = new Date(utc + istOffset * 60000);
-  return ist.getHours() >= 20;
-}
-
-async function saveLineup(allPlayers, teamId) {
+async function saveLineup(allPlayers) {
   const selectedWK = document.querySelector('input[name="wicketKeeper"]:checked');
   if (!selectedWK) {
     alert("Select a Wicket Keeper.");
@@ -166,16 +205,23 @@ async function saveLineup(allPlayers, teamId) {
   }
 
   const wkId = selectedWK.value;
-
   const playingCards = document.querySelectorAll("#playing11-list .player-card");
   const playing11Ids = [...playingCards].map(card => card.dataset.playerId);
 
-  const isLocked = isAfter8PMIST();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: teamData } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("owner_id", user.id)
+    .single();
+
+  const isLocked = isMatchDay() && new Date().getHours() >= 20;
 
   const { error: upsertError } = await supabase
     .from("lineups")
     .upsert({
-      team_id: teamId,
+      team_id: teamData.id,
       playing_xi: playing11Ids,
       batting_order: playing11Ids,
       bowling_order: playing11Ids.slice(5),
@@ -188,7 +234,6 @@ async function saveLineup(allPlayers, teamId) {
     return;
   }
 
-  // ✅ Set WK
   await supabase
     .from("players")
     .update({ is_wk: true })
@@ -198,12 +243,6 @@ async function saveLineup(allPlayers, teamId) {
     .from("players")
     .update({ is_wk: false })
     .in("id", playing11Ids.filter(id => id !== wkId));
-
-  if (isLocked) {
-    const btn = document.getElementById("save-lineup-btn");
-    btn.disabled = true;
-    btn.innerText = "Lineup Locked";
-  }
 
   alert(isLocked ? "✅ Lineup saved and locked!" : "✅ Lineup saved!");
 }
