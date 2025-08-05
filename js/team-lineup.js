@@ -8,12 +8,13 @@ const supabase = createClient(
 
 let currentLineup = [];
 let currentBowlers = [];
+let allPlayers = [];
 let overAssignments = new Array(20).fill(null);
 let locked = false;
 let userId, teamId;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  loadUIBars(); // header/footer
+  loadUIBars(); // inject header/footer
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return (location.href = "login.html");
@@ -23,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const team = await supabase.from("teams").select("*").eq("owner_id", userId).single();
   teamId = team.data.id;
 
-  const players = await supabase.from("players").select("*").eq("team_id", teamId).then(r => r.data || []);
+  allPlayers = await supabase.from("players").select("*").eq("team_id", teamId).then(r => r.data || []);
   const lineup = await supabase.from("lineups").select("*").eq("team_id", teamId).maybeSingle().then(r => r.data || null);
 
   const now = new Date();
@@ -31,7 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   lockTime.setHours(30, 0, 0, 0); // 8 PM IST
   locked = now >= lockTime;
 
-  renderLineup(players, lineup);
+  renderLineup(allPlayers, lineup);
   setupSave();
   setupCountdown(lockTime);
   setupDragAndDrop();
@@ -76,15 +77,12 @@ function setupDragAndDrop() {
 }
 
 function updateFromDOM() {
-  const ids = [...document.querySelectorAll("#playing11-list .player-card")].map(card => card.dataset.playerId);
-  const allPlayers = [...document.querySelectorAll(".player-card")].map(card => ({
-    id: card.dataset.playerId,
-    name: card.dataset.name,
-    role: card.dataset.role
-  }));
+  const idMap = Object.fromEntries(allPlayers.map(p => [p.id, p]));
 
-  currentLineup = ids.map(id => allPlayers.find(p => p.id === id)).filter(Boolean);
-  currentBowlers = currentLineup.filter(p => parseInt(p.role) >= 6).slice(0, 6);
+  const xiIds = [...document.querySelectorAll("#playing11-list .player-card")].map(card => card.dataset.playerId);
+  currentLineup = xiIds.map(id => idMap[id]).filter(Boolean);
+  currentBowlers = currentLineup.filter(p => p.bowling >= 6).slice(0, 6);
+
   renderCaptainPicker();
   renderBowlingLineup();
 }
