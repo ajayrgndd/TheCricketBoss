@@ -1,29 +1,30 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
-import { loadSharedUI } from './shared-ui.js'; // Adjust path as needed
+import { loadSharedUI } from './js/shared-ui.js';
 
 // ✅ Supabase setup
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // 🔐 Replace with your real key
 );
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // ✅ Check auth
   const { data: { user }, error: userError } = await supabase.auth.getUser();
-
   if (userError || !user) {
     alert("Session expired. Please log in again.");
     window.location.href = "login.html";
     return;
   }
 
+  // ✅ Load profile (includes team_id now)
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("manager_name, xp, coins, cash")
+    .select("manager_name, xp, coins, cash, team_id")
     .eq("user_id", user.id)
     .single();
 
-  if (profileError || !profile) {
-    alert("Profile missing. Please complete setup.");
+  if (profileError || !profile || !profile.team_id) {
+    alert("Profile or team not found. Please complete setup.");
     window.location.href = "profile-setup.html";
     return;
   }
@@ -36,31 +37,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     cash: profile.cash,
   });
 
-  const players = await fetchUserPlayers(user.id);
-  const lineupData = await fetchSavedLineup(user.id);
+  const teamId = profile.team_id;
+
+  const players = await fetchUserPlayers(teamId);
+  const lineupData = await fetchSavedLineup(teamId);
   renderPlayers(players, lineupData);
   enableDragDrop();
 
-  document.getElementById("save-lineup-btn").addEventListener("click", () => saveLineup(players));
+  document.getElementById("save-lineup-btn").addEventListener("click", () => saveLineup(players, teamId));
 });
 
-async function fetchUserPlayers(userId) {
-  const { data: teamData, error: teamError } = await supabase
-  .from("teams")
-  .select("id")
-  .eq("user_id", userId)
-  .maybeSingle(); // ✅ avoids crash if no data
-
-
-  if (teamError || !teamData) {
-    console.warn("⚠️ Team not found.");
-    return [];
-  }
-
+async function fetchUserPlayers(teamId) {
   const { data: players, error: playerError } = await supabase
     .from("players")
     .select("*")
-    .eq("team_id", teamData.id);
+    .eq("team_id", teamId);
 
   if (playerError) {
     console.error("❌ Failed to fetch players:", playerError);
@@ -70,22 +61,11 @@ async function fetchUserPlayers(userId) {
   return players;
 }
 
-async function fetchSavedLineup(userId) {
-  const { data: teamData, error: teamError } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("user_id", userId)
-    .single();
-
-  if (teamError || !teamData) {
-    console.warn("Team not found.");
-    return null;
-  }
-
-  const { data: lineup } = await supabase
+async function fetchSavedLineup(teamId) {
+  const { data: lineup, error } = await supabase
     .from("lineups")
     .select("*")
-    .eq("team_id", teamData.id)
+    .eq("team_id", teamId)
     .single();
 
   return lineup || null;
@@ -178,7 +158,7 @@ function isAfter8PMIST() {
   return ist.getHours() >= 20;
 }
 
-async function saveLineup(allPlayers) {
+async function saveLineup(allPlayers, teamId) {
   const selectedWK = document.querySelector('input[name="wicketKeeper"]:checked');
   if (!selectedWK) {
     alert("Select a Wicket Keeper.");
@@ -190,25 +170,12 @@ async function saveLineup(allPlayers) {
   const playingCards = document.querySelectorAll("#playing11-list .player-card");
   const playing11Ids = [...playingCards].map(card => card.dataset.playerId);
 
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const { data: teamData } = await supabase
-    .from("teams")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!teamData) {
-    alert("Team not found.");
-    return;
-  }
-
   const isLocked = isAfter8PMIST();
 
   const { error: upsertError } = await supabase
     .from("lineups")
     .upsert({
-      team_id: teamData.id,
+      team_id: teamId,
       playing_xi: playing11Ids,
       batting_order: playing11Ids,
       bowling_order: playing11Ids.slice(5),
