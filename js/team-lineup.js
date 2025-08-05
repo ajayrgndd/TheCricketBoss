@@ -1,5 +1,5 @@
+
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-import { loadSharedUI } from './shared-ui.js';
 
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
@@ -21,27 +21,46 @@ document.addEventListener("DOMContentLoaded", async () => {
     .eq("user_id", user.id)
     .single();
 
-  loadSharedUI({
-    supabase,
-    manager_name: profile.manager_name,
-    xp: profile.xp,
-    coins: profile.coins,
-    cash: profile.cash,
-  });
+  renderTopBar(profile);
+  renderBottomNav();
 
   const players = await fetchPlayers(user.id);
   const teamId = await fetchTeamId(user.id);
   const lineup = await fetchLineup(teamId);
-  const now = new Date();
-  const lockTime = new Date(now);
-  lockTime.setHours(30, 0, 0, 0); // 8 PM IST
 
+  const now = new Date();
+  const lockTime = new Date();
+  lockTime.setHours(30, 0, 0, 0); // 8 PM IST
   locked = now >= lockTime;
 
   renderLineup(players, lineup);
   setupSaveHandler(user.id, teamId);
   setupCountdown(lockTime);
 });
+
+function renderTopBar(profile) {
+  const topBar = document.getElementById("top-bar");
+  topBar.className = "fixed-top-bar";
+  topBar.innerHTML = `
+    <div>
+      👤 <strong>${profile.manager_name}</strong> | XP: ${profile.xp} |
+      🪙 ${profile.coins} | 💵 ₹${profile.cash}
+    </div>
+    <button onclick="location.href='login.html'">Logout</button>
+  `;
+}
+
+function renderBottomNav() {
+  const bottomNav = document.getElementById("bottom-nav");
+  bottomNav.className = "fixed-bottom-nav";
+  bottomNav.innerHTML = `
+    <a href="team.html">🏏 Team</a>
+    <a href="scout.html">🔍 Scout</a>
+    <a href="home.html">🏠 Home</a>
+    <a href="auction.html">⚒️ Auction</a>
+    <a href="store.html">🛒 Store</a>
+  `;
+}
 
 async function fetchTeamId(userId) {
   const { data } = await supabase.from("teams").select("id").eq("owner_id", userId).single();
