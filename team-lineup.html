@@ -9,32 +9,35 @@
 </head>
 <body>
 
-  <!-- Fixed Top Bar -->
-  <div id="top-bar" class="fixed-top-bar"></div>
+  <!-- Top Bar -->
+  <div id="top-bar"></div>
 
-  <!-- Main Content -->
-  <div class="content-area">
+  <div class="lineup-container">
+
     <h2>Set Your Playing 11</h2>
+    <div id="lineup-status" class="status-text">Loading...</div>
+
     <div id="playing11-list" class="player-list"></div>
 
     <h3>Bench</h3>
-    <div id="bench-list" class="player-list bench"></div>
+    <div id="bench-list" class="player-list"></div>
 
-    <h3>Bowling Order</h3>
-    <div id="bowling-order-list" class="bowling-order-list"></div>
+    <div id="captain-picker" class="captain-section"></div>
 
-    <button id="save-lineup-btn">Save Lineup</button>
-    <div id="lineup-status"></div>
+    <h3>Bowling Lineup</h3>
+    <div id="bowling-lineup" class="bowling-section"></div>
+    <div class="overs-counter">🎯 <span id="overs-count">0/20 overs set</span></div>
+
+    <button id="save-lineup-btn">💾 Save Lineup</button>
   </div>
 
-  <!-- Fixed Bottom Nav -->
-  <div id="bottom-nav" class="fixed-bottom-nav"></div>
+  <!-- Bottom Nav -->
+  <div id="bottom-nav"></div>
 
-  <!-- Sortable.js -->
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-
-  <!-- Modules -->
-  <script type="module" src="js/shared-ui.js"></script>
   <script type="module" src="js/team-lineup.js"></script>
+  <script type="module" src="js/shared-ui.js"></script>
+
 </body>
 </html>
