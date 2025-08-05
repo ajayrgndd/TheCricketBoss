@@ -216,7 +216,7 @@ async function saveLineup(allPlayers) {
     .eq("owner_id", user.id)
     .single();
 
-  const isLocked = isMatchDay() && new Date().getHours() >= 20;
+  const isLocked = isMatchDay() && new Date().getHours() >= 30;
 
   const { error: upsertError } = await supabase
     .from("lineups")
