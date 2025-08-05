@@ -1,117 +1,152 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f4f4f4;
+  background: #f9f9f9;
 }
 
 .lineup-container {
-  padding: 80px 16px 100px; /* space for top and bottom bars */
+  padding: 80px 12px 100px;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 h2, h3 {
   text-align: center;
-  color: #333;
+  margin-top: 24px;
+  color: #222;
 }
 
-#lock-status {
+.status-text {
   text-align: center;
   font-size: 14px;
-  margin-bottom: 10px;
-  color: #555;
+  color: #666;
+  margin: 6px 0 12px;
 }
 
 .player-list {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin: 16px 0;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .player-card {
   background: #fff;
-  border: 1px solid #ccc;
+  border: 1px solid #ddd;
   border-radius: 8px;
-  padding: 10px 12px;
-  width: calc(48% - 10px);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  padding: 10px;
+  width: calc(50% - 8px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   cursor: pointer;
-  transition: all 0.3s ease;
-  max-height: 100px;
-  overflow: hidden;
+  transition: all 0.2s ease;
 }
 
-.player-card.expanded {
-  max-height: 250px;
+.player-card.compact .player-expanded {
+  display: none;
+}
+
+.player-card.expanded .player-expanded {
+  display: block;
+}
+
+.player-card:hover {
+  transform: scale(1.01);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .player-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   font-size: 14px;
-  font-weight: bold;
+  color: #333;
+  margin-bottom: 6px;
 }
 
-.player-name {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #111;
-}
-
-.player-details {
-  margin-top: 10px;
+.player-expanded {
   font-size: 13px;
-  line-height: 1.4;
   color: #444;
 }
 
-.skill-tag {
-  display: inline-block;
-  background: #e0e0e0;
+.captain-section {
+  margin-top: 24px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fefefe;
+}
+
+.captain-section label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.bowling-section {
+  margin-top: 20px;
+}
+
+.bowler-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.bowler-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: bold;
   color: #333;
-  padding: 2px 6px;
+}
+
+.over-box {
+  width: 30px;
+  height: 30px;
+  background: #eee;
+  text-align: center;
+  line-height: 30px;
   border-radius: 4px;
-  font-size: 12px;
-  margin: 2px 4px 2px 0;
-}
-
-.drag-ghost {
-  opacity: 0.5;
-}
-
-.captain-radio input {
-  transform: scale(1.2);
   cursor: pointer;
+  font-size: 13px;
+  transition: 0.2s;
+}
+
+.over-box:hover {
+  background: #ddd;
+}
+
+.over-box.filled {
+  background: #4caf50;
+  color: white;
+}
+
+.overs-counter {
+  text-align: center;
+  margin-top: 6px;
+  color: #555;
+  font-size: 14px;
 }
 
 #save-lineup-btn {
   display: block;
   width: 100%;
   max-width: 400px;
-  margin: 10px auto 40px;
+  margin: 20px auto;
   padding: 14px;
-  background: #4CAF50;
+  font-size: 18px;
+  background: #2196F3;
   color: white;
   border: none;
-  font-size: 18px;
   border-radius: 8px;
   cursor: pointer;
 }
 
-#save-lineup-btn[disabled] {
-  background: #aaa;
-  cursor: not-allowed;
+#save-lineup-btn:hover {
+  background: #1976D2;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
+/* Responsive tweaks */
+@media (max-width: 600px) {
   .player-card {
-    width: calc(100% - 10px);
-  }
-
-  .captain-radio input {
-    transform: scale(1.1);
+    width: 100%;
   }
 }
