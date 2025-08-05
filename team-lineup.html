@@ -8,37 +8,36 @@
   <link rel="stylesheet" href="css/team-lineup.css" />
 </head>
 <body>
+
+  <!-- Top Bar -->
   <div id="top-bar"></div>
 
   <div class="lineup-container">
-    <div class="lineup-header">
-      <h2>Set Your Playing 11</h2>
-      <div id="lock-status">
-        <span id="lock-icon">🔓</span>
-        <span id="lock-countdown">Lineup locks in --</span>
-      </div>
-    </div>
+
+    <h2>Set Your Playing 11</h2>
+    <div id="lineup-status" class="status-text">Loading...</div>
 
     <div id="playing11-list" class="player-list"></div>
 
     <h3>Bench</h3>
-    <div id="bench-list" class="player-list bench"></div>
+    <div id="bench-list" class="player-list"></div>
 
-    <h3>Pick Your Captain</h3>
-    <div id="captain-picker" class="captain-picker"></div>
+    <div id="captain-picker" class="captain-section"></div>
 
-    <h3>Bowling Order</h3>
-    <div id="bowling-lineup" class="bowling-lineup"></div>
-    <div class="bowling-warning">🎯 Assign 20 overs without repeating bowlers consecutively</div>
+    <h3>Bowling Lineup</h3>
+    <div id="bowling-lineup" class="bowling-section"></div>
+    <div class="overs-counter">🎯 <span id="overs-count">0/20 overs set</span></div>
 
-    <button id="save-lineup-btn">Save Lineup</button>
+    <button id="save-lineup-btn">💾 Save Lineup</button>
   </div>
 
+  <!-- Bottom Nav -->
   <div id="bottom-nav"></div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script type="module" src="js/shared-ui.js"></script>
   <script type="module" src="js/team-lineup.js"></script>
+  <script type="module" src="js/shared-ui.js"></script>
+
 </body>
 </html>
