@@ -9,29 +9,31 @@
 </head>
 <body>
 
-  <!-- Top Bar -->
-  <div id="top-bar"></div>
+  <!-- Fixed Top Bar -->
+  <div id="top-bar" class="fixed-top-bar"></div>
 
-  <div class="lineup-container">
+  <!-- Main Content -->
+  <div class="content-area">
     <h2>Set Your Playing 11</h2>
-    <div id="lock-status" class="lock-status">Checking lock status...</div>
-
     <div id="playing11-list" class="player-list"></div>
 
     <h3>Bench</h3>
     <div id="bench-list" class="player-list bench"></div>
 
-    <h3>Bowling Lineup</h3>
-    <div id="bowling-panel" class="bowling-panel"></div>
+    <h3>Bowling Order</h3>
+    <div id="bowling-order-list" class="bowling-order-list"></div>
 
     <button id="save-lineup-btn">Save Lineup</button>
+    <div id="lineup-status"></div>
   </div>
 
-  <!-- Bottom Navigation -->
-  <div id="bottom-nav"></div>
+  <!-- Fixed Bottom Nav -->
+  <div id="bottom-nav" class="fixed-bottom-nav"></div>
 
-  <!-- Scripts -->
+  <!-- Sortable.js -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+  <!-- Modules -->
   <script type="module" src="js/shared-ui.js"></script>
   <script type="module" src="js/team-lineup.js"></script>
 </body>
