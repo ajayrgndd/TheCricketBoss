@@ -149,4 +149,32 @@ h2, h3 {
   .player-card {
     width: 100%;
   }
+.fixed-top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  z-index: 1000;
+  background: #fff;
+  border-bottom: 1px solid #ccc;
+}
+
+.fixed-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  z-index: 1000;
+  background: #fff;
+  border-top: 1px solid #ccc;
+}
+
+.content-area {
+  padding-top: 70px;   /* height of top bar + margin */
+  padding-bottom: 80px; /* height of bottom bar + margin */
+  overflow-y: auto;
+}
+
 }
