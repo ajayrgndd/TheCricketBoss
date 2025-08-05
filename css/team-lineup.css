@@ -39,7 +39,7 @@ h2, h3 {
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   cursor: pointer;
   transition: all 0.2s ease;
-  touch-action: manipulation; /* Allows scroll on touch */
+  touch-action: manipulation;
 }
 
 .player-card.compact .player-expanded {
@@ -145,7 +145,6 @@ h2, h3 {
   background: #1976D2;
 }
 
-/* 🔝 Fixed Top Bar */
 .fixed-top-bar {
   position: fixed;
   top: 0;
@@ -161,7 +160,6 @@ h2, h3 {
   padding: 0 16px;
 }
 
-/* 🔻 Fixed Bottom Nav */
 .fixed-bottom-nav {
   position: fixed;
   bottom: 0;
@@ -182,7 +180,6 @@ h2, h3 {
   text-decoration: none;
 }
 
-/* 📱 Responsive */
 @media (max-width: 600px) {
   .player-card {
     width: 100%;
