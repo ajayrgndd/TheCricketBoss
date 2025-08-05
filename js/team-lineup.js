@@ -48,18 +48,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function fetchUserPlayers(userId) {
-  const { data, error } = await supabase
-    .from("players")
-    .select("*")
-    .eq("user_id", userId);
+  // Step 1: Get team_id from teams table
+  const { data: teamData, error: teamError } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("user_id", userId)
+    .single();
 
-  if (error) {
-    alert("Failed to load players.");
-    console.error(error);
+  if (teamError || !teamData) {
+    console.warn("⚠️ Team not found.");
     return [];
   }
 
-  return data;
+  // Step 2: Get players using team_id
+  const { data: players, error: playerError } = await supabase
+    .from("players")
+    .select("*")
+    .eq("team_id", teamData.id);
+
+  if (playerError) {
+    console.error("❌ Failed to fetch players:", playerError);
+    return [];
+  }
+
+  return players;
 }
 
 async function fetchSavedLineup(userId) {
