@@ -1,68 +1,78 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
 import { loadSharedUI } from './shared-ui.js';
 
+// ✅ Supabase setup
 const supabase = createClient(
-  "https://https://iukofcmatlfhfwcechdq.supabase.co", // ← replace this
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" 
+  "https://iukofcmatlfhfwcechdq.supabase.co", // ⛳ Replace with your Supabase project URL
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"                        // ⛳ Replace with your anon public key
 );
-  
+
 document.addEventListener("DOMContentLoaded", async () => {
-  const { data: { user } } = await supabase.auth.getUser();
+  // ✅ Session check
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
 
+  if (userError || !user) {
+    alert("Session expired. Please log in again.");
+    window.location.href = "login.html";
+    return;
+  }
+
+  // ✅ Load manager profile
   const { data: profile, error: profileError } = await supabase
-  .from("profiles")
-  .select("manager_name, xp, coins, cash")
-  .eq("user_id", user.id)
-  .single();
+    .from("profiles")
+    .select("manager_name, xp, coins, cash")
+    .eq("user_id", user.id)
+    .single();
 
-if (profileError || !profile) {
-  console.error("❌ Profile not found for user:", user.id);
-  alert("Your manager profile is missing. Please complete profile setup first.");
-  window.location.href = "profile-setup.html"; // redirect to profile setup
-  return;
-}
+  if (profileError || !profile) {
+    alert("Profile missing. Please complete setup.");
+    window.location.href = "profile-setup.html";
+    return;
+  }
 
-loadSharedUI({
-  supabase,
-  manager_name: profile.manager_name,
-  xp: profile.xp,
-  coins: profile.coins,
-  cash: profile.cash,
-});
+  loadSharedUI({
+    supabase,
+    manager_name: profile.manager_name,
+    xp: profile.xp,
+    coins: profile.coins,
+    cash: profile.cash,
+  });
 
-  const players = await fetchUserPlayers();
-  if (!players.length) return;
-
-  const lineupData = await fetchSavedLineup();
+  // ✅ Load players and saved lineup
+  const players = await fetchUserPlayers(user.id);
+  const lineupData = await fetchSavedLineup(user.id);
   renderPlayers(players, lineupData);
   enableDragDrop();
 
   document.getElementById("save-lineup-btn").addEventListener("click", () => saveLineup(players));
 });
 
-async function fetchUserPlayers() {
-  const { data: { user } } = await supabase.auth.getUser();
-
+async function fetchUserPlayers(userId) {
   const { data, error } = await supabase
     .from("players")
     .select("*")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (error) {
     alert("Failed to load players.");
+    console.error(error);
     return [];
   }
 
   return data;
 }
 
-async function fetchSavedLineup() {
-  const { data: { user } } = await supabase.auth.getUser();
-  const { data: teamData } = await supabase
+async function fetchSavedLineup(userId) {
+  const { data: teamData, error: teamError } = await supabase
     .from("teams")
     .select("id")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .single();
+
+  if (teamError || !teamData) {
+    console.warn("Team not found.");
+    return null;
+  }
 
   const { data: lineup } = await supabase
     .from("lineups")
@@ -78,8 +88,8 @@ function renderPlayers(players, lineupData) {
   const bench = players.slice(11);
 
   if (lineupData?.batting_order?.length > 0) {
-    const idToPlayer = Object.fromEntries(players.map(p => [p.id, p]));
-    playing11 = lineupData.batting_order.map(id => idToPlayer[id]).filter(Boolean);
+    const idMap = Object.fromEntries(players.map(p => [p.id, p]));
+    playing11 = lineupData.batting_order.map(id => idMap[id]).filter(Boolean);
   }
 
   const playingContainer = document.getElementById("playing11-list");
@@ -99,8 +109,9 @@ function renderPlayers(players, lineupData) {
   });
 
   if (lineupData?.locked) {
-    document.getElementById("save-lineup-btn").disabled = true;
-    document.getElementById("save-lineup-btn").innerText = "Lineup Locked";
+    const btn = document.getElementById("save-lineup-btn");
+    btn.disabled = true;
+    btn.innerText = "Lineup Locked";
   }
 }
 
@@ -116,14 +127,10 @@ function createPlayerCard(player, allowWK = true) {
         <div><strong>${player.name}</strong></div>
         <div class="role-short">${player.role_short}</div>
         <div class="skills">
-          <span title="Batting">🏏 ${player.batting}</span>
-          <span title="Bowling">🎯 ${player.bowling}</span>
-          <span title="WK">🧤 ${player.wk}</span>
+          🏏 ${player.batting} 🎯 ${player.bowling} 🧤 ${player.wk}
         </div>
         <div class="player-stats">
-          <span>Form: ${player.form}</span>
-          <span>Fitness: ${player.fitness}</span>
-          <span>XP: ${player.experience}</span>
+          Form: ${player.form} | Fitness: ${player.fitness} | XP: ${player.experience}
         </div>
         <div class="skills-extra">
           <span class="skill-tag">${player.skill1}</span>
@@ -134,7 +141,7 @@ function createPlayerCard(player, allowWK = true) {
     ${allowWK ? `
       <div class="player-role">
         <label>
-          <input type="radio" name="wicketKeeper" class="wk-radio" value="${player.id}" ${player.is_wk ? 'checked' : ''} />
+          <input type="radio" name="wicketKeeper" class="wk-radio" value="${player.id}" ${player.is_wk ? 'checked' : ''}/>
           WK
         </label>
       </div>
@@ -145,10 +152,10 @@ function createPlayerCard(player, allowWK = true) {
 }
 
 function enableDragDrop() {
-  const playingContainer = document.getElementById("playing11-list");
-  Sortable.create(playingContainer, {
+  const container = document.getElementById("playing11-list");
+  Sortable.create(container, {
     animation: 150,
-    ghostClass: 'drag-ghost'
+    ghostClass: "drag-ghost"
   });
 }
 
@@ -156,8 +163,8 @@ function isAfter8PMIST() {
   const now = new Date();
   const istOffset = 5.5 * 60;
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  const istTime = new Date(utc + (istOffset * 60000));
-  return istTime.getHours() >= 20;
+  const ist = new Date(utc + istOffset * 60000);
+  return ist.getHours() >= 20;
 }
 
 async function saveLineup(allPlayers) {
@@ -180,25 +187,30 @@ async function saveLineup(allPlayers) {
     .eq("user_id", user.id)
     .single();
 
-  const teamId = teamData.id;
+  if (!teamData) {
+    alert("Team not found.");
+    return;
+  }
+
   const isLocked = isAfter8PMIST();
 
-  const { error } = await supabase
+  const { error: upsertError } = await supabase
     .from("lineups")
     .upsert({
-      team_id: teamId,
+      team_id: teamData.id,
       playing_xi: playing11Ids,
       batting_order: playing11Ids,
       bowling_order: playing11Ids.slice(5),
       locked: isLocked
     }, { onConflict: ['team_id'] });
 
-  if (error) {
+  if (upsertError) {
+    console.error("❌ Failed to save lineup", upsertError);
     alert("Failed to save lineup.");
-    console.error(error);
     return;
   }
 
+  // ✅ Set WK
   await supabase
     .from("players")
     .update({ is_wk: true })
@@ -209,10 +221,11 @@ async function saveLineup(allPlayers) {
     .update({ is_wk: false })
     .in("id", playing11Ids.filter(id => id !== wkId));
 
-  alert(isLocked ? "✅ Lineup saved & locked!" : "✅ Lineup saved!");
-
   if (isLocked) {
-    document.getElementById("save-lineup-btn").disabled = true;
-    document.getElementById("save-lineup-btn").innerText = "Lineup Locked";
+    const btn = document.getElementById("save-lineup-btn");
+    btn.disabled = true;
+    btn.innerText = "Lineup Locked";
   }
+
+  alert(isLocked ? "✅ Lineup saved and locked!" : "✅ Lineup saved!");
 }
