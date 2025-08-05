@@ -5,36 +5,113 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Team Lineup</title>
   <link rel="stylesheet" href="css/shared-ui.css" />
-  <link rel="stylesheet" href="css/team-lineup.css" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+    }
+
+    .lineup-container {
+      padding: 80px 16px 100px; /* Space for top and bottom bars */
+    }
+
+    h2, h3 {
+      text-align: center;
+      color: #333;
+    }
+
+    .player-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .player-card {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      width: calc(48% - 10px);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .player-info {
+      display: flex;
+      gap: 10px;
+    }
+
+    .player-info img {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .skills, .player-stats, .skills-extra {
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .skill-tag {
+      background: #e0e0e0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-right: 4px;
+      font-size: 12px;
+    }
+
+    .player-role {
+      margin-top: 6px;
+    }
+
+    #save-lineup-btn {
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto 40px;
+      padding: 14px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      font-size: 18px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #save-lineup-btn[disabled] {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+  </style>
 </head>
 <body>
 
-  <!-- Fixed Top Bar -->
-  <div id="top-bar" class="fixed-top-bar"></div>
+  <!-- Top bar (auto-loaded by shared-ui.js) -->
+  <div id="top-bar"></div>
 
-  <!-- Main Content -->
-  <div class="content-area">
+  <div class="lineup-container">
     <h2>Set Your Playing 11</h2>
     <div id="playing11-list" class="player-list"></div>
 
     <h3>Bench</h3>
     <div id="bench-list" class="player-list bench"></div>
 
-    <h3>Bowling Order</h3>
-    <div id="bowling-order-list" class="bowling-order-list"></div>
-
     <button id="save-lineup-btn">Save Lineup</button>
-    <div id="lineup-status"></div>
   </div>
 
-  <!-- Fixed Bottom Nav -->
-  <div id="bottom-nav" class="fixed-bottom-nav"></div>
+  <!-- Bottom nav bar (auto-loaded by shared-ui.js) -->
+  <div id="bottom-nav"></div>
 
-  <!-- Sortable.js -->
+  <!-- SortableJS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
-  <!-- Modules -->
+  <!-- Main modules -->
   <script type="module" src="js/shared-ui.js"></script>
   <script type="module" src="js/team-lineup.js"></script>
+
 </body>
 </html>
