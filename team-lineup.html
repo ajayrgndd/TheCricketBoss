@@ -4,16 +4,51 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Team Lineup</title>
-  <link rel="stylesheet" href="css/shared-ui.css" />
   <link rel="stylesheet" href="css/team-lineup.css" />
+  <style>
+    /* Ensure fixed bars are styled even without shared-ui */
+    #top-bar.fixed-top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: #fff;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      z-index: 999;
+    }
+
+    #bottom-nav.fixed-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: #fff;
+      border-top: 1px solid #ccc;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 999;
+    }
+
+    body {
+      margin: 0;
+      padding-top: 60px;    /* space for top bar */
+      padding-bottom: 60px; /* space for bottom bar */
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+    }
+  </style>
 </head>
 <body>
 
   <!-- Top Bar -->
-  <div id="top-bar" class="fixed-top-bar"></div>
+  <div id="top-bar"></div>
 
-  <!-- Content Area -->
-  <div class="content-area lineup-container">
+  <div class="lineup-container">
 
     <h2>Set Your Playing 11</h2>
     <div id="lineup-status" class="status-text">Loading...</div>
@@ -33,11 +68,10 @@
   </div>
 
   <!-- Bottom Nav -->
-  <div id="bottom-nav" class="fixed-bottom-nav"></div>
+  <div id="bottom-nav"></div>
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script type="module" src="js/shared-ui.js"></script>
   <script type="module" src="js/team-lineup.js"></script>
 
 </body>
