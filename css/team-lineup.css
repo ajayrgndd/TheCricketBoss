@@ -1,27 +1,117 @@
-.fixed-top-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  z-index: 1000;
-  background: #fff;
-  border-bottom: 1px solid #ccc;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
 }
 
-.fixed-bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  z-index: 1000;
-  background: #fff;
-  border-top: 1px solid #ccc;
+.lineup-container {
+  padding: 80px 16px 100px; /* space for top and bottom bars */
 }
 
-.content-area {
-  padding-top: 70px;   /* height of top bar + margin */
-  padding-bottom: 80px; /* height of bottom bar + margin */
-  overflow-y: auto;
+h2, h3 {
+  text-align: center;
+  color: #333;
+}
+
+#lock-status {
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.player-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.player-card {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  width: calc(48% - 10px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  max-height: 100px;
+  overflow: hidden;
+}
+
+.player-card.expanded {
+  max-height: 250px;
+}
+
+.player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.player-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #111;
+}
+
+.player-details {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #444;
+}
+
+.skill-tag {
+  display: inline-block;
+  background: #e0e0e0;
+  color: #333;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin: 2px 4px 2px 0;
+}
+
+.drag-ghost {
+  opacity: 0.5;
+}
+
+.captain-radio input {
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+#save-lineup-btn {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: 10px auto 40px;
+  padding: 14px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  font-size: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#save-lineup-btn[disabled] {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .player-card {
+    width: calc(100% - 10px);
+  }
+
+  .captain-radio input {
+    transform: scale(1.1);
+  }
 }
