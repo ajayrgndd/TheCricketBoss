@@ -1,4 +1,4 @@
-import { loadSharedUI } from './shared-ui.js';
+import { loadSharedUI } from './js/shared-ui.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
   const { data: { user } } = await supabase.auth.getUser();
