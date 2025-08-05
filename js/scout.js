@@ -38,15 +38,15 @@ if (!user) {
 
 const { data: profile } = await supabase
   .from("profiles")
-  .select("region, last_scouted_date")
+  .select("region, last_scouted_date, team_id, team_name, manager_name")
   .eq("user_id", user.id)
   .single();
 
-const { data: team } = await supabase
-  .from("teams")
-  .select("id, team_name, manager_name")
-  .eq("owner_id", user.id)
-  .single();
+if (!profile?.team_id) {
+  alert("Team ID missing. Please complete profile setup.");
+  location.href = "profile-setup.html";
+}
+
 
 // ✅ Only allow scouting on Sunday (change to 3 for Wednesday if needed)
 if (serverDay !== 3) {
@@ -119,9 +119,9 @@ btn.onclick = async () => {
   const name = regionNames[Math.floor(Math.random() * regionNames.length)];
 
   const basePlayer = {
-    team_id: team.id,
-    team_name: team.team_name,
-    manager_name: team.manager_name,
+   team_id: profile.team_id,
+team_name: profile.team_name,
+manager_name: profile.manager_name,
     name,
     role,
     region: profile.region,
@@ -175,5 +175,6 @@ btn.onclick = async () => {
     console.error(insertErr);
   }
 };
+
 
 
