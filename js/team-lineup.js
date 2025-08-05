@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const lineup = await fetchLineup(teamId);
   const now = new Date();
   const lockTime = new Date(now);
-  lockTime.setHours(30, 0, 0, 0); // 8 PM IST
+  lockTime.setHours(20, 0, 0, 0); // 8 PM IST
 
   locked = now >= lockTime;
 
