@@ -5,94 +5,122 @@ body {
 }
 
 .lineup-container {
-  padding: 80px 16px 100px; /* space for top and bottom bars */
+  padding: 80px 16px 100px;
+  max-width: 800px;
+  margin: auto;
 }
 
 h2, h3 {
   text-align: center;
-  color: #333;
+  color: #222;
+  margin-bottom: 12px;
 }
 
-#lock-status {
+.lock-status {
   text-align: center;
-  font-size: 14px;
-  margin-bottom: 10px;
-  color: #555;
+  font-weight: bold;
+  margin: 10px 0;
+  color: #cc0000;
 }
 
 .player-list {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin: 16px 0;
+  gap: 12px;
 }
 
 .player-card {
   background: #fff;
-  border: 1px solid #ccc;
+  border: 1px solid #ddd;
   border-radius: 8px;
-  padding: 10px 12px;
-  width: calc(48% - 10px);
+  padding: 10px;
+  width: 48%;
+  min-height: 60px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  cursor: pointer;
   transition: all 0.3s ease;
-  max-height: 100px;
-  overflow: hidden;
+  cursor: pointer;
 }
 
 .player-card.expanded {
-  max-height: 250px;
+  background: #f0f8ff;
 }
 
-.player-header {
+.player-card .compact-view {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
-  font-weight: bold;
 }
 
-.player-name {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #111;
+.player-card .compact-view .main {
+  flex-grow: 1;
 }
 
-.player-details {
-  margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.4;
-  color: #444;
+.player-card .expanded-view {
+  margin-top: 6px;
 }
 
-.skill-tag {
-  display: inline-block;
-  background: #e0e0e0;
-  color: #333;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  margin: 2px 4px 2px 0;
+.player-card .expanded-view.hidden {
+  display: none;
 }
 
 .drag-ghost {
   opacity: 0.5;
 }
 
-.captain-radio input {
-  transform: scale(1.2);
+.bowling-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.bowler-card {
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bowler-card .compact-view {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.bowler-card .over-boxes {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.over-box {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #888;
+  border-radius: 4px;
+  text-align: center;
+  line-height: 28px;
+  background: #eee;
   cursor: pointer;
+  font-weight: bold;
+}
+
+.over-box:hover {
+  background: #ddd;
 }
 
 #save-lineup-btn {
   display: block;
   width: 100%;
   max-width: 400px;
-  margin: 10px auto 40px;
+  margin: 20px auto;
   padding: 14px;
-  background: #4CAF50;
+  background: #007BFF;
   color: white;
   border: none;
   font-size: 18px;
@@ -105,13 +133,12 @@ h2, h3 {
   cursor: not-allowed;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .player-card {
-    width: calc(100% - 10px);
-  }
+.captain-select {
+  font-size: 20px;
+  margin-left: 8px;
+  cursor: pointer;
+}
 
-  .captain-radio input {
-    transform: scale(1.1);
-  }
+.captain-select.selected {
+  color: green;
 }
