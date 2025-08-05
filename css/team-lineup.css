@@ -1,83 +1,103 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f7f7f7;
+  background: #f4f4f4;
 }
 
 .lineup-container {
-  padding: 80px 10px 100px;
-  max-width: 900px;
-  margin: auto;
+  padding: 80px 16px 100px; /* space for top and bottom bars */
 }
 
 h2, h3 {
   text-align: center;
-  color: #222;
-  margin-bottom: 8px;
+  color: #333;
+}
+
+#lock-status {
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #555;
 }
 
 .player-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
   justify-content: center;
+  gap: 10px;
+  margin: 16px 0;
 }
 
 .player-card {
-  width: 48%;
-  min-width: 160px;
-  background: white;
-  padding: 8px;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  cursor: grab;
-  transition: all 0.2s ease;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  width: calc(48% - 10px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  max-height: 100px;
+  overflow: hidden;
 }
 
 .player-card.expanded {
-  width: 100%;
-  background: #f9f9f9;
+  max-height: 250px;
 }
 
 .player-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 14px;
+  font-weight: bold;
 }
 
-.player-role,
-.skills,
-.stats {
+.player-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #111;
+}
+
+.player-details {
+  margin-top: 10px;
   font-size: 13px;
-  margin-top: 4px;
-}
-
-.expand-toggle {
-  font-size: 12px;
-  color: #007bff;
-  cursor: pointer;
-  margin-top: 6px;
+  line-height: 1.4;
+  color: #444;
 }
 
 .skill-tag {
-  background: #ddd;
-  padding: 2px 5px;
+  display: inline-block;
+  background: #e0e0e0;
+  color: #333;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 11px;
-  margin-right: 4px;
+  font-size: 12px;
+  margin: 2px 4px 2px 0;
+}
+
+.drag-ghost {
+  opacity: 0.5;
+}
+
+.captain-radio input {
+  transform: scale(1.2);
+  cursor: pointer;
 }
 
 #save-lineup-btn {
-  width: 100%;
-  max-width: 300px;
-  margin: 24px auto;
   display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: 10px auto 40px;
   padding: 14px;
-  font-size: 16px;
   background: #4CAF50;
   color: white;
   border: none;
+  font-size: 18px;
   border-radius: 8px;
+  cursor: pointer;
 }
 
 #save-lineup-btn[disabled] {
@@ -85,49 +105,13 @@ h2, h3 {
   cursor: not-allowed;
 }
 
-.bowling-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .player-card {
+    width: calc(100% - 10px);
+  }
 
-.bowler-card {
-  background: #fff;
-  padding: 10px;
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-}
-
-.bowler-header {
-  display: flex;
-  justify-content: space-between;
-}
-
-.over-boxes {
-  display: flex;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.over-box {
-  width: 28px;
-  height: 28px;
-  background: #eee;
-  border-radius: 4px;
-  text-align: center;
-  line-height: 28px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.over-box.active {
-  background: #4CAF50;
-  color: white;
-}
-
-#lock-status {
-  text-align: center;
-  font-size: 14px;
-  color: #c00;
-  margin-bottom: 10px;
+  .captain-radio input {
+    transform: scale(1.1);
+  }
 }
