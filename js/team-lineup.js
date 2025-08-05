@@ -9,19 +9,26 @@ const supabase = createClient(
 document.addEventListener("DOMContentLoaded", async () => {
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("manager_name, xp, coins, cash")
-    .eq("user_id", user.id)
-    .single();
+  const { data: profile, error: profileError } = await supabase
+  .from("profiles")
+  .select("manager_name, xp, coins, cash")
+  .eq("user_id", user.id)
+  .single();
 
-  loadSharedUI({
-    supabase,
-    manager_name: profile.manager_name,
-    xp: profile.xp,
-    coins: profile.coins,
-    cash: profile.cash,
-  });
+if (profileError || !profile) {
+  console.error("❌ Profile not found for user:", user.id);
+  alert("Your manager profile is missing. Please complete profile setup first.");
+  window.location.href = "profile-setup.html"; // redirect to profile setup
+  return;
+}
+
+loadSharedUI({
+  supabase,
+  manager_name: profile.manager_name,
+  xp: profile.xp,
+  coins: profile.coins,
+  cash: profile.cash,
+});
 
   const players = await fetchUserPlayers();
   if (!players.length) return;
