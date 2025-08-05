@@ -1,152 +1,133 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #f9f9f9;
+  background: #f7f7f7;
 }
 
 .lineup-container {
-  padding: 80px 12px 100px;
-  max-width: 1000px;
-  margin: 0 auto;
+  padding: 80px 10px 100px;
+  max-width: 900px;
+  margin: auto;
 }
 
 h2, h3 {
   text-align: center;
-  margin-top: 24px;
   color: #222;
-}
-
-.status-text {
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  margin: 6px 0 12px;
+  margin-bottom: 8px;
 }
 
 .player-list {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  justify-content: center;
 }
 
 .player-card {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  width: calc(50% - 8px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  cursor: pointer;
+  width: 48%;
+  min-width: 160px;
+  background: white;
+  padding: 8px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  cursor: grab;
   transition: all 0.2s ease;
 }
 
-.player-card.compact .player-expanded {
-  display: none;
-}
-
-.player-card.expanded .player-expanded {
-  display: block;
-}
-
-.player-card:hover {
-  transform: scale(1.01);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+.player-card.expanded {
+  width: 100%;
+  background: #f9f9f9;
 }
 
 .player-header {
-  font-size: 14px;
-  color: #333;
-  margin-bottom: 6px;
-}
-
-.player-expanded {
-  font-size: 13px;
-  color: #444;
-}
-
-.captain-section {
-  margin-top: 24px;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fefefe;
-}
-
-.captain-section label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-}
-
-.bowling-section {
-  margin-top: 20px;
-}
-
-.bowler-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
 }
 
-.bowler-name {
-  flex: 1;
-  font-size: 14px;
-  font-weight: bold;
-  color: #333;
-}
-
-.over-box {
-  width: 30px;
-  height: 30px;
-  background: #eee;
-  text-align: center;
-  line-height: 30px;
-  border-radius: 4px;
-  cursor: pointer;
+.player-role,
+.skills,
+.stats {
   font-size: 13px;
-  transition: 0.2s;
+  margin-top: 4px;
 }
 
-.over-box:hover {
-  background: #ddd;
-}
-
-.over-box.filled {
-  background: #4caf50;
-  color: white;
-}
-
-.overs-counter {
-  text-align: center;
+.expand-toggle {
+  font-size: 12px;
+  color: #007bff;
+  cursor: pointer;
   margin-top: 6px;
-  color: #555;
-  font-size: 14px;
+}
+
+.skill-tag {
+  background: #ddd;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-right: 4px;
 }
 
 #save-lineup-btn {
-  display: block;
   width: 100%;
-  max-width: 400px;
-  margin: 20px auto;
+  max-width: 300px;
+  margin: 24px auto;
+  display: block;
   padding: 14px;
-  font-size: 18px;
-  background: #2196F3;
+  font-size: 16px;
+  background: #4CAF50;
   color: white;
   border: none;
   border-radius: 8px;
+}
+
+#save-lineup-btn[disabled] {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+.bowling-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bowler-card {
+  background: #fff;
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.bowler-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.over-boxes {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.over-box {
+  width: 28px;
+  height: 28px;
+  background: #eee;
+  border-radius: 4px;
+  text-align: center;
+  line-height: 28px;
+  font-size: 13px;
   cursor: pointer;
 }
 
-#save-lineup-btn:hover {
-  background: #1976D2;
+.over-box.active {
+  background: #4CAF50;
+  color: white;
 }
 
-/* Responsive tweaks */
-@media (max-width: 600px) {
-  .player-card {
-    width: 100%;
-  }
+#lock-status {
+  text-align: center;
+  font-size: 14px;
+  color: #c00;
+  margin-bottom: 10px;
 }
