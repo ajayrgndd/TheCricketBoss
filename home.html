@@ -352,7 +352,7 @@
         const topSkill = getTopSkill(p);
         return `
           <div style="text-align:center;">
-            <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:8px;" />
+            <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; object-position: top; margin-bottom:8px;" />
             <div style="font-weight:bold;">${p.name}</div>
             <div style="font-size:0.85rem; color:#ccc;">${p.role ?? "Unknown Role"}</div>
             <div style="font-size:0.85rem; color:#ccc;">${topSkill.name}: <strong>${topSkill.value}</strong></div>
@@ -366,4 +366,5 @@
   </script>
 </body>
 </html>
+
 
