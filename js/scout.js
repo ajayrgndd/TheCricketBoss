@@ -24,32 +24,48 @@ const bar = {
   fitness: document.getElementById("bar-fitness"),
 };
 
-// Fetch server date
+// Get server date from Supabase
 const { data: nowData } = await supabase.rpc("get_server_date");
 const serverDate = new Date(nowData);
 const serverDateStr = serverDate.toISOString().split("T")[0];
-const serverDay = serverDate.getUTCDay(); // 3 = Wednesday
+const serverDay = serverDate.getUTCDay(); // Sunday = 0
 
+// Auth check
 const { data: { user } } = await supabase.auth.getUser();
 if (!user) {
   alert("Please login.");
   location.href = "index.html";
+  throw new Error("Not logged in");
 }
 
-// Get profile and team
+// Profile check
 const { data: profile } = await supabase
   .from("profiles")
   .select("region, last_scouted_date")
   .eq("user_id", user.id)
   .single();
 
+if (!profile || !profile.region) {
+  alert("❌ Profile incomplete. Redirecting to profile setup.");
+  location.href = "profile-setup.html";
+  throw new Error("Missing profile or region");
+}
+
+const region = profile.region;
+
+// Team check
 const { data: team } = await supabase
   .from("teams")
   .select("id, team_name, manager_name")
   .eq("owner_id", user.id)
   .single();
 
-// ✅ Scouting allowed only on Wednesday
+if (!team) {
+  alert("❌ Team not found. Please contact support.");
+  throw new Error("Missing team");
+}
+
+// ✅ Only allow scouting on Wednesday (3)
 if (serverDay !== 3) {
   btn.disabled = true;
   btn.textContent = "Scouting locked until next Wednesday";
@@ -69,7 +85,6 @@ if (profile?.last_scouted_date) {
 btn.onclick = async () => {
   btn.disabled = true;
 
-  // 🧬 Age Distribution
   const agePool = [
     ...Array(15).fill(16),
     ...Array(30).fill(17),
@@ -83,7 +98,6 @@ btn.onclick = async () => {
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
   const role = roles[Math.floor(Math.random() * roles.length)];
 
-  // 🏏 Skill Assignment
   let batting = 0, bowling = 0, keeping = 0;
   const fitness = 100;
 
@@ -117,11 +131,8 @@ btn.onclick = async () => {
   const batting_style = battingStyles[Math.floor(Math.random() * battingStyles.length)];
   const bowling_style = bowlingStyles[Math.floor(Math.random() * bowlingStyles.length)];
 
-  const region = profile?.region || "Unknown";
-  const regionNames = regionNameData[region] || ["Random Player"];
+  const regionNames = regionNameData[region] || ["Unknown"];
   const name = regionNames[Math.floor(Math.random() * regionNames.length)];
-
-  const image_url = `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`;
 
   const basePlayer = {
     team_id: team.id,
@@ -139,11 +150,11 @@ btn.onclick = async () => {
     form: "Good",
     experience: 0,
     skill_level: "Newbie",
-    skills: "", // store as string, even if empty
+    skills: "", // 👈 must be string
     batting_style,
     bowling_style,
     is_wk: role === "Wicket Keeper",
-    image_url
+    image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`
   };
 
   const salary = calculateWeeklySalary(basePlayer);
@@ -155,16 +166,17 @@ btn.onclick = async () => {
     market_price
   };
 
-  console.log("📦 Final Payload", player);
+  console.log("🧪 Final Player Payload:", player);
 
   const { error: insertErr } = await supabase.from("players").insert(player);
+
   if (!insertErr) {
     await supabase
       .from("profiles")
       .update({ last_scouted_date: serverDateStr })
       .eq("user_id", user.id);
 
-    // 🎨 UI Update
+    // Update UI
     nameEl.textContent = player.name;
     roleEl.textContent = `Role: ${role}`;
     ageEl.textContent = `Age: ${age_years}y ${age_days}d`;
@@ -179,6 +191,6 @@ btn.onclick = async () => {
     card.classList.add("reveal");
   } else {
     alert("❌ Failed to scout player.");
-    console.error("Insert error:", insertErr.message, insertErr.details, insertErr.hint);
+    console.error("❌ Supabase Insert Error:", insertErr.message, insertErr);
   }
 };
