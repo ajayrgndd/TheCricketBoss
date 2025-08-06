@@ -278,28 +278,34 @@
         : "❌ <strong>Training Pending</strong> – Train 3 players";
       document.getElementById("goTrainingBtn").disabled = trained.size >= 3;
 
-      // Fetch players for this team
-  const { data: players } = await supabase
-        .from("players")
-        .select("name, batting, bowling, fitness")
-        .eq("team_id", team.id);
+     // Fetch players for this team
+const { data: players, error: playersError } = await supabase
+  .from("players")
+  .select("name, batting, bowling, fitness")
+  .eq("team_id", team?.id);
 
-      const top = (players ?? [])
-        .map(p => ({
-          ...p,
-          totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
-        }))
-        .sort((a, b) => b.totalSkill - a.totalSkill)
-        .slice(0, 3);
+if (playersError) {
+  console.error("❌ Failed to fetch players:", playersError.message);
+  document.getElementById("top-players-list").innerText = "Error loading players.";
+} else if (!players || players.length === 0) {
+  document.getElementById("top-players-list").innerText = "No players found.";
+} else {
+  const topPlayers = players
+    .map(p => ({
+      ...p,
+      totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
+    }))
+    .sort((a, b) => b.totalSkill - a.totalSkill)
+    .slice(0, 3);
 
-      document.getElementById("top-players-list").innerHTML = top.length
-        ? top.map(p => `
-          <div style="margin-bottom: 10px; text-align: left;">
-            <strong>${p.name}</strong><br>
-            🏏 Batting: ${p.batting}, 🎯 Bowling: ${p.bowling}, 💪 Fitness: ${p.fitness}<br>
-            ⭐ Total Skill: <strong>${p.totalSkill}</strong>
-          </div>
-        `).join("")
+  document.getElementById("top-players-list").innerHTML = topPlayers
+    .map(p => `
+      <div style="margin-bottom: 10px; text-align: left;">
+        <strong>${p.name}</strong><br>
+        🏏 Batting: ${p.batting ?? 0}, 🎯 Bowling: ${p.bowling ?? 0}, 💪 Fitness: ${p.fitness ?? 0}<br>
+        ⭐ Total Skill: <strong>${p.totalSkill}</strong>
+      </div>
+    `).join("");
         : "No players found.";
     }
 
@@ -307,6 +313,7 @@
   </script>
 </body>
 </html>
+
 
 
 
