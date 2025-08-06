@@ -134,6 +134,20 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     } else {
       console.log(`🧹 ${count} old bot players deleted`);
     }
+    // 🔁 3B: Update profile with assigned team_id
+const { error: profileUpdateError } = await supabase
+  .from("profiles")
+  .update({ team_id: botTeam.id })
+  .eq("user_id", user.id);
+
+if (profileUpdateError) {
+  console.error("❌ Failed to update profile with team_id:", profileUpdateError.message);
+  alert("Failed to link profile with team.");
+  return;
+}
+
+console.log("✅ Profile updated with team_id");
+
 
     // 5️⃣ Delete old bot stadium (if any)
     const { data: oldStadium } = await supabase
@@ -185,3 +199,4 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     alert("Unexpected error: " + e.message);
   }
 });
+
