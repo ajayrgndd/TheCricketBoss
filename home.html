@@ -278,10 +278,16 @@
         : "❌ <strong>Training Pending</strong> – Train 3 players";
       document.getElementById("goTrainingBtn").disabled = trained.size >= 3;
 
-      const { data: players } = await supabase
-        .from("players")
-        .select("name, batting, bowling, fitness")
-        .eq("team_id", team.id);
+      const { data: players, error: playersError } = await supabase
+  .from("players")
+  .select("name, batting, bowling, fitness")
+  .eq("team_id", team.id);
+
+if (playersError) {
+  console.error("❌ Failed to fetch players:", playersError.message);
+} else {
+  console.log("✅ Players fetched:", players);
+}
 
       const top = (players ?? [])
         .map(p => ({
@@ -306,6 +312,7 @@
   </script>
 </body>
 </html>
+
 
 
 
