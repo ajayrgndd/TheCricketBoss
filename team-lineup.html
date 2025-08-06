@@ -1,52 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Team Lineup</title>
-  <link rel="stylesheet" href="css/team-lineup.css" />
+  <meta charset="UTF-8">
+  <title>Team Lineup | TheCricketBoss</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/team-lineup.css">
 </head>
 <body>
 
-  <!-- 🔝 Top Bar -->
-  <div id="top-bar" class="fixed-top-bar">
-    <div><strong>🏏 Team Lineup</strong></div>
-    <div style="font-size: 13px;">TheCricketBoss</div>
-  </div>
+  <header class="top-bar">
+    <h2>Set Your Lineup</h2>
+    <div id="lineup-status">🔓 Lineup open</div>
+  </header>
 
-  <!-- 📦 Main Content -->
-  <div class="lineup-container">
-    <h2>Set Your Playing XI</h2>
-    <div id="lineup-status" class="status-text">Loading...</div>
+  <main>
+    <section>
+      <h3>Playing XI</h3>
+      <div id="playing11-list" class="player-list"></div>
+    </section>
 
-    <h3>Playing XI</h3>
-    <div id="playing11-list" class="player-list"></div>
+    <section>
+      <h3>Bench</h3>
+      <div id="bench-list" class="player-list bench-list"></div>
+    </section>
 
-    <h3>Bench</h3>
-    <div id="bench-list" class="player-list"></div>
+    <section id="captain-picker"></section>
+    <section id="keeper-picker"></section>
 
-    <div class="captain-section" id="captain-picker"></div>
-
-    <div class="bowling-section">
-      <h3>Assign Overs</h3>
+    <section>
+      <h3>Assign Bowlers</h3>
       <div id="bowling-lineup"></div>
-      <div class="overs-counter" id="overs-count">0/20 overs set</div>
+      <div id="overs-count">0/20 overs set</div>
+    </section>
+
+    <div class="button-row">
+      <button id="save-lineup-btn">💾 Save Lineup</button>
+      <button id="reset-lineup-btn" class="reset-btn">♻️ Reset Lineup</button>
     </div>
+  </main>
 
-    <button id="save-lineup-btn">💾 Save Lineup</button>
-  </div>
-
-  <!-- 🔻 Bottom Nav -->
-  <div id="bottom-nav" class="fixed-bottom-nav">
-    <a href="team.html">🏏</a>
-    <a href="scout.html">🔍</a>
-    <a href="home.html">🏠</a>
-    <a href="auction.html">⚒️</a>
-    <a href="store.html">🛒</a>
-  </div>
-
-  <!-- JS -->
   <script type="module" src="js/team-lineup.js"></script>
 </body>
 </html>
-
