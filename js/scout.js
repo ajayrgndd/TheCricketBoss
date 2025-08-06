@@ -30,42 +30,25 @@ const serverDate = new Date(nowData);
 const serverDateStr = serverDate.toISOString().split("T")[0];
 const serverDay = serverDate.getUTCDay(); // Sunday = 0
 
-// Auth check
 const { data: { user } } = await supabase.auth.getUser();
 if (!user) {
   alert("Please login.");
   location.href = "index.html";
-  throw new Error("Not logged in");
 }
 
-// Profile check
 const { data: profile } = await supabase
   .from("profiles")
   .select("region, last_scouted_date")
   .eq("user_id", user.id)
   .single();
 
-if (!profile || !profile.region) {
-  alert("❌ Profile incomplete. Redirecting to profile setup.");
-  location.href = "profile-setup.html";
-  throw new Error("Missing profile or region");
-}
-
-const region = profile.region;
-
-// Team check
 const { data: team } = await supabase
   .from("teams")
   .select("id, team_name, manager_name")
   .eq("owner_id", user.id)
   .single();
 
-if (!team) {
-  alert("❌ Team not found. Please contact support.");
-  throw new Error("Missing team");
-}
-
-// ✅ Only allow scouting on Wednesday (3)
+// ✅ Only allow scouting on Sunday (change to 3 for Wednesday if needed)
 if (serverDay !== 3) {
   btn.disabled = true;
   btn.textContent = "Scouting locked until next Wednesday";
@@ -99,7 +82,7 @@ btn.onclick = async () => {
   const role = roles[Math.floor(Math.random() * roles.length)];
 
   let batting = 0, bowling = 0, keeping = 0;
-  const fitness = 100;
+  const fitness = 100; // ✅ Fixed fitness
 
   switch (role) {
     case "Batsman":
@@ -120,6 +103,7 @@ btn.onclick = async () => {
       break;
   }
 
+  // ✅ Batting & Bowling Style Assignment
   const battingStyles = ["Right Hand Batter", "Left Hand Batter"];
   const bowlingStyles = [
     "Right Hand Seamer",
@@ -131,7 +115,7 @@ btn.onclick = async () => {
   const batting_style = battingStyles[Math.floor(Math.random() * battingStyles.length)];
   const bowling_style = bowlingStyles[Math.floor(Math.random() * bowlingStyles.length)];
 
-  const regionNames = regionNameData[region] || ["Unknown"];
+  const regionNames = regionNameData[profile.region] || ["Unknown"];
   const name = regionNames[Math.floor(Math.random() * regionNames.length)];
 
   const basePlayer = {
@@ -140,7 +124,7 @@ btn.onclick = async () => {
     manager_name: team.manager_name,
     name,
     role,
-    region,
+    region: profile.region,
     batting,
     bowling,
     keeping,
@@ -150,13 +134,13 @@ btn.onclick = async () => {
     form: "Good",
     experience: 0,
     skill_level: "Newbie",
-    skills: "", // 👈 must be string
+    skills: [],
     batting_style,
     bowling_style,
-    is_wk: role === "Wicket Keeper",
     image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`
   };
 
+  // ✅ Salary and Market Value from utils
   const salary = calculateWeeklySalary(basePlayer);
   const market_price = calculateMarketValue(basePlayer);
 
@@ -166,17 +150,14 @@ btn.onclick = async () => {
     market_price
   };
 
-  console.log("🧪 Final Player Payload:", player);
-
   const { error: insertErr } = await supabase.from("players").insert(player);
-
   if (!insertErr) {
     await supabase
       .from("profiles")
       .update({ last_scouted_date: serverDateStr })
       .eq("user_id", user.id);
 
-    // Update UI
+    // Show UI card
     nameEl.textContent = player.name;
     roleEl.textContent = `Role: ${role}`;
     ageEl.textContent = `Age: ${age_years}y ${age_days}d`;
@@ -190,7 +171,9 @@ btn.onclick = async () => {
 
     card.classList.add("reveal");
   } else {
-    alert("❌ Failed to scout player.");
-    console.error("❌ Supabase Insert Error:", insertErr.message, insertErr);
+    alert("❌ Failed to scout.");
+    console.error(insertErr);
   }
 };
+
+
