@@ -38,7 +38,7 @@ if (!user) {
 
 const { data: profile } = await supabase
   .from("profiles")
-  .select("region, last_scouted_date")
+  .select("region, last_scouted_date, xp")
   .eq("user_id", user.id)
   .single();
 
@@ -48,7 +48,7 @@ const { data: team } = await supabase
   .eq("owner_id", user.id)
   .single();
 
-// ✅ Only allow scouting on Sunday (change to 3 for Wednesday if needed)
+// ✅ Only allow scouting on Wednesday (3)
 if (serverDay !== 3) {
   btn.disabled = true;
   btn.textContent = "Scouting locked until next Wednesday";
@@ -82,7 +82,7 @@ btn.onclick = async () => {
   const role = roles[Math.floor(Math.random() * roles.length)];
 
   let batting = 0, bowling = 0, keeping = 0;
-  const fitness = 100; // ✅ Fixed fitness
+  const fitness = 100;
 
   switch (role) {
     case "Batsman":
@@ -103,7 +103,6 @@ btn.onclick = async () => {
       break;
   }
 
-  // ✅ Batting & Bowling Style Assignment
   const battingStyles = ["Right Hand Batter", "Left Hand Batter"];
   const bowlingStyles = [
     "Right Hand Seamer",
@@ -140,7 +139,6 @@ btn.onclick = async () => {
     image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`
   };
 
-  // ✅ Salary and Market Value from utils
   const salary = calculateWeeklySalary(basePlayer);
   const market_price = calculateMarketValue(basePlayer);
 
@@ -152,12 +150,20 @@ btn.onclick = async () => {
 
   const { error: insertErr } = await supabase.from("players").insert(player);
   if (!insertErr) {
+    // ⏱️ Update last_scouted_date
     await supabase
       .from("profiles")
       .update({ last_scouted_date: serverDateStr })
       .eq("user_id", user.id);
 
-    // Show UI card
+    // 🎁 +10 XP reward
+    const newXP = (profile?.xp || 0) + 10;
+    await supabase
+      .from("profiles")
+      .update({ xp: newXP })
+      .eq("user_id", user.id);
+
+    // 🎴 Show player card
     nameEl.textContent = player.name;
     roleEl.textContent = `Role: ${role}`;
     ageEl.textContent = `Age: ${age_years}y ${age_days}d`;
@@ -175,5 +181,3 @@ btn.onclick = async () => {
     console.error(insertErr);
   }
 };
-
-
