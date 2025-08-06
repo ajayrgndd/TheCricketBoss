@@ -2,12 +2,13 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { regionNameData } from "./data/region-names.js";
 import { calculateWeeklySalary, calculateMarketValue } from "./utils/salary.js";
 
+// ✅ Supabase client
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
-// UI elements
+// ✅ UI elements
 const btn = document.getElementById("scout-btn");
 const countdown = document.getElementById("countdown");
 const card = document.getElementById("player-card");
@@ -24,36 +25,40 @@ const bar = {
   fitness: document.getElementById("bar-fitness"),
 };
 
-// Get server date from Supabase
+// ✅ Get server date
 const { data: nowData } = await supabase.rpc("get_server_date");
 const serverDate = new Date(nowData);
 const serverDateStr = serverDate.toISOString().split("T")[0];
 const serverDay = serverDate.getUTCDay(); // Sunday = 0
 
+// ✅ Get user
 const { data: { user } } = await supabase.auth.getUser();
 if (!user) {
   alert("Please login.");
   location.href = "index.html";
 }
 
+// ✅ Get profile
 const { data: profile } = await supabase
   .from("profiles")
   .select("region, last_scouted_date")
   .eq("user_id", user.id)
   .single();
 
+// ✅ Get team
 const { data: team } = await supabase
   .from("teams")
   .select("id, team_name, manager_name")
   .eq("owner_id", user.id)
   .single();
 
-// ✅ Only allow scouting on Wednesday (3)
+// ✅ Lock scouting on non-Wednesday
 if (serverDay !== 3) {
   btn.disabled = true;
   btn.textContent = "Scouting locked until next Wednesday";
 }
 
+// ✅ Lock if already scouted this week
 if (profile?.last_scouted_date) {
   const lastDate = new Date(profile.last_scouted_date);
   const daysSince = Math.floor((serverDate - lastDate) / (1000 * 60 * 60 * 24));
@@ -65,6 +70,7 @@ if (profile?.last_scouted_date) {
   }
 }
 
+// ✅ SCOUT ACTION
 btn.onclick = async () => {
   btn.disabled = true;
 
@@ -133,10 +139,10 @@ btn.onclick = async () => {
     form: "Good",
     experience: 0,
     skill_level: "Newbie",
-    skills: "", // 🔥 FIXED: string instead of array
+    skills: "", // ✅ as string
     batting_style,
     bowling_style,
-    is_wk: role === "Wicket Keeper" ? true : false, // ✅ ADD THIS
+    is_wk: role === "Wicket Keeper",
     image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`
   };
 
@@ -144,20 +150,23 @@ btn.onclick = async () => {
   const market_price = calculateMarketValue(basePlayer);
 
   const player = {
-  ...basePlayer,
-  salary,
-  market_price
-};
+    ...basePlayer,
+    salary,
+    market_price
+  };
 
-console.log("🧪 Final Player Payload:", player);
+  console.log("🧪 Final Player Payload:", player);
 
-const { error: insertErr } = await supabase.from("players").insert(player);
-if (!insertErr) {
+  const { error: insertErr } = await supabase.from("players").insert(player);
+
+  if (!insertErr) {
+    // ✅ Update last_scouted_date
     await supabase
       .from("profiles")
       .update({ last_scouted_date: serverDateStr })
       .eq("user_id", user.id);
 
+    // ✅ Show on UI
     nameEl.textContent = player.name;
     roleEl.textContent = `Role: ${role}`;
     ageEl.textContent = `Age: ${age_years}y ${age_days}d`;
@@ -171,12 +180,11 @@ if (!insertErr) {
 
     card.classList.add("reveal");
   } else {
-    alert("❌ Failed to scout.");
-    console.error("❌ Insert error", insertErr.message, insertErr.details, insertErr.hint);
+    alert("❌ Failed to scout player.");
+    console.error("❌ Supabase Insert Error:");
+    console.error("Message:", insertErr.message);
+    console.error("Details:", insertErr.details);
+    console.error("Hint:", insertErr.hint);
+    console.error("Payload:", player);
   }
 };
-
-
-
-
-
