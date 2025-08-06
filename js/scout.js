@@ -2,13 +2,12 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { regionNameData } from "./data/region-names.js";
 import { calculateWeeklySalary, calculateMarketValue } from "./utils/salary.js";
 
-// ✅ Supabase client
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
-// ✅ UI elements
+// UI elements
 const btn = document.getElementById("scout-btn");
 const countdown = document.getElementById("countdown");
 const card = document.getElementById("player-card");
@@ -25,40 +24,37 @@ const bar = {
   fitness: document.getElementById("bar-fitness"),
 };
 
-// ✅ Get server date
+// Fetch server date
 const { data: nowData } = await supabase.rpc("get_server_date");
 const serverDate = new Date(nowData);
 const serverDateStr = serverDate.toISOString().split("T")[0];
-const serverDay = serverDate.getUTCDay(); // Sunday = 0
+const serverDay = serverDate.getUTCDay(); // 3 = Wednesday
 
-// ✅ Get user
 const { data: { user } } = await supabase.auth.getUser();
 if (!user) {
   alert("Please login.");
   location.href = "index.html";
 }
 
-// ✅ Get profile
+// Get profile and team
 const { data: profile } = await supabase
   .from("profiles")
   .select("region, last_scouted_date")
   .eq("user_id", user.id)
   .single();
 
-// ✅ Get team
 const { data: team } = await supabase
   .from("teams")
   .select("id, team_name, manager_name")
   .eq("owner_id", user.id)
   .single();
 
-// ✅ Lock scouting on non-Wednesday
+// ✅ Scouting allowed only on Wednesday
 if (serverDay !== 3) {
   btn.disabled = true;
   btn.textContent = "Scouting locked until next Wednesday";
 }
 
-// ✅ Lock if already scouted this week
 if (profile?.last_scouted_date) {
   const lastDate = new Date(profile.last_scouted_date);
   const daysSince = Math.floor((serverDate - lastDate) / (1000 * 60 * 60 * 24));
@@ -70,10 +66,10 @@ if (profile?.last_scouted_date) {
   }
 }
 
-// ✅ SCOUT ACTION
 btn.onclick = async () => {
   btn.disabled = true;
 
+  // 🧬 Age Distribution
   const agePool = [
     ...Array(15).fill(16),
     ...Array(30).fill(17),
@@ -87,6 +83,7 @@ btn.onclick = async () => {
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
   const role = roles[Math.floor(Math.random() * roles.length)];
 
+  // 🏏 Skill Assignment
   let batting = 0, bowling = 0, keeping = 0;
   const fitness = 100;
 
@@ -120,8 +117,11 @@ btn.onclick = async () => {
   const batting_style = battingStyles[Math.floor(Math.random() * battingStyles.length)];
   const bowling_style = bowlingStyles[Math.floor(Math.random() * bowlingStyles.length)];
 
-  const regionNames = regionNameData[profile.region] || ["Unknown"];
+  const region = profile?.region || "Unknown";
+  const regionNames = regionNameData[region] || ["Random Player"];
   const name = regionNames[Math.floor(Math.random() * regionNames.length)];
+
+  const image_url = `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`;
 
   const basePlayer = {
     team_id: team.id,
@@ -129,7 +129,7 @@ btn.onclick = async () => {
     manager_name: team.manager_name,
     name,
     role,
-    region: profile.region,
+    region,
     batting,
     bowling,
     keeping,
@@ -139,11 +139,11 @@ btn.onclick = async () => {
     form: "Good",
     experience: 0,
     skill_level: "Newbie",
-    skills: "", // ✅ as string
+    skills: "", // store as string, even if empty
     batting_style,
     bowling_style,
     is_wk: role === "Wicket Keeper",
-    image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`
+    image_url
   };
 
   const salary = calculateWeeklySalary(basePlayer);
@@ -155,18 +155,16 @@ btn.onclick = async () => {
     market_price
   };
 
-  console.log("🧪 Final Player Payload:", player);
+  console.log("📦 Final Payload", player);
 
   const { error: insertErr } = await supabase.from("players").insert(player);
-
   if (!insertErr) {
-    // ✅ Update last_scouted_date
     await supabase
       .from("profiles")
       .update({ last_scouted_date: serverDateStr })
       .eq("user_id", user.id);
 
-    // ✅ Show on UI
+    // 🎨 UI Update
     nameEl.textContent = player.name;
     roleEl.textContent = `Role: ${role}`;
     ageEl.textContent = `Age: ${age_years}y ${age_days}d`;
@@ -181,10 +179,6 @@ btn.onclick = async () => {
     card.classList.add("reveal");
   } else {
     alert("❌ Failed to scout player.");
-    console.error("❌ Supabase Insert Error:");
-    console.error("Message:", insertErr.message);
-    console.error("Details:", insertErr.details);
-    console.error("Hint:", insertErr.hint);
-    console.error("Payload:", player);
+    console.error("Insert error:", insertErr.message, insertErr.details, insertErr.hint);
   }
 };
