@@ -1,162 +1,134 @@
 body {
+  font-family: sans-serif;
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f9f9f9;
+  padding-bottom: 80px;
+  background: #f8f8f8;
 }
-.lineup-container {
-  padding: 80px 12px 100px;
-  max-width: 1000px;
-  margin: 0 auto;
+
+.top-bar {
+  background: #1e293b;
+  color: white;
+  padding: 1rem;
+  text-align: center;
 }
+
 h2, h3 {
+  margin: 1rem 0 0.5rem;
   text-align: center;
-  margin-top: 24px;
-  color: #222;
 }
-.status-text {
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  margin: 6px 0 12px;
+
+main {
+  padding: 1rem;
+  max-width: 600px;
+  margin: auto;
 }
+
 .player-list {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 0.5rem;
+  justify-content: center;
 }
+
 .player-card {
-  background: #fff;
+  background: white;
+  border-radius: 6px;
   border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  width: calc(50% - 8px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  padding: 0.5rem;
+  width: 140px;
+  transition: all 0.3s ease;
   cursor: pointer;
-  transition: all 0.2s ease;
-  touch-action: manipulation;
 }
+
 .player-card.compact .player-expanded {
   display: none;
 }
-.player-card.expanded .player-expanded {
-  display: block;
+
+.player-card.expanded {
+  background: #f0f9ff;
+  border-color: #3b82f6;
 }
-.player-card:hover {
-  transform: scale(1.01);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
+
 .player-header {
-  font-size: 14px;
-  color: #333;
-  margin-bottom: 6px;
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
 }
+
 .player-expanded {
-  font-size: 13px;
-  color: #444;
+  font-size: 0.8rem;
+  color: #333;
 }
-.captain-section {
-  margin-top: 24px;
-  padding: 10px;
+
+#captain-picker,
+#keeper-picker {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: #fff;
+  border-radius: 6px;
   border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fefefe;
 }
-.captain-section label {
+
+#captain-picker label,
+#keeper-picker label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
+  padding: 0.2rem 0;
+  font-size: 0.9rem;
 }
-.bowling-section {
-  margin-top: 20px;
+
+#bowling-lineup {
+  margin-top: 1rem;
 }
+
 .bowler-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 0.5rem;
   flex-wrap: wrap;
 }
+
 .bowler-name {
-  flex: 1;
-  font-size: 14px;
+  width: 120px;
   font-weight: bold;
-  color: #333;
 }
+
 .over-box {
   width: 30px;
   height: 30px;
+  margin: 0.2rem;
   background: #eee;
+  border-radius: 4px;
   text-align: center;
   line-height: 30px;
-  border-radius: 4px;
+  font-weight: bold;
   cursor: pointer;
-  font-size: 13px;
-  transition: 0.2s;
+  user-select: none;
+  border: 1px solid #ccc;
 }
-.over-box:hover {
-  background: #ddd;
-}
+
 .over-box.filled {
-  background: #4caf50;
+  background: #34d399;
   color: white;
+  border-color: #10b981;
 }
-.overs-counter {
-  text-align: center;
-  margin-top: 6px;
-  color: #555;
-  font-size: 14px;
+
+.button-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
 }
-#save-lineup-btn {
-  display: block;
-  width: 100%;
-  max-width: 400px;
-  margin: 20px auto;
-  padding: 14px;
-  font-size: 18px;
-  background: #2196F3;
-  color: white;
+
+button {
+  padding: 0.6rem 1.2rem;
   border: none;
-  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-weight: bold;
+  border-radius: 6px;
   cursor: pointer;
 }
-#save-lineup-btn:hover {
-  background: #1976D2;
-}
-.fixed-top-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  z-index: 1000;
-  background: #fff;
-  border-bottom: 1px solid #ccc;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-}
-.fixed-bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  z-index: 1000;
-  background: #fff;
-  border-top: 1px solid #ccc;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  font-size: 24px;
-}
-.fixed-bottom-nav a {
-  color: #333;
-  text-decoration: none;
-}
-@media (max-width: 600px) {
-  .player-card {
-    width: 100%;
-  }
+
+button.reset-btn {
+  background: #ef4444;
 }
