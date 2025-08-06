@@ -52,17 +52,16 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
 
     // 1️⃣ Insert Profile
     const { error: profileError } = await supabase.from("profiles").insert({
-  user_id: user.id,
-  manager_name: managerName,
-  team_name: teamName,
-  dob,
-  region,
-  team_id: botTeam.id, // ✅ NEW
-  xp: 10,
-  coins: 10,
-  cash: 1000,
-  level: "Beginner"
-});
+      user_id: user.id,
+      manager_name: managerName,
+      team_name: teamName,
+      dob,
+      region,
+      xp: 10,
+      coins: 10,
+      cash: 1000,
+      level: "Beginner"
+    });
 
     if (profileError) {
       console.error("❌ Profile insert failed:", profileError.message);
@@ -186,4 +185,3 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     alert("Unexpected error: " + e.message);
   }
 });
-
