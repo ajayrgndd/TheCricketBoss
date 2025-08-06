@@ -3,33 +3,28 @@ body {
   font-family: Arial, sans-serif;
   background: #f9f9f9;
 }
-
 .lineup-container {
   padding: 80px 12px 100px;
   max-width: 1000px;
   margin: 0 auto;
 }
-
 h2, h3 {
   text-align: center;
   margin-top: 24px;
   color: #222;
 }
-
 .status-text {
   text-align: center;
   font-size: 14px;
   color: #666;
   margin: 6px 0 12px;
 }
-
 .player-list {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 8px;
 }
-
 .player-card {
   background: #fff;
   border: 1px solid #ddd;
@@ -41,31 +36,25 @@ h2, h3 {
   transition: all 0.2s ease;
   touch-action: manipulation;
 }
-
 .player-card.compact .player-expanded {
   display: none;
 }
-
 .player-card.expanded .player-expanded {
   display: block;
 }
-
 .player-card:hover {
   transform: scale(1.01);
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
-
 .player-header {
   font-size: 14px;
   color: #333;
   margin-bottom: 6px;
 }
-
 .player-expanded {
   font-size: 13px;
   color: #444;
 }
-
 .captain-section {
   margin-top: 24px;
   padding: 10px;
@@ -73,17 +62,14 @@ h2, h3 {
   border-radius: 8px;
   background: #fefefe;
 }
-
 .captain-section label {
   display: block;
   margin-bottom: 6px;
   font-size: 14px;
 }
-
 .bowling-section {
   margin-top: 20px;
 }
-
 .bowler-row {
   display: flex;
   align-items: center;
@@ -91,14 +77,12 @@ h2, h3 {
   margin-bottom: 6px;
   flex-wrap: wrap;
 }
-
 .bowler-name {
   flex: 1;
   font-size: 14px;
   font-weight: bold;
   color: #333;
 }
-
 .over-box {
   width: 30px;
   height: 30px;
@@ -110,23 +94,19 @@ h2, h3 {
   font-size: 13px;
   transition: 0.2s;
 }
-
 .over-box:hover {
   background: #ddd;
 }
-
 .over-box.filled {
   background: #4caf50;
   color: white;
 }
-
 .overs-counter {
   text-align: center;
   margin-top: 6px;
   color: #555;
   font-size: 14px;
 }
-
 #save-lineup-btn {
   display: block;
   width: 100%;
@@ -140,11 +120,9 @@ h2, h3 {
   border-radius: 8px;
   cursor: pointer;
 }
-
 #save-lineup-btn:hover {
   background: #1976D2;
 }
-
 .fixed-top-bar {
   position: fixed;
   top: 0;
@@ -159,7 +137,6 @@ h2, h3 {
   justify-content: space-between;
   padding: 0 16px;
 }
-
 .fixed-bottom-nav {
   position: fixed;
   bottom: 0;
@@ -174,12 +151,10 @@ h2, h3 {
   align-items: center;
   font-size: 24px;
 }
-
 .fixed-bottom-nav a {
   color: #333;
   text-decoration: none;
 }
-
 @media (max-width: 600px) {
   .player-card {
     width: 100%;
