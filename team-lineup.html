@@ -7,10 +7,14 @@
   <link rel="stylesheet" href="team-lineup.css" />
 </head>
 <body>
-  <!-- 🔝 Top bar -->
-  <div id="top-bar"></div>
 
-  <!-- 📦 Main content -->
+  <!-- 🔝 Top Bar -->
+  <div id="top-bar" class="fixed-top-bar">
+    <div><strong>🏏 Team Lineup</strong></div>
+    <div style="font-size: 13px;">TheCricketBoss</div>
+  </div>
+
+  <!-- 📦 Main Content -->
   <div class="lineup-container">
     <h2>Set Your Playing XI</h2>
     <div id="lineup-status" class="status-text">Loading...</div>
@@ -32,10 +36,16 @@
     <button id="save-lineup-btn">💾 Save Lineup</button>
   </div>
 
-  <!-- 🔻 Bottom nav -->
-  <div id="bottom-nav"></div>
+  <!-- 🔻 Bottom Nav -->
+  <div id="bottom-nav" class="fixed-bottom-nav">
+    <a href="team.html">🏏</a>
+    <a href="scout.html">🔍</a>
+    <a href="home.html">🏠</a>
+    <a href="auction.html">⚒️</a>
+    <a href="store.html">🛒</a>
+  </div>
 
-  <!-- 📜 Script -->
+  <!-- JS -->
   <script type="module" src="team-lineup.js"></script>
 </body>
 </html>
