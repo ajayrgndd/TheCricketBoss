@@ -13,16 +13,19 @@
       margin: 0;
       padding-bottom: 80px;
     }
+
     .main {
       padding: 20px;
-      padding-top: 60px;
+      padding-top: 100px; /* Ensure welcome is visible */
       max-width: 800px;
       margin: auto;
     }
+
     h2, h3 {
       text-align: center;
       margin-bottom: 20px;
     }
+
     button {
       padding: 12px 24px;
       font-size: 16px;
@@ -33,29 +36,35 @@
       cursor: pointer;
       margin-top: 10px;
     }
+
     button:disabled {
       background: gray;
       cursor: not-allowed;
     }
+
     .grid-container {
       display: grid;
       grid-template-columns: 1fr;
       gap: 20px;
     }
+
     .grid-item {
       background-color: #1e1e1e;
       padding: 16px;
       border-radius: 10px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
+
     .xp-bar-container {
       margin: 20px 0;
       text-align: center;
     }
+
     .level-text {
       font-size: 0.95rem;
       margin-bottom: 6px;
     }
+
     .xp-bar {
       width: 100%;
       height: 18px;
@@ -64,33 +73,34 @@
       overflow: hidden;
       margin-bottom: 6px;
     }
+
     .xp-fill {
       height: 100%;
       background: linear-gradient(to right, #00e676, #00c853);
       width: 0%;
       transition: width 0.4s ease;
     }
+
     .xp-count {
       font-size: 0.85rem;
       color: #ccc;
     }
-    #top-players-list {
-      font-size: 0.85rem;
-      color: #ccc;
-      margin-top: 10px;
-    }
+
     .quick-links {
       margin-top: 40px;
       text-align: center;
     }
+
     .quick-links h3 {
       margin-bottom: 12px;
     }
+
     .quick-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
       gap: 12px;
     }
+
     .quick-grid a {
       display: flex;
       flex-direction: column;
@@ -104,13 +114,16 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.4);
       transition: background 0.2s ease;
     }
+
     .quick-grid a:hover {
       background-color: #2e2e2e;
     }
+
     .quick-grid .icon {
       font-size: 24px;
       margin-bottom: 6px;
     }
+
     .quick-grid .label {
       font-size: 0.85rem;
     }
@@ -150,25 +163,26 @@
         <h3>Top 3 Players</h3>
         <div id="top-players-list">Loading your top players...</div>
       </div>
-    </div>
 
-    <!-- Quick Access -->
-    <div class="quick-links">
-      <h3>Quick Access</h3>
-      <div class="quick-grid">
-        <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
-        <a href="team.html"><div class="icon">🧍‍♂️</div><div class="label">My Team</div></a>
-        <a href="matches.html"><div class="icon">📊</div><div class="label">Matches</div></a>
-        <a href="training.html"><div class="icon">🧠</div><div class="label">Training</div></a>
-        <a href="scout.html"><div class="icon">🕵️‍♂️</div><div class="label">Scout</div></a>
-        <a href="academy.html"><div class="icon">🎓</div><div class="label">Academy</div></a>
-        <a href="book-friendly.html"><div class="icon">🤝</div><div class="label">Friendly</div></a>
-        <a href="stadium.html"><div class="icon">🏟️</div><div class="label">Stadium</div></a>
-        <a href="store.html"><div class="icon">🛒</div><div class="label">Store</div></a>
-        <a href="finance.html"><div class="icon">💰</div><div class="label">Finance</div></a>
-        <a href="halloffame.html"><div class="icon">👑</div><div class="label">Hall of Fame</div></a>
-        <a href="myprofile.html"><div class="icon">⚙️</div><div class="label">Profile</div></a>
+      <!-- Quick Access -->
+      <div class="quick-links">
+        <h3>Quick Access</h3>
+        <div class="quick-grid">
+          <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
+          <a href="team.html"><div class="icon">🧍‍♂️</div><div class="label">My Team</div></a>
+          <a href="matches.html"><div class="icon">📊</div><div class="label">Matches</div></a>
+          <a href="training.html"><div class="icon">🧠</div><div class="label">Training</div></a>
+          <a href="scout.html"><div class="icon">🕵️‍♂️</div><div class="label">Scout</div></a>
+          <a href="academy.html"><div class="icon">🎓</div><div class="label">Academy</div></a>
+          <a href="book-friendly.html"><div class="icon">🤝</div><div class="label">Friendly</div></a>
+          <a href="stadium.html"><div class="icon">🏟️</div><div class="label">Stadium</div></a>
+          <a href="store.html"><div class="icon">🛒</div><div class="label">Store</div></a>
+          <a href="finance.html"><div class="icon">💰</div><div class="label">Finance</div></a>
+          <a href="halloffame.html"><div class="icon">👑</div><div class="label">Hall of Fame</div></a>
+          <a href="myprofile.html"><div class="icon">⚙️</div><div class="label">Profile</div></a>
+        </div>
       </div>
+
     </div>
   </div>
 
@@ -202,18 +216,20 @@
         cash: profile.cash ?? 0
       });
 
+      // XP Calculation
       const xp = profile.xp ?? 0;
       const levels = [
         { name: "Beginner", xp: 0 },
-        { name: "Expert", xp: 250 },
-        { name: "Professional", xp: 750 },
-        { name: "Master", xp: 1750 },
+        { name: "Expert", xp: 500 },
+        { name: "Professional", xp: 1000 },
+        { name: "Master", xp: 2000 },
         { name: "Supreme", xp: 3500 },
-        { name: "World Class", xp: 5500 },
-        { name: "Ultimate", xp: 8500 },
-        { name: "Titan", xp: 13500 },
-        { name: "The Boss", xp: 150000 },
+        { name: "World Class", xp: 5000 },
+        { name: "Ultimate", xp: 7000 },
+        { name: "Titan", xp: 10000 },
+        { name: "The Boss", xp: 15000 },
       ];
+
       let currentLevel = levels[0], nextLevel = levels[1];
       for (let i = 0; i < levels.length - 1; i++) {
         if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
@@ -226,17 +242,19 @@
           break;
         }
       }
-      const progress = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
+      const progressPercent = ((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100;
       document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
       document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
-      document.getElementById("xp-fill").style.width = `${progress}%`;
+      document.getElementById("xp-fill").style.width = `${progressPercent}%`;
 
+      // Get team info
       const { data: team } = await supabase
         .from("teams")
         .select("*")
         .eq("owner_id", user.id)
         .single();
 
+      // Fixture Info
       const { data: fixture } = await supabase
         .from("matches")
         .select("*")
@@ -257,6 +275,7 @@
         ? `vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM`
         : "No upcoming matches";
 
+      // Training Check
       const { data: lastMatch } = await supabase
         .from("matches")
         .select("*")
@@ -265,48 +284,42 @@
         .limit(1)
         .single();
 
-      const lastDate = lastMatch?.date || "1970-01-01";
-      const { data: logs } = await supabase
+      const lastMatchDate = lastMatch?.date || "1970-01-01";
+      const { data: trainingLogs } = await supabase
         .from("training_logs")
         .select("*")
         .eq("team_id", team.id)
-        .gte("created_at", lastDate);
+        .gte("created_at", lastMatchDate);
 
-      const trained = new Set(logs?.map(t => t.player_id));
-      document.getElementById("trainingStatus").innerHTML = trained.size >= 3
+      const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
+      const trainingCompleted = trainedPlayers.size >= 3;
+
+      document.getElementById("trainingStatus").innerHTML = trainingCompleted
         ? "✅ <strong>Training Completed</strong> (3+ players trained)"
         : "❌ <strong>Training Pending</strong> – Train 3 players";
-      document.getElementById("goTrainingBtn").disabled = trained.size >= 3;
+      document.getElementById("goTrainingBtn").disabled = trainingCompleted;
 
-     // Fetch players for this team
-      const { data: team } = await supabase
-  .from("teams")
-  .select("*")
-  .eq("owner_id", user.id)
-  .single();
+      // Top 3 Players
+      const { data: players } = await supabase
+        .from("players")
+        .select("name, batting, bowling, fitness")
+        .eq("team_id", team.id);
 
-// ✅ Immediately use team.id to fetch players (independent of matches)
-const { data: players } = await supabase
-  .from("players")
-  .select("name, batting, bowling, fitness")
-  .eq("team_id", team.id);
+      const topPlayers = (players ?? [])
+        .map(p => ({
+          ...p,
+          totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
+        }))
+        .sort((a, b) => b.totalSkill - a.totalSkill)
+        .slice(0, 3);
 
-const topPlayers = (players ?? [])
-  .map(p => ({
-    ...p,
-    totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
-  }))
-  .sort((a, b) => b.totalSkill - a.totalSkill)
-  .slice(0, 3);
-
-if (topPlayers.length > 0) {
-  document.getElementById("top-players-list").innerHTML = topPlayers
-    .map(p => `
-      <div style="margin-bottom: 10px; text-align: left;">
-        <strong>${p.name}</strong><br>
-        🏏 Batting: ${p.batting ?? 0}, 🎯 Bowling: ${p.bowling ?? 0}, 💪 Fitness: ${p.fitness ?? 0}<br>
-        ⭐ Total Skill: <strong>${p.totalSkill}</strong>
-      </div>
+      document.getElementById("top-players-list").innerHTML = topPlayers.length
+        ? topPlayers.map(p => `
+          <div style="margin-bottom: 10px; text-align: left;">
+            <strong>${p.name}</strong><br>
+            🏏 Batting: ${p.batting ?? 0}, 🎯 Bowling: ${p.bowling ?? 0}, 💪 Fitness: ${p.fitness ?? 0}<br>
+            ⭐ Total Skill: <strong>${p.totalSkill}</strong>
+          </div>
         `).join("")
         : "No players found.";
     }
@@ -315,18 +328,3 @@ if (topPlayers.length > 0) {
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
