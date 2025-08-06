@@ -4,6 +4,41 @@ body {
   padding-bottom: 80px;
   background: #f8f8f8;
 }
+.fixed-header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  background: #0f172a;
+  color: white;
+  padding: 0.5rem;
+  z-index: 1000;
+  font-size: 0.85rem;
+}
+
+.top-info {
+  display: flex;
+  justify-content: space-around;
+  gap: 0.5rem;
+}
+
+.fixed-footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 1.1rem;
+  z-index: 1000;
+}
+
+.fixed-footer a {
+  color: white;
+  text-decoration: none;
+}
 
 .top-bar {
   background: #1e293b;
