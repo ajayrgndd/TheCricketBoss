@@ -232,22 +232,37 @@ function updateOverBoxes() {
 function setupSave() {
   document.getElementById("save-lineup-btn").onclick = async () => {
     if (locked) return alert("🔒 Lineup is locked.");
-    if (overAssignments.filter(Boolean).length < 20) return alert("Assign all 20 overs.");
+
+    const xiCards = document.querySelectorAll("#playing11-list .player-card");
+    if (xiCards.length !== 11) return alert("Select exactly 11 players.");
+
+    const xiIds = [...xiCards].map(c => c.dataset.playerId);
     const captainId = document.querySelector('input[name="captain"]:checked')?.value;
     if (!captainId) return alert("Pick a captain.");
+    if (overAssignments.filter(Boolean).length < 20) return alert("Assign all 20 overs.");
 
-    const xiIds = [...document.querySelectorAll("#playing11-list .player-card")].map(c => c.dataset.playerId);
-
-    const { error } = await supabase.from("lineups").upsert({
+    const payload = {
       team_id: teamId,
       playing_xi: xiIds,
       batting_order: xiIds,
       bowling_order: overAssignments,
       captain: captainId,
       locked: false
-    }, { onConflict: ['team_id'] });
+    };
 
-    if (error) return alert("❌ Save failed.");
+    // Debug log
+    console.log("🟡 Payload to Supabase →", JSON.stringify(payload, null, 2));
+
+    const { error } = await supabase
+      .from("lineups")
+      .upsert(payload, { onConflict: ['team_id'] });
+
+    if (error) {
+      console.error("❌ Supabase Error:", error);
+      alert("❌ Save failed.\n\n" + error.message);
+      return;
+    }
+
     alert("✅ Lineup saved.");
   };
 }
