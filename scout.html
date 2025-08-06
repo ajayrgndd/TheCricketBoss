@@ -126,9 +126,10 @@
   </div>
 
   <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI, addManagerXP } from "./js/shared-ui.js";
+    import { loadSharedUI } from './js/shared-ui.js';
 
+    // Get user profile for top bar
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
@@ -153,79 +154,7 @@
       coins: profile.coins,
       cash: profile.cash
     });
-
-    const scoutBtn = document.getElementById("scout-btn");
-    const countdown = document.getElementById("countdown");
-
-    // Check if today is Wednesday
-    const today = new Date();
-    const isWednesday = today.getDay() === 3;
-
-    if (!isWednesday) {
-      scoutBtn.disabled = true;
-      countdown.textContent = "⛔ Our Scouting Team searching for best young talent, they will be reach here with New Talent on WEDNESDAY. So stay tuned and comeback here on WEDNESDAY to meet your New Player. 🧭";
-    }
-
-    // Prevent double scout on same day
-    const todayDate = today.toISOString().split("T")[0];
-    if (profile.last_scout_date === todayDate) {
-      scoutBtn.disabled = true;
-      countdown.textContent = "✅ You already scouted a player today.";
-    }
-
-    scoutBtn.addEventListener("click", async () => {
-      scoutBtn.disabled = true;
-      countdown.textContent = "Scouting...";
-
-      // Generate player data (randomized — customize as needed)
-      const player = {
-        name: "Random Player",
-        role: "All-Rounder",
-        batting: Math.floor(Math.random() * 16),
-        bowling: Math.floor(Math.random() * 16),
-        keeping: Math.floor(Math.random() * 16),
-        fitness: Math.floor(Math.random() * 16),
-        age_years: 16 + Math.floor(Math.random() * 5),
-        age_days: 0,
-        team_id: profile.team_id
-      };
-
-      const { error } = await supabase
-        .from("players")
-        .insert([player]);
-
-      if (!error) {
-        // ✅ Give XP
-        await addManagerXP(user.id, "scout_player");
-
-        // ✅ Update scout date
-        await supabase
-          .from("profiles")
-          .update({ last_scout_date: todayDate })
-          .eq("user_id", user.id);
-
-        // UI reveal (use your existing card code here)
-        document.getElementById("player-card").classList.add("reveal");
-        document.getElementById("player-img").src = "assets/player-default.png";
-        document.getElementById("player-name").textContent = player.name;
-        document.getElementById("player-role").textContent = player.role;
-        document.getElementById("player-age").textContent = `Age: ${player.age_years}`;
-        document.getElementById("player-skill").textContent = "Skill Level: Newbie";
-
-        document.getElementById("bar-batting").style.width = `${player.batting * 5}%`;
-        document.getElementById("bar-bowling").style.width = `${player.bowling * 5}%`;
-        document.getElementById("bar-keeping").style.width = `${player.keeping * 5}%`;
-        document.getElementById("bar-fitness").style.width = `${player.fitness * 5}%`;
-
-        countdown.textContent = "✅ Player scouted and added to your team. +10 XP";
-      } else {
-        countdown.textContent = "❌ Scout failed. Try again.";
-        scoutBtn.disabled = false;
-      }
-    });
   </script>
+  <script type="module" src="js/scout.js"></script>
 </body>
 </html>
-
-
-
