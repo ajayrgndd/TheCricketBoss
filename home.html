@@ -289,29 +289,30 @@
       console.log("✅ Players fetched:", players);
       }
 
-      const top = (players ?? [])
-        .map(p => ({
-          ...p,
-          totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
-        }))
-        .sort((a, b) => b.totalSkill - a.totalSkill)
-        .slice(0, 3);
+      const topPlayers = (players ?? [])
+  .map(p => ({
+    ...p,
+    totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
+  }))
+  .sort((a, b) => b.totalSkill - a.totalSkill)
+  .slice(0, 3);
 
-      document.getElementById("top-players-list").innerHTML = top.length
-        ? top.map(p => `
-          <div style="margin-bottom: 10px; text-align: left;">
-            <strong>${p.name}</strong><br>
-            🏏 Batting: ${p.batting}, 🎯 Bowling: ${p.bowling}, 💪 Fitness: ${p.fitness}<br>
-            ⭐ Total Skill: <strong>${p.totalSkill}</strong>
-          </div>
-        `).join("")
-        : "No players found.";
+document.getElementById("top-players-list").innerHTML = topPlayers.length
+  ? topPlayers.map(p => `
+      <div style="margin-bottom: 10px; text-align: left;">
+        <strong>${p.name}</strong><br>
+        🏏 Batting: ${p.batting}, 🎯 Bowling: ${p.bowling}, 💪 Fitness: ${p.fitness}<br>
+        ⭐ Total Skill: <strong>${p.totalSkill}</strong>
+      </div>
+    `).join("")
+  : "No players found.";
     }
 
     main();
   </script>
 </body>
 </html>
+
 
 
 
