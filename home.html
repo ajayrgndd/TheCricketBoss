@@ -209,138 +209,154 @@
       }
     }
 
-    async function main() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return location.href = "login.html";
+   async function main() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return location.href = "login.html";
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
 
-      if (!profile?.manager_name || !profile?.team_name)
-        return location.href = "profile-setup.html";
+  if (!profile?.manager_name || !profile?.team_name)
+    return location.href = "profile-setup.html";
 
-      loadSharedUI({
-        supabase,
-        manager_name: profile.manager_name,
-        xp: profile.xp ?? 0,
-        coins: profile.coins ?? 0,
-        cash: profile.cash ?? 0
-      });
+  loadSharedUI({
+    supabase,
+    manager_name: profile.manager_name,
+    xp: profile.xp ?? 0,
+    coins: profile.coins ?? 0,
+    cash: profile.cash ?? 0
+  });
 
-      await distributeDailyLoginXP(user.id);
+  await distributeDailyLoginXP(user.id);
 
-      const xp = profile.xp ?? 0;
-      const levels = [
-        { name: "Beginner", xp: 0 },
-        { name: "Expert", xp: 500 },
-        { name: "Professional", xp: 1000 },
-        { name: "Master", xp: 2000 },
-        { name: "Supreme", xp: 3500 },
-        { name: "World Class", xp: 5000 },
-        { name: "Ultimate", xp: 7000 },
-        { name: "Titan", xp: 10000 },
-        { name: "The Boss", xp: 15000 },
-      ];
-      let currentLevel = levels[0], nextLevel = levels[1];
-      for (let i = 0; i < levels.length - 1; i++) {
-        if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
-          currentLevel = levels[i];
-          nextLevel = levels[i + 1];
-          break;
-        } else if (xp >= levels[levels.length - 1].xp) {
-          currentLevel = levels[levels.length - 1];
-          nextLevel = { name: "MAX", xp: currentLevel.xp + 1 };
-          break;
-        }
-      }
-      const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
-      document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
-      document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
-      document.getElementById("xp-fill").style.width = `${percent}%`;
+  const xp = profile.xp ?? 0;
+  const levels = [
+    { name: "Beginner", xp: 0 },
+    { name: "Expert", xp: 500 },
+    { name: "Professional", xp: 1000 },
+    { name: "Master", xp: 2000 },
+    { name: "Supreme", xp: 3500 },
+    { name: "World Class", xp: 5000 },
+    { name: "Ultimate", xp: 7000 },
+    { name: "Titan", xp: 10000 },
+    { name: "The Boss", xp: 15000 },
+  ];
+  let currentLevel = levels[0], nextLevel = levels[1];
+  for (let i = 0; i < levels.length - 1; i++) {
+    if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
+      currentLevel = levels[i];
+      nextLevel = levels[i + 1];
+      break;
+    } else if (xp >= levels[levels.length - 1].xp) {
+      currentLevel = levels[levels.length - 1];
+      nextLevel = { name: "MAX", xp: currentLevel.xp + 1 };
+      break;
+    }
+  }
+  const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
+  document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
+  document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
+  document.getElementById("xp-fill").style.width = `${percent}%`;
 
-      const { data: team } = await supabase
-        .from("teams")
-        .select("*")
-        .eq("owner_id", user.id)
-        .single();
+  // ✅ Fetch team FIRST
+  const { data: team } = await supabase
+    .from("teams")
+    .select("*")
+    .eq("owner_id", user.id)
+    .single();
 
-      const { data: fixture } = await supabase
-        .from("matches")
-        .select("*")
-        .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-        .gte("date", new Date().toISOString())
-        .order("date", { ascending: true })
-        .limit(1)
-        .single();
+  if (!team) {
+    console.warn("No team found for user.");
+    return;
+  }
 
-      const opponentId = fixture?.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
+  // ✅ Fetch fixture safely
+  try {
+    const { data: fixture } = await supabase
+      .from("matches")
+      .select("*")
+      .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+      .gte("date", new Date().toISOString())
+      .order("date", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (fixture) {
+      const opponentId = fixture.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
       const { data: opponent } = await supabase
         .from("teams")
         .select("team_name")
         .eq("id", opponentId)
         .single();
 
-      document.getElementById("fixture-info").innerHTML = fixture
-        ? `vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM`
-        : "No upcoming matches";
+      document.getElementById("fixture-info").innerHTML = `
+        vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM
+      `;
+    } else {
+      document.getElementById("fixture-info").textContent = "No upcoming matches";
+    }
+  } catch (err) {
+    document.getElementById("fixture-info").textContent = "Error loading fixtures";
+  }
 
-      const { data: lastMatch } = await supabase
-        .from("matches")
-        .select("*")
-        .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-        .order("date", { ascending: false })
-        .limit(1)
-        .single();
+  // ✅ Training status (always safe)
+  const { data: lastMatch } = await supabase
+    .from("matches")
+    .select("*")
+    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+    .order("date", { ascending: false })
+    .limit(1)
+    .single();
 
-      const lastMatchDate = lastMatch?.date || "1970-01-01";
-      const { data: trainingLogs } = await supabase
-        .from("training_logs")
-        .select("*")
-        .eq("team_id", team.id)
-        .gte("created_at", lastMatchDate);
+  const lastMatchDate = lastMatch?.date || "1970-01-01";
+  const { data: trainingLogs } = await supabase
+    .from("training_logs")
+    .select("*")
+    .eq("team_id", team.id)
+    .gte("created_at", lastMatchDate);
 
-      const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
-      document.getElementById("trainingStatus").innerHTML = trainedPlayers.size >= 3
-        ? "✅ <strong>Training Completed</strong> (3+ players trained)"
-        : "❌ <strong>Training Pending</strong> – Train 3 players";
-      document.getElementById("goTrainingBtn").disabled = trainedPlayers.size >= 3;
+  const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
+  document.getElementById("trainingStatus").innerHTML = trainedPlayers.size >= 3
+    ? "✅ <strong>Training Completed</strong> (3+ players trained)"
+    : "❌ <strong>Training Pending</strong> – Train 3 players";
+  document.getElementById("goTrainingBtn").disabled = trainedPlayers.size >= 3;
 
-      // Top 3 Players Grid with Image
-      const { data: players } = await supabase
-        .from("players")
-        .select("name, role, image_url, batting, bowling, fitness")
-        .eq("team_id", team.id);
+  // ✅ TOP 3 PLAYERS – Always show even without matches
+  const { data: players } = await supabase
+    .from("players")
+    .select("name, role, image_url, batting, bowling, fitness")
+    .eq("team_id", team.id);
 
-      const topPlayers = (players ?? [])
-        .map(p => ({
-          ...p,
-          totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
-        }))
-        .sort((a, b) => b.totalSkill - a.totalSkill)
-        .slice(0, 3);
+  const topPlayers = (players ?? [])
+    .map(p => ({
+      ...p,
+      totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
+    }))
+    .sort((a, b) => b.totalSkill - a.totalSkill)
+    .slice(0, 3);
 
-      function getTopSkill(p) {
-        const skills = [
-          { name: "Batting", value: p.batting ?? 0 },
-          { name: "Bowling", value: p.bowling ?? 0 },
-          { name: "Fitness", value: p.fitness ?? 0 }
-        ];
-        return skills.sort((a, b) => b.value - a.value)[0];
-      }
+  function getTopSkill(p) {
+    const skills = [
+      { name: "Batting", value: p.batting ?? 0 },
+      { name: "Bowling", value: p.bowling ?? 0 },
+      { name: "Fitness", value: p.fitness ?? 0 }
+    ];
+    return skills.sort((a, b) => b.value - a.value)[0];
+  }
 
-      document.getElementById("top-players-list").innerHTML = topPlayers.length
-        ? topPlayers.map(p => {
-            const topSkill = getTopSkill(p);
-            return `
-              <div style="text-align:center;">
-                <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:8px;" />
-                <div style="font-weight:bold;">${p.name}</div>
-                <div style="font-size:0.85rem; color:#ccc;">${p.role ?? "Unknown Role"}</div>
-                <div style="font-size:0.85rem; color:#ccc;">${topSkill.name}: <strong>${topSkill.value}</strong></div>
-              </div>
+  document.getElementById("top-players-list").innerHTML = topPlayers.length
+    ? topPlayers.map(p => {
+        const topSkill = getTopSkill(p);
+        return `
+          <div style="text-align:center;">
+            <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:8px;" />
+            <div style="font-weight:bold;">${p.name}</div>
+            <div style="font-size:0.85rem; color:#ccc;">${p.role ?? "Unknown Role"}</div>
+            <div style="font-size:0.85rem; color:#ccc;">${topSkill.name}: <strong>${topSkill.value}</strong></div>
+          </div>
             `;
           }).join("")
         : "No players found.";
@@ -350,3 +366,4 @@
   </script>
 </body>
 </html>
+
