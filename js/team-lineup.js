@@ -8,13 +8,11 @@ const supabase = createClient(
 
 let currentLineup = [];
 let currentBowlers = [];
-let overAssignments = [];
+let overAssignments = new Array(20).fill(null);
 let locked = false;
 let userId, teamId;
 
 document.addEventListener("DOMContentLoaded", async () => {
-  loadUIBars();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return (location.href = "login.html");
   userId = user.id;
@@ -31,14 +29,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   lockTime.setHours(30, 0, 0, 0); // 8 PM IST
   locked = now >= lockTime;
 
-  overAssignments = lineup?.bowling_order || new Array(20).fill(null);
   renderLineup(players, lineup);
   setupSave();
   setupCountdown(lockTime);
   setupDragAndDrop();
 });
 
-// Render players
+// 🧠 Lineup Rendering
 function renderLineup(players, lineup) {
   const xi = lineup?.playing_xi || players.slice(0, 11).map(p => p.id);
   const idMap = Object.fromEntries(players.map(p => [p.id, p]));
@@ -58,12 +55,61 @@ function renderLineup(players, lineup) {
   renderBowlingLineup();
 }
 
+// 🔁 Drag & Drop
+function setupDragAndDrop() {
+  const xi = document.getElementById("playing11-list");
+  const bench = document.getElementById("bench-list");
+
+  new Sortable(xi, {
+    group: "players",
+    animation: 150,
+    onAdd: (evt) => {
+      if (xi.children.length > 11) {
+        evt.from.appendChild(evt.item); // move back
+        alert("Only 11 players allowed in Playing XI.");
+      } else {
+        updateFromDOM();
+      }
+    },
+    onSort: updateFromDOM,
+    touchStartThreshold: 5
+  });
+
+  new Sortable(bench, {
+    group: "players",
+    animation: 150,
+    onAdd: updateFromDOM,
+    touchStartThreshold: 5
+  });
+}
+
+function updateFromDOM() {
+  const ids = [...document.querySelectorAll("#playing11-list .player-card")].map(card => card.dataset.playerId);
+  const allCards = [...document.querySelectorAll(".player-card")];
+  const idMap = {};
+  allCards.forEach(card => {
+    idMap[card.dataset.playerId] = {
+      id: card.dataset.playerId,
+      name: card.dataset.name,
+      role: card.dataset.role,
+      bowling: parseInt(card.dataset.bowling) || 0,
+    };
+  });
+
+  currentLineup = ids.map(id => idMap[id]).filter(Boolean);
+  currentBowlers = currentLineup.filter(p => p.bowling >= 6).slice(0, 6);
+  renderCaptainPicker();
+  renderBowlingLineup();
+}
+
+// 📛 Player Card
 function makePlayerCard(p) {
   const div = document.createElement("div");
   div.className = "player-card compact";
   div.dataset.playerId = p.id;
   div.dataset.name = p.name;
   div.dataset.role = p.role;
+  div.dataset.bowling = p.bowling;
 
   const bowStyle = (p.bowling_style || "RH-Med").split(" ").map(s => s[0]).join("");
 
@@ -80,6 +126,7 @@ function makePlayerCard(p) {
       <div>Skills: ${[p.skill1, p.skill2].filter(Boolean).join(", ")}</div>
     </div>
   `;
+
   div.addEventListener("click", () => {
     div.classList.toggle("compact");
     div.classList.toggle("expanded");
@@ -88,40 +135,7 @@ function makePlayerCard(p) {
   return div;
 }
 
-// Drag
-function setupDragAndDrop() {
-  new Sortable(document.getElementById("playing11-list"), {
-    group: {
-      name: "players",
-      pull: true,
-      put: (to) => to.el.children.length < 11,
-    },
-    animation: 150,
-    onAdd: () => updateFromDOM()
-  });
-
-  new Sortable(document.getElementById("bench-list"), {
-    group: "players",
-    animation: 150,
-    onAdd: () => updateFromDOM()
-  });
-}
-
-function updateFromDOM() {
-  const ids = [...document.querySelectorAll("#playing11-list .player-card")].map(card => card.dataset.playerId);
-  const allPlayers = [...document.querySelectorAll(".player-card")].map(card => ({
-    id: card.dataset.playerId,
-    name: card.dataset.name,
-    role: card.dataset.role
-  }));
-
-  currentLineup = ids.map(id => allPlayers.find(p => p.id === id)).filter(Boolean);
-  currentBowlers = currentLineup.filter(p => parseInt(p.role) >= 6).slice(0, 6);
-  renderCaptainPicker();
-  renderBowlingLineup();
-}
-
-// Captain
+// 👑 Captain Picker
 function renderCaptainPicker() {
   const container = document.getElementById("captain-picker");
   container.innerHTML = `<h3>Pick Captain</h3>`;
@@ -132,7 +146,7 @@ function renderCaptainPicker() {
   });
 }
 
-// Bowling
+// 🎯 Bowling
 function renderBowlingLineup() {
   const container = document.getElementById("bowling-lineup");
   container.innerHTML = "";
@@ -145,7 +159,7 @@ function renderBowlingLineup() {
       const box = document.createElement("div");
       box.className = "over-box";
       box.dataset.bowlerId = p.id;
-      box.addEventListener("click", () => assignOrUnassignOver(p.id));
+      box.addEventListener("click", () => toggleOver(p.id));
       row.appendChild(box);
     }
     container.appendChild(row);
@@ -154,17 +168,16 @@ function renderBowlingLineup() {
   updateOverBoxes();
 }
 
-function assignOrUnassignOver(bowlerId) {
-  // if bowler already assigned max 4, deny
-  const count = overAssignments.filter(id => id === bowlerId).length;
-  if (count >= 4) return alert("Max 4 overs per bowler.");
-
-  // find unassigned index
-  const index = overAssignments.findIndex(v => v === null);
-  if (index === -1) return alert("All 20 overs assigned.");
-  if (index > 0 && overAssignments[index - 1] === bowlerId) return alert("No consecutive overs.");
-
-  overAssignments[index] = bowlerId;
+function toggleOver(bowlerId) {
+  const index = overAssignments.indexOf(bowlerId);
+  if (index !== -1) {
+    overAssignments[index] = null; // unassign
+  } else {
+    const next = overAssignments.findIndex(v => v === null);
+    if (next === -1) return alert("All 20 overs assigned.");
+    if (overAssignments[next - 1] === bowlerId) return alert("No consecutive overs.");
+    overAssignments[next] = bowlerId;
+  }
   updateOverBoxes();
 }
 
@@ -180,18 +193,14 @@ function updateOverBoxes() {
       if (box) {
         box.innerText = i + 1;
         box.classList.add("filled");
-        box.onclick = () => {
-          overAssignments[i] = null;
-          updateOverBoxes();
-        };
       }
     }
   });
 
-  document.getElementById("overs-count").innerText = `${overAssignments.filter(v => v).length}/20 overs set`;
+  document.getElementById("overs-count").innerText = `${overAssignments.filter(Boolean).length}/20 overs set`;
 }
 
-// Save
+// 💾 Save
 function setupSave() {
   document.getElementById("save-lineup-btn").onclick = async () => {
     if (locked) return alert("🔒 Lineup is locked.");
@@ -215,7 +224,7 @@ function setupSave() {
   };
 }
 
-// Countdown
+// 🔒 Countdown
 function setupCountdown(lockTime) {
   const status = document.getElementById("lineup-status");
   const tick = () => {
@@ -232,26 +241,4 @@ function setupCountdown(lockTime) {
   };
   const timer = setInterval(tick, 60000);
   tick();
-}
-
-// Header/Footer UI
-function loadUIBars() {
-  const topBar = document.getElementById("top-bar");
-  const bottomBar = document.getElementById("bottom-nav");
-
-  topBar.className = "fixed-top-bar";
-  bottomBar.className = "fixed-bottom-nav";
-
-  topBar.innerHTML = `
-    <div><strong>🏏 Team Lineup</strong></div>
-    <div style="font-size: 13px;">TheCricketBoss</div>
-  `;
-
-  bottomBar.innerHTML = `
-    <a href="team.html">🏏</a>
-    <a href="scout.html">🔍</a>
-    <a href="home.html">🏠</a>
-    <a href="auction.html">⚒️</a>
-    <a href="store.html">🛒</a>
-  `;
 }
