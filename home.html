@@ -6,19 +6,22 @@
   <title>Home – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    body { background-color: #121212; color: #fff; font-family: sans-serif; }
-
+    body {
+      background-color: #121212;
+      color: #fff;
+      font-family: sans-serif;
+      margin: 0;
+      padding-bottom: 80px;
+    }
     .main {
       padding: 20px;
       max-width: 800px;
       margin: auto;
     }
-
     h2, h3 {
       text-align: center;
       margin-bottom: 20px;
     }
-
     button {
       padding: 12px 24px;
       font-size: 16px;
@@ -29,19 +32,86 @@
       cursor: pointer;
       margin-top: 10px;
     }
-
     button:disabled {
       background: gray;
       cursor: not-allowed;
     }
-
-    .preparation-section, .friendly-section {
-      margin-bottom: 40px;
+    .grid-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .grid-item {
+      background-color: #1e1e1e;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .xp-bar-container {
+      margin: 20px 0;
       text-align: center;
     }
-
-    .friendly-section h3 {
-      margin-bottom: 10px;
+    .level-text {
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+    }
+    .xp-bar {
+      width: 100%;
+      height: 18px;
+      background-color: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .xp-fill {
+      height: 100%;
+      background: linear-gradient(to right, #00e676, #00c853);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .xp-count {
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+    #top-players-list {
+      font-size: 0.85rem;
+      color: #ccc;
+      margin-top: 10px;
+    }
+    .quick-links {
+      margin-top: 40px;
+      text-align: center;
+    }
+    .quick-links h3 {
+      margin-bottom: 12px;
+    }
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+    }
+    .quick-grid a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #1e1e1e;
+      padding: 14px 10px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #00e676;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+      transition: background 0.2s ease;
+    }
+    .quick-grid a:hover {
+      background-color: #2e2e2e;
+    }
+    .quick-grid .icon {
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+    .quick-grid .label {
+      font-size: 0.85rem;
     }
   </style>
 </head>
@@ -52,15 +122,52 @@
   <div class="main">
     <h2>Welcome back!</h2>
 
-    <div class="preparation-section">
-      <h3>Match Preparation</h3>
-      <div id="trainingStatus">Checking training status...</div>
-      <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
+    <!-- XP Progress Bar -->
+    <div class="xp-bar-container">
+      <div class="level-text" id="level-label">Level: Beginner</div>
+      <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
+      <div class="xp-count" id="xp-label">XP: 0 / 500</div>
     </div>
 
-    <div class="friendly-section">
-      <h3>Want a Practice Game?</h3>
-      <a href="book-friendly.html"><button>📖 Book Friendly Match</button></a>
+    <div class="grid-container">
+
+      <!-- Fixture -->
+      <div class="grid-item" id="fixture-block">
+        <h3>Next Match</h3>
+        <div id="fixture-info">Loading...</div>
+      </div>
+
+      <!-- Training -->
+      <div class="grid-item">
+        <h3>Match Preparation</h3>
+        <div id="trainingStatus">Checking training status...</div>
+        <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
+      </div>
+
+      <!-- Top Players -->
+      <div class="grid-item">
+        <h3>Top 3 Players</h3>
+        <div id="top-players-list">Loading your top players...</div>
+      </div>
+    </div>
+
+    <!-- Quick Access -->
+    <div class="quick-links">
+      <h3>Quick Access</h3>
+      <div class="quick-grid">
+        <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
+        <a href="team.html"><div class="icon">🧍‍♂️</div><div class="label">My Team</div></a>
+        <a href="matches.html"><div class="icon">📊</div><div class="label">Matches</div></a>
+        <a href="training.html"><div class="icon">🧠</div><div class="label">Training</div></a>
+        <a href="scout.html"><div class="icon">🕵️‍♂️</div><div class="label">Scout</div></a>
+        <a href="academy.html"><div class="icon">🎓</div><div class="label">Academy</div></a>
+        <a href="book-friendly.html"><div class="icon">🤝</div><div class="label">Friendly</div></a>
+        <a href="stadium.html"><div class="icon">🏟️</div><div class="label">Stadium</div></a>
+        <a href="store.html"><div class="icon">🛒</div><div class="label">Store</div></a>
+        <a href="finance.html"><div class="icon">💰</div><div class="label">Finance</div></a>
+        <a href="halloffame.html"><div class="icon">👑</div><div class="label">Hall of Fame</div></a>
+        <a href="myprofile.html"><div class="icon">⚙️</div><div class="label">Profile</div></a>
+      </div>
     </div>
   </div>
 
@@ -73,42 +180,9 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    async function distributeDailyLoginXP(userId) {
-      const today = new Date().toISOString().split("T")[0];
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("last_xp_login_date")
-        .eq("user_id", userId)
-        .single();
-
-      if (error) {
-        console.error("❌ Could not fetch login date:", error.message);
-        return;
-      }
-
-      if (data?.last_xp_login_date !== today) {
-        await addManagerXP(supabase, userId, "daily_login");
-
-        const { error: updateErr } = await supabase
-          .from("profiles")
-          .update({ last_xp_login_date: today })
-          .eq("user_id", userId);
-
-        if (updateErr) {
-          console.error("❌ Could not update login date:", updateErr.message);
-        }
-      } else {
-        console.log("🕘 Daily XP already claimed today.");
-      }
-    }
-
     async function main() {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        window.location.href = "login.html";
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return location.href = "login.html";
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -116,11 +190,8 @@
         .eq("user_id", user.id)
         .single();
 
-      if (!profile || !profile.manager_name?.trim() || !profile.team_name?.trim()) {
-        console.warn("⚠️ Profile incomplete. Redirecting...");
-        window.location.href = "profile-setup.html";
-        return;
-      }
+      if (!profile?.manager_name || !profile?.team_name)
+        return location.href = "profile-setup.html";
 
       loadSharedUI({
         supabase,
@@ -130,13 +201,60 @@
         cash: profile.cash ?? 0
       });
 
-      await distributeDailyLoginXP(user.id);
+      const xp = profile.xp ?? 0;
+      const levels = [
+        { name: "Beginner", xp: 0 },
+        { name: "Expert", xp: 500 },
+        { name: "Professional", xp: 1000 },
+        { name: "Master", xp: 2000 },
+        { name: "Supreme", xp: 3500 },
+        { name: "World Class", xp: 5000 },
+        { name: "Ultimate", xp: 7000 },
+        { name: "Titan", xp: 10000 },
+        { name: "The Boss", xp: 15000 },
+      ];
+      let currentLevel = levels[0], nextLevel = levels[1];
+      for (let i = 0; i < levels.length - 1; i++) {
+        if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
+          currentLevel = levels[i];
+          nextLevel = levels[i + 1];
+          break;
+        } else if (xp >= levels[levels.length - 1].xp) {
+          currentLevel = levels[levels.length - 1];
+          nextLevel = { name: "MAX", xp: currentLevel.xp + 1 };
+          break;
+        }
+      }
+      const progress = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
+      document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
+      document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
+      document.getElementById("xp-fill").style.width = `${progress}%`;
 
       const { data: team } = await supabase
         .from("teams")
         .select("*")
         .eq("owner_id", user.id)
         .single();
+
+      const { data: fixture } = await supabase
+        .from("matches")
+        .select("*")
+        .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+        .gte("date", new Date().toISOString())
+        .order("date", { ascending: true })
+        .limit(1)
+        .single();
+
+      const opponentId = fixture?.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
+      const { data: opponent } = await supabase
+        .from("teams")
+        .select("team_name")
+        .eq("id", opponentId)
+        .single();
+
+      document.getElementById("fixture-info").innerHTML = fixture
+        ? `vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM`
+        : "No upcoming matches";
 
       const { data: lastMatch } = await supabase
         .from("matches")
@@ -146,27 +264,41 @@
         .limit(1)
         .single();
 
-      const lastMatchDate = lastMatch?.date || "1970-01-01";
-
-      const { data: trainingLogs } = await supabase
+      const lastDate = lastMatch?.date || "1970-01-01";
+      const { data: logs } = await supabase
         .from("training_logs")
         .select("*")
         .eq("team_id", team.id)
-        .gte("created_at", lastMatchDate);
+        .gte("created_at", lastDate);
 
-      const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
-      const trainingCompleted = trainedPlayers.size >= 3;
+      const trained = new Set(logs?.map(t => t.player_id));
+      document.getElementById("trainingStatus").innerHTML = trained.size >= 3
+        ? "✅ <strong>Training Completed</strong> (3+ players trained)"
+        : "❌ <strong>Training Pending</strong> – Train 3 players";
+      document.getElementById("goTrainingBtn").disabled = trained.size >= 3;
 
-      const statusDiv = document.getElementById("trainingStatus");
-      const goBtn = document.getElementById("goTrainingBtn");
+      const { data: players } = await supabase
+        .from("players")
+        .select("name, batting, bowling, fitness")
+        .eq("team_id", team.id);
 
-      if (trainingCompleted) {
-        statusDiv.innerHTML = "✅ <strong>Training Completed</strong> (3 players trained)";
-        goBtn.disabled = true;
-      } else {
-        statusDiv.innerHTML = "❌ <strong>Training Pending</strong> – Train 3 players before next match";
-        goBtn.disabled = false;
-      }
+      const top = (players ?? [])
+        .map(p => ({
+          ...p,
+          totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
+        }))
+        .sort((a, b) => b.totalSkill - a.totalSkill)
+        .slice(0, 3);
+
+      document.getElementById("top-players-list").innerHTML = top.length
+        ? top.map(p => `
+          <div style="margin-bottom: 10px; text-align: left;">
+            <strong>${p.name}</strong><br>
+            🏏 Batting: ${p.batting}, 🎯 Bowling: ${p.bowling}, 💪 Fitness: ${p.fitness}<br>
+            ⭐ Total Skill: <strong>${p.totalSkill}</strong>
+          </div>
+        `).join("")
+        : "No players found.";
     }
 
     main();
