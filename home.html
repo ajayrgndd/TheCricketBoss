@@ -298,6 +298,7 @@ if (playersError) {
     .sort((a, b) => b.totalSkill - a.totalSkill)
     .slice(0, 3);
 
+  if (topPlayers.length > 0) {
   document.getElementById("top-players-list").innerHTML = topPlayers
     .map(p => `
       <div style="margin-bottom: 10px; text-align: left;">
@@ -306,13 +307,14 @@ if (playersError) {
         ⭐ Total Skill: <strong>${p.totalSkill}</strong>
       </div>
     `).join("");
-        : "No players found.";
-    }
-
+} else {
+  document.getElementById("top-players-list").innerText = "No players found.";
+}
     main();
   </script>
 </body>
 </html>
+
 
 
 
