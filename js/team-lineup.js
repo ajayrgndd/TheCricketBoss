@@ -18,6 +18,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!user) return (location.href = "login.html");
   userId = user.id;
 
+  const profile = await supabase.from("profiles").select("*").eq("user_id", userId).single();
+  const profileData = profile.data;
+  document.getElementById("top-username").innerText = `👤 ${profileData.manager_name}`;
+  document.getElementById("top-xp").innerText = `⭐ ${profileData.xp || 0} XP`;
+  document.getElementById("top-coins").innerText = `🪙 ${profileData.coins || 0}`;
+  document.getElementById("top-cash").innerText = `💵 ${profileData.cash || 0}`;
+
   const team = await supabase.from("teams").select("*").eq("owner_id", userId).single();
   teamId = team.data.id;
 
