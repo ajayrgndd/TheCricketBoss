@@ -136,6 +136,7 @@ btn.onclick = async () => {
     skills: "", // 🔥 FIXED: string instead of array
     batting_style,
     bowling_style,
+    is_wk: role === "Wicket Keeper" ? true : false, // ✅ ADD THIS
     image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`
   };
 
@@ -172,5 +173,6 @@ btn.onclick = async () => {
     console.error(insertErr);
   }
 };
+
 
 
