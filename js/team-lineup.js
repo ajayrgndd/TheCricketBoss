@@ -146,7 +146,7 @@ function renderCaptainPicker() {
   });
 }
 
-// 🎯 Bowling
+// 🎯 Bowling Lineup with single/double click logic
 function renderBowlingLineup() {
   const container = document.getElementById("bowling-lineup");
   container.innerHTML = "";
@@ -159,7 +159,19 @@ function renderBowlingLineup() {
       const box = document.createElement("div");
       box.className = "over-box";
       box.dataset.bowlerId = p.id;
-      box.addEventListener("click", () => assignOrUnassignOver(p.id));
+
+      box.addEventListener("click", (e) => {
+        if (e.detail === 1) {
+          setTimeout(() => {
+            if (e.detail === 1) assignOver(p.id);
+          }, 200);
+        }
+      });
+
+      box.addEventListener("dblclick", () => {
+        unassignOver(p.id);
+      });
+
       row.appendChild(box);
     }
     container.appendChild(row);
@@ -168,30 +180,27 @@ function renderBowlingLineup() {
   updateOverBoxes();
 }
 
-function assignOrUnassignOver(bowlerId) {
+function assignOver(bowlerId) {
+  const assigned = overAssignments.filter(id => id === bowlerId).length;
+  if (assigned >= 4) return alert("Max 4 overs per bowler.");
+
+  const index = overAssignments.findIndex(v => v === null);
+  if (index === -1) return alert("All 20 overs assigned.");
+  if (index > 0 && overAssignments[index - 1] === bowlerId) return alert("No consecutive overs.");
+
+  overAssignments[index] = bowlerId;
+  updateOverBoxes();
+}
+
+function unassignOver(bowlerId) {
   const lastIndex = [...overAssignments].map((id, i) => ({ id, i }))
     .reverse()
     .find(entry => entry.id === bowlerId);
 
-  const assignedCount = overAssignments.filter(id => id === bowlerId).length;
-
   if (lastIndex) {
-    // Unassign latest over if clicked again
     overAssignments[lastIndex.i] = null;
-  } else {
-    if (assignedCount >= 4) {
-      alert("Max 4 overs per bowler.");
-      return;
-    }
-
-    const index = overAssignments.findIndex(v => v === null);
-    if (index === -1) return alert("All 20 overs assigned.");
-    if (index > 0 && overAssignments[index - 1] === bowlerId) return alert("No consecutive overs.");
-
-    overAssignments[index] = bowlerId;
+    updateOverBoxes();
   }
-
-  updateOverBoxes();
 }
 
 function updateOverBoxes() {
@@ -200,20 +209,20 @@ function updateOverBoxes() {
     box.innerText = "";
   });
 
-  const bowlerUsage = {};
+  const usage = {};
 
   overAssignments.forEach((id, i) => {
     if (!id) return;
-    if (!bowlerUsage[id]) bowlerUsage[id] = 0;
+    if (!usage[id]) usage[id] = 0;
 
     const boxes = document.querySelectorAll(`.over-box[data-bowler-id="${id}"]`);
-    const box = boxes[bowlerUsage[id]];
+    const box = boxes[usage[id]];
     if (box) {
       box.innerText = i + 1;
       box.classList.add("filled");
     }
 
-    bowlerUsage[id]++;
+    usage[id]++;
   });
 
   document.getElementById("overs-count").innerText = `${overAssignments.filter(Boolean).length}/20 overs set`;
