@@ -147,7 +147,7 @@ btn.onclick = async () => {
     salary,
     market_price
   };
-
+  console.log("🚀 Final Player Payload:", player);
   const { error: insertErr } = await supabase.from("players").insert(player);
   if (!insertErr) {
     await supabase
@@ -172,3 +172,4 @@ btn.onclick = async () => {
     console.error(insertErr);
   }
 };
+
