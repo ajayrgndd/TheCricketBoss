@@ -324,7 +324,7 @@
     : "❌ <strong>Training Pending</strong> – Train 3 players";
   document.getElementById("goTrainingBtn").disabled = trainedPlayers.size >= 3;
 
-  // Top 3 Players
+// Top 3 Players
 const { data: players } = await supabase
   .from("players")
   .select("name, role, batting, bowling, keeping, image_url")
@@ -366,6 +366,7 @@ document.getElementById("top-players-list").innerHTML = topPlayers.length
   </script>
 </body>
 </html>
+
 
 
 
