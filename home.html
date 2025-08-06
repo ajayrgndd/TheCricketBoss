@@ -255,25 +255,38 @@
         .single();
 
       // Fixture Info
-      const { data: fixture } = await supabase
-        .from("matches")
-        .select("*")
-        .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-        .gte("date", new Date().toISOString())
-        .order("date", { ascending: true })
-        .limit(1)
-        .single();
+     // Fetch Fixture
+let fixture, opponent;
+try {
+  const { data: upcoming } = await supabase
+    .from("matches")
+    .select("*")
+    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+    .gte("date", new Date().toISOString())
+    .order("date", { ascending: true })
+    .limit(1)
+    .single();
 
-      const opponentId = fixture?.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
-      const { data: opponent } = await supabase
-        .from("teams")
-        .select("team_name")
-        .eq("id", opponentId)
-        .single();
+  fixture = upcoming;
 
-      document.getElementById("fixture-info").innerHTML = fixture
-        ? `vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM`
-        : "No upcoming matches";
+  if (fixture) {
+    const opponentId = fixture.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
+    const { data: opp } = await supabase
+      .from("teams")
+      .select("team_name")
+      .eq("id", opponentId)
+      .single();
+    opponent = opp;
+  }
+
+  document.getElementById("fixture-info").innerHTML = fixture
+    ? `vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM`
+    : "No upcoming matches";
+
+} catch (error) {
+  console.error("Fixture load failed", error);
+  document.getElementById("fixture-info").innerText = "Unable to load match data.";
+}
 
       // Training Check
       const { data: lastMatch } = await supabase
@@ -328,3 +341,4 @@
   </script>
 </body>
 </html>
+
