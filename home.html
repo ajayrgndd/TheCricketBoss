@@ -357,8 +357,9 @@ document.getElementById("top-players-list").innerHTML = topPlayers.length
           <div style="font-size: 0.85rem;">${p.role}</div>
           <div style="font-size: 0.85rem; color: #ccc;">${p.topSkillName}: ${p.topSkillValue}</div>
         </div>
-            `;
-          }).join("")
+          `).join("")}
+        </div>
+        `
         : "No players found.";
     }
 
@@ -366,6 +367,7 @@ document.getElementById("top-players-list").innerHTML = topPlayers.length
   </script>
 </body>
 </html>
+
 
 
 
