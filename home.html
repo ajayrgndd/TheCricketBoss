@@ -16,7 +16,6 @@
 
     .main {
       padding: 20px;
-      padding-top: 100px; /* Ensure welcome is visible */
       max-width: 800px;
       margin: auto;
     }
@@ -134,7 +133,7 @@
   <!-- Top bar & bottom nav will be injected by shared-ui.js -->
 
   <div class="main">
-    <h2>Welcome back, Manager!</h2>
+    <h2 style="margin-top: 60px;">Welcome back!</h2>
 
     <!-- XP Progress Bar -->
     <div class="xp-bar-container">
@@ -158,32 +157,31 @@
         <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
       </div>
 
-      <<!-- Top Players (Styled Grid with Image + Role + Skill) -->
-<div class="grid-item">
-  <h3>Top 3 Players</h3>
-  <div id="top-players-list" class="quick-grid" style="text-align: center;"></div>
-</div>
-
-
-      <!-- Quick Access -->
-      <div class="quick-links">
-        <h3>Quick Access</h3>
-        <div class="quick-grid">
-          <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
-          <a href="team.html"><div class="icon">🧍‍♂️</div><div class="label">My Team</div></a>
-          <a href="matches.html"><div class="icon">📊</div><div class="label">Matches</div></a>
-          <a href="training.html"><div class="icon">🧠</div><div class="label">Training</div></a>
-          <a href="scout.html"><div class="icon">🕵️‍♂️</div><div class="label">Scout</div></a>
-          <a href="academy.html"><div class="icon">🎓</div><div class="label">Academy</div></a>
-          <a href="book-friendly.html"><div class="icon">🤝</div><div class="label">Friendly</div></a>
-          <a href="stadium.html"><div class="icon">🏟️</div><div class="label">Stadium</div></a>
-          <a href="store.html"><div class="icon">🛒</div><div class="label">Store</div></a>
-          <a href="finance.html"><div class="icon">💰</div><div class="label">Finance</div></a>
-          <a href="halloffame.html"><div class="icon">👑</div><div class="label">Hall of Fame</div></a>
-          <a href="myprofile.html"><div class="icon">⚙️</div><div class="label">Profile</div></a>
-        </div>
+      <!-- Top 3 Players -->
+      <div class="grid-item">
+        <h3>Top 3 Players</h3>
+        <div id="top-players-list" class="quick-grid" style="text-align: center;"></div>
       </div>
 
+    </div>
+
+    <!-- Quick Access -->
+    <div class="quick-links">
+      <h3>Quick Access</h3>
+      <div class="quick-grid">
+        <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
+        <a href="team.html"><div class="icon">🧍‍♂️</div><div class="label">My Team</div></a>
+        <a href="matches.html"><div class="icon">📊</div><div class="label">Matches</div></a>
+        <a href="training.html"><div class="icon">🧠</div><div class="label">Training</div></a>
+        <a href="scout.html"><div class="icon">🕵️‍♂️</div><div class="label">Scout</div></a>
+        <a href="academy.html"><div class="icon">🎓</div><div class="label">Academy</div></a>
+        <a href="book-friendly.html"><div class="icon">🤝</div><div class="label">Friendly</div></a>
+        <a href="stadium.html"><div class="icon">🏟️</div><div class="label">Stadium</div></a>
+        <a href="store.html"><div class="icon">🛒</div><div class="label">Store</div></a>
+        <a href="finance.html"><div class="icon">💰</div><div class="label">Finance</div></a>
+        <a href="halloffame.html"><div class="icon">👑</div><div class="label">Hall of Fame</div></a>
+        <a href="myprofile.html"><div class="icon">⚙️</div><div class="label">Profile</div></a>
+      </div>
     </div>
   </div>
 
@@ -195,6 +193,21 @@
       "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
+
+    async function distributeDailyLoginXP(userId) {
+      const today = new Date().toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("profiles")
+        .select("last_xp_login_date")
+        .eq("user_id", userId)
+        .single();
+      if (data?.last_xp_login_date !== today) {
+        await addManagerXP(supabase, userId, "daily_login");
+        await supabase.from("profiles")
+          .update({ last_xp_login_date: today })
+          .eq("user_id", userId);
+      }
+    }
 
     async function main() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -217,7 +230,8 @@
         cash: profile.cash ?? 0
       });
 
-      // XP Calculation
+      await distributeDailyLoginXP(user.id);
+
       const xp = profile.xp ?? 0;
       const levels = [
         { name: "Beginner", xp: 0 },
@@ -230,7 +244,6 @@
         { name: "Titan", xp: 10000 },
         { name: "The Boss", xp: 15000 },
       ];
-
       let currentLevel = levels[0], nextLevel = levels[1];
       for (let i = 0; i < levels.length - 1; i++) {
         if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
@@ -243,53 +256,37 @@
           break;
         }
       }
-      const progressPercent = ((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100;
+      const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
       document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
       document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
-      document.getElementById("xp-fill").style.width = `${progressPercent}%`;
+      document.getElementById("xp-fill").style.width = `${percent}%`;
 
-      // Get team info
       const { data: team } = await supabase
         .from("teams")
         .select("*")
         .eq("owner_id", user.id)
         .single();
 
-      // Fixture Info
-     // Fetch Fixture
-let fixture, opponent;
-try {
-  const { data: upcoming } = await supabase
-    .from("matches")
-    .select("*")
-    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-    .gte("date", new Date().toISOString())
-    .order("date", { ascending: true })
-    .limit(1)
-    .single();
+      const { data: fixture } = await supabase
+        .from("matches")
+        .select("*")
+        .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+        .gte("date", new Date().toISOString())
+        .order("date", { ascending: true })
+        .limit(1)
+        .single();
 
-  fixture = upcoming;
+      const opponentId = fixture?.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
+      const { data: opponent } = await supabase
+        .from("teams")
+        .select("team_name")
+        .eq("id", opponentId)
+        .single();
 
-  if (fixture) {
-    const opponentId = fixture.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
-    const { data: opp } = await supabase
-      .from("teams")
-      .select("team_name")
-      .eq("id", opponentId)
-      .single();
-    opponent = opp;
-  }
+      document.getElementById("fixture-info").innerHTML = fixture
+        ? `vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM`
+        : "No upcoming matches";
 
-  document.getElementById("fixture-info").innerHTML = fixture
-    ? `vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM`
-    : "No upcoming matches";
-
-} catch (error) {
-  console.error("Fixture load failed", error);
-  document.getElementById("fixture-info").innerText = "Unable to load match data.";
-}
-
-      // Training Check
       const { data: lastMatch } = await supabase
         .from("matches")
         .select("*")
@@ -306,47 +303,46 @@ try {
         .gte("created_at", lastMatchDate);
 
       const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
-      const trainingCompleted = trainedPlayers.size >= 3;
-
-      document.getElementById("trainingStatus").innerHTML = trainingCompleted
+      document.getElementById("trainingStatus").innerHTML = trainedPlayers.size >= 3
         ? "✅ <strong>Training Completed</strong> (3+ players trained)"
         : "❌ <strong>Training Pending</strong> – Train 3 players";
-      document.getElementById("goTrainingBtn").disabled = trainingCompleted;
+      document.getElementById("goTrainingBtn").disabled = trainedPlayers.size >= 3;
 
-      // Top 3 Players (with Image, Role, and Top Skill)
-const { data: players } = await supabase
-  .from("players")
-  .select("name, role, image_url, batting, bowling, fitness")
-  .eq("team_id", team.id);
+      // Top 3 Players Grid with Image
+      const { data: players } = await supabase
+        .from("players")
+        .select("name, role, image_url, batting, bowling, fitness")
+        .eq("team_id", team.id);
 
-const topPlayers = (players ?? [])
-  .map(p => ({
-    ...p,
-    totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
-  }))
-  .sort((a, b) => b.totalSkill - a.totalSkill)
-  .slice(0, 3);
+      const topPlayers = (players ?? [])
+        .map(p => ({
+          ...p,
+          totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
+        }))
+        .sort((a, b) => b.totalSkill - a.totalSkill)
+        .slice(0, 3);
 
-function getTopSkill(p) {
-  const skills = [
-    { name: "Batting", value: p.batting ?? 0 },
-    { name: "Bowling", value: p.bowling ?? 0 },
-    { name: "Fitness", value: p.fitness ?? 0 }
-  ];
-  return skills.sort((a, b) => b.value - a.value)[0];
-}
+      function getTopSkill(p) {
+        const skills = [
+          { name: "Batting", value: p.batting ?? 0 },
+          { name: "Bowling", value: p.bowling ?? 0 },
+          { name: "Fitness", value: p.fitness ?? 0 }
+        ];
+        return skills.sort((a, b) => b.value - a.value)[0];
+      }
 
-document.getElementById("top-players-list").innerHTML = topPlayers.length
-  ? topPlayers.map(p => {
-      const topSkill = getTopSkill(p);
-      return `
-        <div style="text-align:center;">
-          <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:8px;" />
-          <div style="font-weight:bold;">${p.name}</div>
-          <div style="font-size:0.85rem; color:#ccc;">${p.role ?? "Unknown Role"}</div>
-          <div style="font-size:0.85rem; color:#ccc;">${topSkill.name}: <strong>${topSkill.value}</strong></div>
-        </div>
-        `).join("")
+      document.getElementById("top-players-list").innerHTML = topPlayers.length
+        ? topPlayers.map(p => {
+            const topSkill = getTopSkill(p);
+            return `
+              <div style="text-align:center;">
+                <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; margin-bottom:8px;" />
+                <div style="font-weight:bold;">${p.name}</div>
+                <div style="font-size:0.85rem; color:#ccc;">${p.role ?? "Unknown Role"}</div>
+                <div style="font-size:0.85rem; color:#ccc;">${topSkill.name}: <strong>${topSkill.value}</strong></div>
+              </div>
+            `;
+          }).join("")
         : "No players found.";
     }
 
@@ -354,5 +350,3 @@ document.getElementById("top-players-list").innerHTML = topPlayers.length
   </script>
 </body>
 </html>
-
-
