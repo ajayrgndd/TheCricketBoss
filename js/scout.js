@@ -4,7 +4,7 @@ import { calculateWeeklySalary, calculateMarketValue } from "./utils/salary.js";
 
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 );
 
 // UI elements
@@ -48,7 +48,7 @@ const { data: team } = await supabase
   .eq("owner_id", user.id)
   .single();
 
-// ✅ Only allow scouting on Sunday (change to 3 for Wednesday if needed)
+// ✅ Only allow scouting on Wednesday (3)
 if (serverDay !== 3) {
   btn.disabled = true;
   btn.textContent = "Scouting locked until next Wednesday";
@@ -82,7 +82,7 @@ btn.onclick = async () => {
   const role = roles[Math.floor(Math.random() * roles.length)];
 
   let batting = 0, bowling = 0, keeping = 0;
-  const fitness = 100; // ✅ Fixed fitness
+  const fitness = 100;
 
   switch (role) {
     case "Batsman":
@@ -103,7 +103,6 @@ btn.onclick = async () => {
       break;
   }
 
-  // ✅ Batting & Bowling Style Assignment
   const battingStyles = ["Right Hand Batter", "Left Hand Batter"];
   const bowlingStyles = [
     "Right Hand Seamer",
@@ -134,13 +133,12 @@ btn.onclick = async () => {
     form: "Good",
     experience: 0,
     skill_level: "Newbie",
-    skills: [],
+    skills: "", // 🔥 FIXED: string instead of array
     batting_style,
     bowling_style,
     image_url: `https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/${role.toLowerCase().replaceAll(" ", "").replaceAll("-", "")}.png`
   };
 
-  // ✅ Salary and Market Value from utils
   const salary = calculateWeeklySalary(basePlayer);
   const market_price = calculateMarketValue(basePlayer);
 
@@ -157,7 +155,6 @@ btn.onclick = async () => {
       .update({ last_scouted_date: serverDateStr })
       .eq("user_id", user.id);
 
-    // Show UI card
     nameEl.textContent = player.name;
     roleEl.textContent = `Role: ${role}`;
     ageEl.textContent = `Age: ${age_years}y ${age_days}d`;
@@ -175,5 +172,3 @@ btn.onclick = async () => {
     console.error(insertErr);
   }
 };
-
-
