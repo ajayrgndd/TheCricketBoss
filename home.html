@@ -324,39 +324,39 @@
     : "❌ <strong>Training Pending</strong> – Train 3 players";
   document.getElementById("goTrainingBtn").disabled = trainedPlayers.size >= 3;
 
-  // ✅ TOP 3 PLAYERS – Always show even without matches
-  const { data: players } = await supabase
-    .from("players")
-    .select("name, role, image_url, batting, bowling, fitness")
-    .eq("team_id", team.id);
+  // Top 3 Players
+const { data: players } = await supabase
+  .from("players")
+  .select("name, role, batting, bowling, keeping, image_url")
+  .eq("team_id", team.id);
 
-  const topPlayers = (players ?? [])
-    .map(p => ({
+const topPlayers = (players ?? [])
+  .map(p => {
+    const skills = {
+      Batting: p.batting ?? 0,
+      Bowling: p.bowling ?? 0,
+      Keeping: p.keeping ?? 0
+    };
+    const topSkill = Object.entries(skills).reduce((a, b) => b[1] > a[1] ? b : a);
+    return {
       ...p,
-      totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
-    }))
-    .sort((a, b) => b.totalSkill - a.totalSkill)
-    .slice(0, 3);
+      topSkillName: topSkill[0],
+      topSkillValue: topSkill[1]
+    };
+  })
+  .sort((a, b) => b.topSkillValue - a.topSkillValue)
+  .slice(0, 3);
 
-  function getTopSkill(p) {
-    const skills = [
-      { name: "Batting", value: p.batting ?? 0 },
-      { name: "Bowling", value: p.bowling ?? 0 },
-      { name: "Fitness", value: p.fitness ?? 0 }
-    ];
-    return skills.sort((a, b) => b.value - a.value)[0];
-  }
-
-  document.getElementById("top-players-list").innerHTML = topPlayers.length
-    ? topPlayers.map(p => {
-        const topSkill = getTopSkill(p);
-        return `
-          <div style="text-align:center;">
-            <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; object-position: top; margin-bottom:8px;" />
-            <div style="font-weight:bold;">${p.name}</div>
-            <div style="font-size:0.85rem; color:#ccc;">${p.role ?? "Unknown Role"}</div>
-            <div style="font-size:0.85rem; color:#ccc;">${topSkill.name}: <strong>${topSkill.value}</strong></div>
-          </div>
+document.getElementById("top-players-list").innerHTML = topPlayers.length
+  ? `
+    <div style="display: flex; justify-content: space-around; text-align: center;">
+      ${topPlayers.map(p => `
+        <div>
+          <img src="${p.image_url}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; margin-bottom: 6px;" />
+          <div><strong>${p.name}</strong></div>
+          <div style="font-size: 0.85rem;">${p.role}</div>
+          <div style="font-size: 0.85rem; color: #ccc;">${p.topSkillName}: ${p.topSkillValue}</div>
+        </div>
             `;
           }).join("")
         : "No players found.";
@@ -366,6 +366,7 @@
   </script>
 </body>
 </html>
+
 
 
 
