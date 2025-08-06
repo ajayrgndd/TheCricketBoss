@@ -144,13 +144,16 @@ btn.onclick = async () => {
   const market_price = calculateMarketValue(basePlayer);
 
   const player = {
-    ...basePlayer,
-    salary,
-    market_price
-  };
-  console.log("🚀 Final Player Payload:", player);
-  const { error: insertErr } = await supabase.from("players").insert(player);
-  if (!insertErr) {
+  ...basePlayer,
+  skills: "", // ✅ important fix
+  salary,
+  market_price
+};
+
+console.log("🧪 Final Player Payload:", player);
+
+const { error: insertErr } = await supabase.from("players").insert(player);
+if (!insertErr) {
     await supabase
       .from("profiles")
       .update({ last_scouted_date: serverDateStr })
@@ -170,9 +173,10 @@ btn.onclick = async () => {
     card.classList.add("reveal");
   } else {
     alert("❌ Failed to scout.");
-    console.error(insertErr);
+    console.error("❌ Insert error", insertErr.message, insertErr.details, insertErr.hint);
   }
 };
+
 
 
 
