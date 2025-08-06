@@ -145,7 +145,6 @@ btn.onclick = async () => {
 
   const player = {
   ...basePlayer,
-  skills: "", // ✅ important fix
   salary,
   market_price
 };
@@ -176,6 +175,7 @@ if (!insertErr) {
     console.error("❌ Insert error", insertErr.message, insertErr.details, insertErr.hint);
   }
 };
+
 
 
 
