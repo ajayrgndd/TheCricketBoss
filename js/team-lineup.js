@@ -159,7 +159,7 @@ function renderBowlingLineup() {
       const box = document.createElement("div");
       box.className = "over-box";
       box.dataset.bowlerId = p.id;
-      box.addEventListener("click", () => toggleOver(p.id));
+      box.addEventListener("click", () => assignOrUnassignOver(p.id));
       row.appendChild(box);
     }
     container.appendChild(row);
@@ -168,16 +168,29 @@ function renderBowlingLineup() {
   updateOverBoxes();
 }
 
-function toggleOver(bowlerId) {
-  const index = overAssignments.indexOf(bowlerId);
-  if (index !== -1) {
-    overAssignments[index] = null; // unassign
+function assignOrUnassignOver(bowlerId) {
+  const lastIndex = [...overAssignments].map((id, i) => ({ id, i }))
+    .reverse()
+    .find(entry => entry.id === bowlerId);
+
+  const assignedCount = overAssignments.filter(id => id === bowlerId).length;
+
+  if (lastIndex) {
+    // Unassign latest over if clicked again
+    overAssignments[lastIndex.i] = null;
   } else {
-    const next = overAssignments.findIndex(v => v === null);
-    if (next === -1) return alert("All 20 overs assigned.");
-    if (overAssignments[next - 1] === bowlerId) return alert("No consecutive overs.");
-    overAssignments[next] = bowlerId;
+    if (assignedCount >= 4) {
+      alert("Max 4 overs per bowler.");
+      return;
+    }
+
+    const index = overAssignments.findIndex(v => v === null);
+    if (index === -1) return alert("All 20 overs assigned.");
+    if (index > 0 && overAssignments[index - 1] === bowlerId) return alert("No consecutive overs.");
+
+    overAssignments[index] = bowlerId;
   }
+
   updateOverBoxes();
 }
 
@@ -187,14 +200,20 @@ function updateOverBoxes() {
     box.innerText = "";
   });
 
+  const bowlerUsage = {};
+
   overAssignments.forEach((id, i) => {
-    if (id) {
-      const box = document.querySelector(`.over-box[data-bowler-id="${id}"]:not(.filled)`);
-      if (box) {
-        box.innerText = i + 1;
-        box.classList.add("filled");
-      }
+    if (!id) return;
+    if (!bowlerUsage[id]) bowlerUsage[id] = 0;
+
+    const boxes = document.querySelectorAll(`.over-box[data-bowler-id="${id}"]`);
+    const box = boxes[bowlerUsage[id]];
+    if (box) {
+      box.innerText = i + 1;
+      box.classList.add("filled");
     }
+
+    bowlerUsage[id]++;
   });
 
   document.getElementById("overs-count").innerText = `${overAssignments.filter(Boolean).length}/20 overs set`;
