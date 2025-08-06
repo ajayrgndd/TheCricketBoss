@@ -279,26 +279,34 @@
       document.getElementById("goTrainingBtn").disabled = trained.size >= 3;
 
      // Fetch players for this team
-      const { data: players } = await supabase
-        .from("players")
-        .select("name, batting, bowling, fitness")
-        .eq("team_id", team.id);
+      const { data: team } = await supabase
+  .from("teams")
+  .select("*")
+  .eq("owner_id", user.id)
+  .single();
 
-      const top = (players ?? [])
-        .map(p => ({
-          ...p,
-          totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
-        }))
-        .sort((a, b) => b.totalSkill - a.totalSkill)
-        .slice(0, 3);
+// ✅ Immediately use team.id to fetch players (independent of matches)
+const { data: players } = await supabase
+  .from("players")
+  .select("name, batting, bowling, fitness")
+  .eq("team_id", team.id);
 
-      document.getElementById("top-players-list").innerHTML = top.length
-        ? top.map(p => `
-          <div style="margin-bottom: 10px; text-align: left;">
-            <strong>${p.name}</strong><br>
-            🏏 Batting: ${p.batting}, 🎯 Bowling: ${p.bowling}, 💪 Fitness: ${p.fitness}<br>
-            ⭐ Total Skill: <strong>${p.totalSkill}</strong>
-          </div>
+const topPlayers = (players ?? [])
+  .map(p => ({
+    ...p,
+    totalSkill: (p.batting ?? 0) + (p.bowling ?? 0) + (p.fitness ?? 0)
+  }))
+  .sort((a, b) => b.totalSkill - a.totalSkill)
+  .slice(0, 3);
+
+if (topPlayers.length > 0) {
+  document.getElementById("top-players-list").innerHTML = topPlayers
+    .map(p => `
+      <div style="margin-bottom: 10px; text-align: left;">
+        <strong>${p.name}</strong><br>
+        🏏 Batting: ${p.batting ?? 0}, 🎯 Bowling: ${p.bowling ?? 0}, 💪 Fitness: ${p.fitness ?? 0}<br>
+        ⭐ Total Skill: <strong>${p.totalSkill}</strong>
+      </div>
         `).join("")
         : "No players found.";
     }
@@ -307,6 +315,7 @@
   </script>
 </body>
 </html>
+
 
 
 
