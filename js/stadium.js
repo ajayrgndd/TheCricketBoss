@@ -1,75 +1,74 @@
-// js/stadium.js
-import { loadSharedUI } from './shared-ui-stadium.js';
+import { supabase } from './shared-ui-stadium.js'
 
-// Mock manager and stadium data for demo/testing
-const manager = {
-  level: "Professional", // could be: Beginner, Expert, Professional, etc.
-  xp: 4200,
-  coins: 30,
-  cash: 5000,
-  name: "Ajay"
-};
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
 
-const stadiumLevels = [
-  { name: "Basic", capacity: 1000, revenue: 100, cost: 1000, requiredLevel: "Beginner" },
-  { name: "Standard", capacity: 2500, revenue: 250, cost: 2500, requiredLevel: "Expert" },
-  { name: "Deluxe", capacity: 5000, revenue: 500, cost: 5000, requiredLevel: "Professional" },
-  { name: "Elite", capacity: 10000, revenue: 1000, cost: 10000, requiredLevel: "Master" },
-  { name: "Mega", capacity: 20000, revenue: 2000, cost: 20000, requiredLevel: "Supreme" }
-];
+  const userId = user.id
 
-let currentStadiumLevelIndex = 0;
+  // Fetch stadium & manager level
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('manager_level, stadium_level')
+    .eq('id', userId)
+    .single()
 
-function getManagerLevelRank(level) {
-  const ranks = ["Beginner", "Expert", "Professional", "Master", "Supreme", "World Class", "Ultimate", "Titan", "The Boss"];
-  return ranks.indexOf(level);
-}
+  if (error || !profile) {
+    console.error('Error loading stadium data', error)
+    return
+  }
 
-function updateUI() {
-  const stadium = stadiumLevels[currentStadiumLevelIndex];
-  document.getElementById('stadium-level-name').textContent = stadium.name;
-  document.getElementById('stadium-capacity').textContent = stadium.capacity;
-  document.getElementById('stadium-revenue').textContent = stadium.revenue;
-  document.getElementById('stadium-upgrade-cost').textContent = stadium.cost;
-  document.getElementById('required-manager-level').textContent = stadium.requiredLevel;
+  const levels = [
+    { name: "Local Ground", capacity: 3000, revenue: 300, cost: 4000, requiredLevel: "Professional" },
+    { name: "City Arena", capacity: 7000, revenue: 700, cost: 8000, requiredLevel: "Supreme" },
+    { name: "National Stadium", capacity: 15000, revenue: 1500, cost: 16000, requiredLevel: "World Class" },
+    { name: "Grand Dome", capacity: 30000, revenue: 3000, cost: 30000, requiredLevel: "Ultimate" },
+    { name: "Boss Arena", capacity: 50000, revenue: 5000, cost: null, requiredLevel: "Titan" }
+  ]
 
-  // Top bar info
-  document.getElementById('username').textContent = manager.name;
-  document.getElementById('xp').textContent = `XP: ${manager.xp}`;
-  document.getElementById('coins').textContent = `Coins: ${manager.coins}`;
-  document.getElementById('cash').textContent = `Cash: ₹${manager.cash}`;
-}
+  let currentLevel = profile.stadium_level || 0
+  const managerLevel = profile.manager_level
 
-function init() {
-  loadSharedUI();
-  updateUI();
+  const current = levels[currentLevel]
+  const next = levels[currentLevel + 1]
 
-  document.getElementById('upgrade-btn').addEventListener('click', () => {
-    const nextLevelIndex = currentStadiumLevelIndex + 1;
+  document.getElementById('stadium-level').textContent = current.name
+  document.getElementById('stadium-capacity').textContent = current.capacity
+  document.getElementById('stadium-revenue').textContent = current.revenue
+  document.getElementById('stadium-upgrade-cost').textContent = next ? next.cost : "Max"
+  document.getElementById('required-manager-level').textContent = next ? next.requiredLevel : "Max"
 
-    if (nextLevelIndex >= stadiumLevels.length) {
-      document.getElementById('upgrade-msg').textContent = "🏟️ Stadium is at max level.";
-      return;
+  // Disable button if maxed
+  const upgradeBtn = document.getElementById('upgrade-btn')
+  if (!next) {
+    upgradeBtn.disabled = true
+    upgradeBtn.textContent = "Max Level Reached"
+    return
+  }
+
+  // On click upgrade
+  upgradeBtn.addEventListener('click', async () => {
+    const allowedLevels = [
+      "Beginner", "Expert", "Professional", "Master", "Supreme", "World Class", "Ultimate", "Titan", "The Boss"
+    ]
+
+    const managerIndex = allowedLevels.indexOf(managerLevel)
+    const requiredIndex = allowedLevels.indexOf(next.requiredLevel)
+
+    if (managerIndex < requiredIndex) {
+      alert(`You need to be at least ${next.requiredLevel} to upgrade.`)
+      return
     }
 
-    const nextLevel = stadiumLevels[nextLevelIndex];
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ stadium_level: currentLevel + 1 })
+      .eq('id', userId)
 
-    if (getManagerLevelRank(manager.level) < getManagerLevelRank(nextLevel.requiredLevel)) {
-      document.getElementById('upgrade-msg').textContent = `⛔ Requires manager level: ${nextLevel.requiredLevel}`;
-      return;
+    if (updateError) {
+      alert('Upgrade failed.')
+    } else {
+      location.reload()
     }
-
-    if (manager.cash < nextLevel.cost) {
-      document.getElementById('upgrade-msg').textContent = `💸 Not enough cash to upgrade.`;
-      return;
-    }
-
-    // Upgrade success
-    manager.cash -= nextLevel.cost;
-    currentStadiumLevelIndex = nextLevelIndex;
-    document.getElementById('upgrade-msg').textContent = "✅ Stadium upgraded!";
-    updateUI();
-  });
-}
-
-init();
+  })
+})
