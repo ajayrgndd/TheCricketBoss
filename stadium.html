@@ -4,16 +4,66 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stadium – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css" />
-  <script type="module" src="js/stadium.js" defer></script>
-  <script type="module" src="js/shared-ui-stadium.js" defer></script>
+  <link rel="stylesheet" href="/styles/global.css" />
+  <style>
+    body {
+      background-color: #0a0226;
+      color: #ffffff;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+    }
+
+    .stadium-container {
+      margin-top: 100px;
+      padding: 20px;
+    }
+
+    .stadium-box {
+      background-color: #1b1045;
+      padding: 25px;
+      margin: auto;
+      max-width: 380px;
+      border-radius: 15px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.4);
+    }
+
+    .stadium-box p {
+      font-size: 18px;
+      line-height: 1.6;
+      margin: 10px 0;
+    }
+
+    #upgrade-btn {
+      background-color: #ffc107;
+      color: #000;
+      font-weight: bold;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    #upgrade-btn:hover {
+      background-color: #ffcd39;
+    }
+  </style>
 </head>
 <body>
-  <main class="content">
-    <h2>Upgrade Stadium</h2>
-    <div id="stadium-info"></div>
-    <button id="upgrade-btn">Upgrade</button>
-    <p id="status-msg"></p>
-  </main>
+  <div class="stadium-container">
+    <div class="stadium-box" id="stadium-info">
+      <p><strong>Level:</strong> Loading...</p>
+      <p><strong>Capacity:</strong> Loading...</p>
+      <p><strong>Next Upgrade Cost:</strong> Loading...</p>
+      <button id="upgrade-btn">Upgrade</button>
+    </div>
+  </div>
+
+  <!-- Shared UI and Stadium Logic -->
+  <script type="module" src="/js/shared-ui-stadium.js"></script>
+  <script type="module" src="/js/stadium.js"></script>
 </body>
 </html>
