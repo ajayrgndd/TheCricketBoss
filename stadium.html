@@ -6,8 +6,41 @@
   <title>Stadium – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <link rel="stylesheet" href="css/stadium.css" />
+  <style>
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background-color: #1a1a1a;
+      color: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      font-size: 14px;
+      z-index: 1000;
+      border-bottom: 1px solid #333;
+    }
+
+    body {
+      margin: 0;
+      padding-top: 50px; /* So content isn't hidden under top bar */
+      font-family: sans-serif;
+    }
+  </style>
 </head>
 <body>
+
+  <!-- ✅ Top Bar -->
+  <div class="top-bar">
+    <span id="top-username">👤</span>
+    <span id="top-xp">XP: 0</span>
+    <span id="top-coins">🪙 0</span>
+    <span id="top-cash">₹ 0</span>
+  </div>
+
+  <!-- ✅ Stadium Content -->
   <main class="stadium-content">
     <h2>Your Stadium</h2>
     <div class="stadium-card">
@@ -29,7 +62,37 @@
     </div>
   </main>
 
-  <!-- Scripts -->
+  <!-- ✅ Load Topbar Info + Stadium Logic -->
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const userId = user.id;
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("manager_name, xp, coins, cash")
+        .eq("user_id", userId)
+        .single();
+
+      if (profile) {
+        document.getElementById("top-username").textContent = `👤 ${profile.manager_name}`;
+        document.getElementById("top-xp").textContent = `XP: ${profile.xp}`;
+        document.getElementById("top-coins").textContent = `🪙 ${profile.coins}`;
+        document.getElementById("top-cash").textContent = `₹ ${profile.cash}`;
+      }
+    });
+  </script>
+
+  <!-- ✅ Stadium Upgrade Logic -->
   <script type="module" src="js/stadium.js"></script>
 </body>
 </html>
