@@ -1,5 +1,6 @@
 // stadium.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
+import { addManagerXP } from "./xp.js"; // Make sure this file exports XP logic
 
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
@@ -9,11 +10,11 @@ const supabase = createClient(
 let userId;
 
 const STADIUM_LEVELS = {
-  1: { capacity: 5000, revenue: 500, upgradeCost: 2000 },
-  2: { capacity: 10000, revenue: 800, upgradeCost: 4000 },
-  3: { capacity: 15000, revenue: 1200, upgradeCost: 8000 },
-  4: { capacity: 20000, revenue: 1600, upgradeCost: 12000 },
-  5: { capacity: 35000, revenue: 2000, upgradeCost: null }, // Max
+  1: { name: "Local", capacity: 5000, revenue: 500, upgradeCost: 2000 },
+  2: { name: "Domestic", capacity: 10000, revenue: 800, upgradeCost: 4000 },
+  3: { name: "State", capacity: 15000, revenue: 1200, upgradeCost: 8000 },
+  4: { name: "National", capacity: 20000, revenue: 1600, upgradeCost: 12000 },
+  5: { name: "World Class", capacity: 35000, revenue: 2000, upgradeCost: null }, // Max
 };
 
 async function init() {
@@ -56,7 +57,7 @@ async function init() {
 
 function updateStadiumDisplay(level) {
   const data = STADIUM_LEVELS[level];
-  document.getElementById("stadium-level").innerText = level;
+  document.getElementById("stadium-level").innerText = `Level ${level} (${data.name})`;
   document.getElementById("stadium-capacity").innerText = data.capacity.toLocaleString();
   document.getElementById("stadium-revenue").innerText = data.revenue.toLocaleString();
 }
@@ -89,14 +90,22 @@ async function upgradeStadium(profile) {
     return;
   }
 
-  // XP Reward
-  await addManagerXP(supabase, userId, `stadium_lvl${level + 1}`);
+  // XP Reward per level (you can tune these XP values if needed)
+  const xpRewards = {
+    2: 100,
+    3: 150,
+    4: 200,
+    5: 300,
+  };
+
+  const rewardXP = xpRewards[level + 1] || 50;
+  await addManagerXP(supabase, userId, `stadium_lvl${level + 1}`, rewardXP);
 
   // UI updates
   profile.stadium_level += 1;
   profile.cash -= next.upgradeCost;
   updateStadiumDisplay(profile.stadium_level);
-  document.getElementById("upgrade-msg").innerText = `✅ Upgraded to Level ${profile.stadium_level}`;
+  document.getElementById("upgrade-msg").innerText = `✅ Upgraded to Level ${profile.stadium_level} (${STADIUM_LEVELS[profile.stadium_level].name})`;
 }
 
 init();
