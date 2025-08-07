@@ -1,6 +1,6 @@
 // js/stadium.js
-import { loadSharedUI } from './js/shared-ui-stadium.js';
-import { addManagerXP } from './js/shared-xp.js';
+import { loadSharedUI } from './shared-ui-stadium.js';
+import { addManagerXP } from './shared-xp.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
 loadSharedUI();
