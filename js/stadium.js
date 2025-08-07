@@ -20,14 +20,13 @@ const STADIUM_LEVELS = [
 
 const MANAGER_LEVELS = [
   { xp: 0, label: "Beginner" },
-  { xp: 100, label: "Expert" },
-  { xp: 300, label: "Professional" },
-  { xp: 600, label: "Master" },
-  { xp: 1000, label: "Supreme" },
-  { xp: 1500, label: "World Class" },
-  { xp: 2000, label: "Ultimate" },
-  { xp: 3000, label: "Titan" },
-  { xp: 5000, label: "The Boss" },
+  { xp: 250, label: "Expert" },
+  { xp: 750, label: "Professional" },
+  { xp: 1750, label: "Master" },
+  { xp: 3500, label: "Supreme" },
+  { xp: 5500, label: "World Class" },
+  { xp: 8500, label: "Ultimate" },
+  { xp: 13500, label: "The Boss" },
 ];
 
 function getManagerLevelLabel(xp) {
