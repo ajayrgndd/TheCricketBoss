@@ -1,81 +1,75 @@
+// js/stadium.js
 import { loadSharedUI } from './shared-ui-stadium.js';
 
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadSharedUI();
-  init(); // your stadium logic
-});
-
-
-const stadiumLevels = [
-  { name: "Street Ground", capacity: 1000, revenue: 100, upgradeCost: 500, requiredManagerLevel: "Beginner" },
-  { name: "Local Ground", capacity: 3000, revenue: 300, upgradeCost: 1500, requiredManagerLevel: "Expert" },
-  { name: "State Stadium", capacity: 8000, revenue: 600, upgradeCost: 4000, requiredManagerLevel: "Professional" },
-  { name: "National Stadium", capacity: 15000, revenue: 1200, upgradeCost: 10000, requiredManagerLevel: "Master" },
-  { name: "International Arena", capacity: 30000, revenue: 2500, upgradeCost: 25000, requiredManagerLevel: "Supreme" }
-];
-
-const managerLevelsOrder = ["Beginner", "Expert", "Professional", "Master", "Supreme", "World Class", "Ultimate", "Titan", "The Boss"];
-
-let userData = {
-  username: "You",
-  xp: 0,
-  coins: 0,
-  cash: 20000,
-  manager_level: "Professional",
-  stadium_level: 1 // index in stadiumLevels
+// Mock manager and stadium data for demo/testing
+const manager = {
+  level: "Professional", // could be: Beginner, Expert, Professional, etc.
+  xp: 4200,
+  coins: 30,
+  cash: 5000,
+  name: "Ajay"
 };
 
-function displayStadiumInfo() {
-  const currentLevel = stadiumLevels[userData.stadium_level];
-  const nextLevel = stadiumLevels[userData.stadium_level + 1];
+const stadiumLevels = [
+  { name: "Basic", capacity: 1000, revenue: 100, cost: 1000, requiredLevel: "Beginner" },
+  { name: "Standard", capacity: 2500, revenue: 250, cost: 2500, requiredLevel: "Expert" },
+  { name: "Deluxe", capacity: 5000, revenue: 500, cost: 5000, requiredLevel: "Professional" },
+  { name: "Elite", capacity: 10000, revenue: 1000, cost: 10000, requiredLevel: "Master" },
+  { name: "Mega", capacity: 20000, revenue: 2000, cost: 20000, requiredLevel: "Supreme" }
+];
 
-  document.getElementById("stadium-level-name").textContent = currentLevel.name;
-  document.getElementById("stadium-capacity").textContent = currentLevel.capacity;
-  document.getElementById("stadium-revenue").textContent = currentLevel.revenue;
+let currentStadiumLevelIndex = 0;
 
-  if (nextLevel) {
-    document.getElementById("stadium-upgrade-cost").textContent = nextLevel.upgradeCost;
-    document.getElementById("required-manager-level").textContent = nextLevel.requiredManagerLevel;
-    document.getElementById("upgrade-btn").disabled = false;
-  } else {
-    document.getElementById("stadium-upgrade-cost").textContent = "Max";
-    document.getElementById("required-manager-level").textContent = "-";
-    document.getElementById("upgrade-btn").disabled = true;
-    document.getElementById("upgrade-msg").textContent = "🏟️ Stadium is already at max level.";
-  }
+function getManagerLevelRank(level) {
+  const ranks = ["Beginner", "Expert", "Professional", "Master", "Supreme", "World Class", "Ultimate", "Titan", "The Boss"];
+  return ranks.indexOf(level);
 }
 
-function upgradeStadium() {
-  const nextLevel = stadiumLevels[userData.stadium_level + 1];
-  if (!nextLevel) return;
+function updateUI() {
+  const stadium = stadiumLevels[currentStadiumLevelIndex];
+  document.getElementById('stadium-level-name').textContent = stadium.name;
+  document.getElementById('stadium-capacity').textContent = stadium.capacity;
+  document.getElementById('stadium-revenue').textContent = stadium.revenue;
+  document.getElementById('stadium-upgrade-cost').textContent = stadium.cost;
+  document.getElementById('required-manager-level').textContent = stadium.requiredLevel;
 
-  const userLevelIndex = managerLevelsOrder.indexOf(userData.manager_level);
-  const requiredLevelIndex = managerLevelsOrder.indexOf(nextLevel.requiredManagerLevel);
-
-  if (userLevelIndex < requiredLevelIndex) {
-    document.getElementById("upgrade-msg").textContent = `❌ Upgrade locked. Requires Manager Level: ${nextLevel.requiredManagerLevel}`;
-    return;
-  }
-
-  if (userData.cash < nextLevel.upgradeCost) {
-    document.getElementById("upgrade-msg").textContent = `❌ Not enough cash. Need ₹${nextLevel.upgradeCost}`;
-    return;
-  }
-
-  userData.cash -= nextLevel.upgradeCost;
-  userData.stadium_level++;
-  document.getElementById("upgrade-msg").textContent = `✅ Stadium upgraded to ${nextLevel.name}!`;
-
-  // Update top bar cash display
-  document.getElementById("cash").textContent = `₹${userData.cash}`;
-
-  displayStadiumInfo();
+  // Top bar info
+  document.getElementById('username').textContent = manager.name;
+  document.getElementById('xp').textContent = `XP: ${manager.xp}`;
+  document.getElementById('coins').textContent = `Coins: ${manager.coins}`;
+  document.getElementById('cash').textContent = `Cash: ₹${manager.cash}`;
 }
 
 function init() {
-  loadSharedUI(userData); // Inject header/footer and display topbar values
-  displayStadiumInfo();
-  document.getElementById("upgrade-btn").addEventListener("click", upgradeStadium);
+  loadSharedUI();
+  updateUI();
+
+  document.getElementById('upgrade-btn').addEventListener('click', () => {
+    const nextLevelIndex = currentStadiumLevelIndex + 1;
+
+    if (nextLevelIndex >= stadiumLevels.length) {
+      document.getElementById('upgrade-msg').textContent = "🏟️ Stadium is at max level.";
+      return;
+    }
+
+    const nextLevel = stadiumLevels[nextLevelIndex];
+
+    if (getManagerLevelRank(manager.level) < getManagerLevelRank(nextLevel.requiredLevel)) {
+      document.getElementById('upgrade-msg').textContent = `⛔ Requires manager level: ${nextLevel.requiredLevel}`;
+      return;
+    }
+
+    if (manager.cash < nextLevel.cost) {
+      document.getElementById('upgrade-msg').textContent = `💸 Not enough cash to upgrade.`;
+      return;
+    }
+
+    // Upgrade success
+    manager.cash -= nextLevel.cost;
+    currentStadiumLevelIndex = nextLevelIndex;
+    document.getElementById('upgrade-msg').textContent = "✅ Stadium upgraded!";
+    updateUI();
+  });
 }
 
 init();
