@@ -1,6 +1,7 @@
 // stadium.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
-import { addManagerXP } from "./xp-utils.js";
+import { addManagerXP } from "./shared-xp.js";
+import { loadSharedUI } from "./shared-ui-stadium.js";
 
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
@@ -10,11 +11,11 @@ const supabase = createClient(
 let userId;
 
 const STADIUM_LEVELS = {
-  1: { name: "Local", capacity: 5000, revenue: 500, upgradeCost: 2000, requiredManagerLevel: "Beginner" },
-  2: { name: "Domestic", capacity: 10000, revenue: 800, upgradeCost: 4000, requiredManagerLevel: "Expert" },
-  3: { name: "State", capacity: 15000, revenue: 1200, upgradeCost: 8000, requiredManagerLevel: "Master" },
-  4: { name: "National", capacity: 20000, revenue: 1600, upgradeCost: 12000, requiredManagerLevel: "World Class" },
-  5: { name: "International", capacity: 35000, revenue: 2000, upgradeCost: null, requiredManagerLevel: "Ultimate" },
+  1: { name: "Local", capacity: 5000, revenue: 500, upgradeCost: 2000 },
+  2: { name: "Domestic", capacity: 10000, revenue: 800, upgradeCost: 4000 },
+  3: { name: "Regional", capacity: 15000, revenue: 1200, upgradeCost: 8000 },
+  4: { name: "National", capacity: 20000, revenue: 1600, upgradeCost: 12000 },
+  5: { name: "Mega", capacity: 35000, revenue: 2000, upgradeCost: null }, // Max
 };
 
 async function init() {
@@ -57,17 +58,9 @@ async function init() {
 
 function updateStadiumDisplay(level) {
   const data = STADIUM_LEVELS[level];
-  document.getElementById("stadium-level-name").innerText = `Level ${level} (${data.name})`;
+  document.getElementById("stadium-level").innerText = `Level ${level} (${data.name})`;
   document.getElementById("stadium-capacity").innerText = data.capacity.toLocaleString();
   document.getElementById("stadium-revenue").innerText = data.revenue.toLocaleString();
-  document.getElementById("required-manager-level").innerText = data.requiredManagerLevel;
-
-  const upgradeCostEl = document.getElementById("stadium-upgrade-cost");
-  if (data.upgradeCost) {
-    upgradeCostEl.innerText = `₹${data.upgradeCost.toLocaleString()}`;
-  } else {
-    upgradeCostEl.innerText = "Max Level";
-  }
 }
 
 async function upgradeStadium(profile) {
@@ -105,7 +98,8 @@ async function upgradeStadium(profile) {
   profile.stadium_level += 1;
   profile.cash -= next.upgradeCost;
   updateStadiumDisplay(profile.stadium_level);
-  document.getElementById("upgrade-msg").innerText = `✅ Upgraded to Level ${profile.stadium_level}`;
+  const levelInfo = STADIUM_LEVELS[profile.stadium_level];
+  document.getElementById("upgrade-msg").innerText = `✅ Upgraded to Level ${profile.stadium_level} (${levelInfo.name})`;
 }
 
 init();
