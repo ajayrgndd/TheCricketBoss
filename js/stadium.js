@@ -12,10 +12,10 @@ const supabase = createClient(
 
 const STADIUM_LEVELS = [
   { level: 1, name: "Local", capacity: 5000, revenue: 500, cost: 100000, requiredManagerXP: 1 },
-  { level: 2, name: "Town", capacity: 10000, revenue: 1000, cost: 250000, requiredManagerXP: 200 },
-  { level: 3, name: "City", capacity: 15000, revenue: 2000, cost: 500000, requiredManagerXP: 600 },
-  { level: 4, name: "National", capacity: 20000, revenue: 4000, cost: 1000000, requiredManagerXP: 1000 },
-  { level: 5, name: "World Class", capacity: 30000, revenue: 8000, cost: 2000000, requiredManagerXP: 1500 },
+  { level: 2, name: "Town", capacity: 10000, revenue: 1000, cost: 250000, requiredManagerXP: 750 },
+  { level: 3, name: "City", capacity: 15000, revenue: 2000, cost: 500000, requiredManagerXP: 3500 },
+  { level: 4, name: "National", capacity: 20000, revenue: 4000, cost: 1000000, requiredManagerXP: 5500 },
+  { level: 5, name: "World Class", capacity: 30000, revenue: 8000, cost: 2000000, requiredManagerXP: 8500 },
 ];
 
 const MANAGER_LEVELS = [
