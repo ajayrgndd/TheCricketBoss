@@ -1,5 +1,3 @@
-// shared-ui.js
-
 // XP → Level mapping
 export function getManagerLevel(xp) {
   if (xp >= 13500) return "The Boss";
@@ -77,7 +75,7 @@ function updateTopbarXPLevel(xp, level) {
 }
 
 // Load top and bottom bars
-export function loadSharedUI({ supabase, manager_name, xp, coins, cash }) {
+export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id }) {
   // Top bar
   const topBar = document.createElement("div");
   topBar.className = "top-bar";
@@ -96,12 +94,12 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash }) {
       🪙 <span id="coins">${coins}</span> |
       💵 ₹<span id="cash">${cash}</span> |
       <span id="manager-level">${getManagerLevel(xp)}</span>
-      <span class="top-notification">
-  🔔 <span id="notification-count" style="color: yellow; font-weight: bold;">0</span>
-  <div id="notification-dropdown" class="notification-dropdown" hidden>
-    <ul id="notification-list"></ul>
-  </div>
-</span>
+      <span class="top-notification" id="notification-icon">
+        🔔 <span id="notification-count" style="color: yellow; font-weight: bold;">0</span>
+        <div id="notification-dropdown" class="notification-dropdown" hidden>
+          <ul id="notification-list"></ul>
+        </div>
+      </span>
     </div>
   `;
   document.body.prepend(topBar);
@@ -118,10 +116,9 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash }) {
   `;
   document.body.appendChild(bottomBar);
 
-  // Dropdown menu
+  // Dropdown menu toggle
   const dropdown = document.getElementById("managerName");
   const popup = document.getElementById("popupMenu");
-
   dropdown.addEventListener("click", () => {
     popup.style.display = popup.style.display === "flex" ? "none" : "flex";
   });
@@ -139,5 +136,59 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash }) {
       window.location.href = "login.html";
     }
   });
+
+  // Load notifications
+  if (user_id) {
+    loadNotifications(supabase, user_id);
+  }
+
+  // Bell click toggles dropdown
+  const bell = document.getElementById("notification-icon");
+  const dropdownBox = document.getElementById("notification-dropdown");
+  bell.addEventListener("click", () => {
+    dropdownBox.hidden = !dropdownBox.hidden;
+  });
 }
 
+// 🔔 Load Notifications
+async function loadNotifications(supabase, userId) {
+  try {
+    const { data: notifications, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    const list = document.getElementById("notification-list");
+    const countSpan = document.getElementById("notification-count");
+    list.innerHTML = "";
+
+    let unreadCount = 0;
+
+    notifications.forEach((n) => {
+      const li = document.createElement("li");
+      li.innerText = n.message;
+      if (!n.read) {
+        li.style.fontWeight = "bold";
+        unreadCount++;
+      }
+      list.appendChild(li);
+    });
+
+    countSpan.innerText = unreadCount;
+
+    // Optional: mark all as read once dropdown opens (can modify this logic)
+    if (unreadCount > 0) {
+      await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", userId)
+        .eq("read", false);
+    }
+  } catch (err) {
+    console.error("❌ Notification load error:", err.message);
+  }
+}
