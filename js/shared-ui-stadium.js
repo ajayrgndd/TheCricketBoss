@@ -5,7 +5,7 @@ export function loadSharedUI() {
   topBar.className = 'top-bar';
   topBar.innerHTML = `
     <span id="username">Loading...</span>
-    <span id="xp">XP: 0</span>
+    <span id="xp">XP: ${profile.xp}</span>
     <span id="coins">💰 0</span>
     <span id="cash">₹0</span>
   `;
