@@ -1,107 +1,90 @@
 // js/stadium.js
-import { loadSharedUI } from './shared-ui-stadium.js';
-import { addManagerXP } from './shared-xp.js';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js';
-
-loadSharedUI();
+import { createClient } from "https://esm.sh/@supabase/supabase-js";
+import { addManagerXP } from "./shared-xp.js";
 
 const supabase = createClient(
-  'https://iukofcmatlfhfwcechdq.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
+  "https://iukofcmatlfhfwcechdq.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
-const STADIUM_LEVELS = [
-  { level: 1, name: "Local", capacity: 5000, revenue: 500, cost: 100000, requiredManagerXP: 1 },
-  { level: 2, name: "Professional", capacity: 10000, revenue: 1000, cost: 250000, requiredManagerXP: 750 },
-  { level: 3, name: "Domestic", capacity: 15000, revenue: 2000, cost: 500000, requiredManagerXP: 3500 },
-  { level: 4, name: "National", capacity: 20000, revenue: 4000, cost: 1000000, requiredManagerXP: 5500 },
-  { level: 5, name: "World Class", capacity: 30000, revenue: 8000, cost: 2000000, requiredManagerXP: 8500 },
-];
+let userId = null;
 
-const MANAGER_LEVELS = [
-  { xp: 0, label: "Beginner" },
-  { xp: 250, label: "Expert" },
-  { xp: 750, label: "Professional" },
-  { xp: 1750, label: "Master" },
-  { xp: 3500, label: "Supreme" },
-  { xp: 5500, label: "World Class" },
-  { xp: 8500, label: "Ultimate" },
-  { xp: 13500, label: "The Boss" },
-];
-
-function getManagerLevelLabel(xp) {
-  let label = "Beginner";
-  for (let lvl of MANAGER_LEVELS) {
-    if (xp >= lvl.xp) label = lvl.label;
-    else break;
+document.addEventListener("DOMContentLoaded", async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    document.getElementById("status-msg").textContent = "Please log in.";
+    return;
   }
-  return label;
+
+  userId = user.id;
+  await loadStadiumInfo();
+
+  document.getElementById("upgrade-btn").addEventListener("click", upgradeStadium);
+});
+
+async function loadStadiumInfo() {
+  const { data, error } = await supabase
+    .from("stadiums")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !data) {
+    document.getElementById("stadium-info").textContent = "Failed to load stadium data.";
+    return;
+  }
+
+  document.getElementById("stadium-info").innerHTML = `
+    <p><strong>Level:</strong> ${data.level}</p>
+    <p><strong>Capacity:</strong> ${data.capacity}</p>
+    <p><strong>Next Upgrade Cost:</strong> ₹${data.upgrade_cost}</p>
+  `;
 }
 
-async function init() {
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) return;
+async function upgradeStadium() {
+  const { data: stadium, error } = await supabase
+    .from("stadiums")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !stadium) return;
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("stadium_level, xp, cash")
-    .eq("user_id", user.id)
+    .select("cash")
+    .eq("user_id", userId)
     .single();
 
-  if (!profile) return;
+  if (profile.cash < stadium.upgrade_cost) {
+    document.getElementById("status-msg").textContent = "Not enough cash to upgrade!";
+    return;
+  }
 
-  updateStadiumDisplay(profile.stadium_level, profile.xp);
+  const newLevel = stadium.level + 1;
+  const newCapacity = stadium.capacity + 1000;
+  const newCost = stadium.upgrade_cost * 2;
+  const newCash = profile.cash - stadium.upgrade_cost;
 
-  document.getElementById('upgrade-btn')?.addEventListener('click', async () => {
-    const currentLevel = profile.stadium_level;
-    if (currentLevel >= 5) {
-      document.getElementById('upgrade-msg').innerText = "Max level reached.";
-      return;
-    }
+  const { error: updateErr } = await supabase
+    .from("stadiums")
+    .update({
+      level: newLevel,
+      capacity: newCapacity,
+      upgrade_cost: newCost
+    })
+    .eq("user_id", userId);
 
-    const next = STADIUM_LEVELS[currentLevel]; // 0-indexed
-    if (profile.xp < next.requiredManagerXP) {
-      document.getElementById('upgrade-msg').innerText = "Not enough XP to upgrade.";
-      return;
-    }
+  await supabase
+    .from("profiles")
+    .update({ cash: newCash })
+    .eq("user_id", userId);
 
-    if (profile.cash < next.cost) {
-      document.getElementById('upgrade-msg').innerText = "Not enough cash.";
-      return;
-    }
-
-    const updates = await supabase
-      .from("profiles")
-      .update({
-        stadium_level: currentLevel + 1,
-        cash: profile.cash - next.cost
-      })
-      .eq("user_id", user.id);
-
-    if (!updates.error) {
-      const newLevel = currentLevel + 1;
-      await addManagerXP(supabase, user.id, `stadium_lvl${newLevel}`);
-      location.reload();
-    }
-  });
+  if (!updateErr) {
+    await addManagerXP(supabase, userId, `stadium_lvl${newLevel}`);
+    document.getElementById("status-msg").textContent = `✅ Stadium upgraded to Level ${newLevel}!`;
+    loadStadiumInfo();
+  } else {
+    document.getElementById("status-msg").textContent = "❌ Upgrade failed.";
+  }
 }
-
-function updateStadiumDisplay(level, xp) {
-  const el = (id) => document.getElementById(id);
-  if (!el("stadium-level-name")) return;
-
-  const stadium = STADIUM_LEVELS[level - 1];
-  const next = STADIUM_LEVELS[level] || null;
-
-  el("stadium-level-name").innerText = `Level ${stadium.level} (${stadium.name})`;
-  el("stadium-capacity").innerText = stadium.capacity.toLocaleString();
-  el("stadium-revenue").innerText = stadium.revenue.toLocaleString();
-  el("stadium-upgrade-cost").innerText = next ? next.cost.toLocaleString() : "—";
-  el("required-manager-level").innerText = next
-    ? getManagerLevelLabel(next.requiredManagerXP)
-    : "Max";
-}
-
-init();
