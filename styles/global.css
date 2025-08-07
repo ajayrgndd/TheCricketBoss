@@ -131,3 +131,41 @@ a:hover {
   max-width: 700px;
   margin: auto;
 }
+.notifications-dropdown {
+  position: relative;
+}
+
+#notification-bell {
+  width: 24px;
+  cursor: pointer;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 30px;
+  right: 0;
+  background-color: #222;
+  color: white;
+  min-width: 250px;
+  border-radius: 5px;
+  padding: 10px;
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.notifications-dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.notification-item {
+  padding: 8px;
+  border-bottom: 1px solid #444;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
