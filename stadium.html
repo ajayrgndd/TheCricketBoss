@@ -8,7 +8,8 @@
   <link rel="stylesheet" href="css/stadium.css" />
 </head>
 <body>
-  <!-- UI bars will be injected by JS -->
+  <!-- Top and Bottom Nav -->
+  <script src="js/shared-ui-stadium.js" defer></script>
 
   <main class="stadium-content">
     <h2>Your Stadium</h2>
@@ -17,18 +18,20 @@
       <p class="stadium-description">
         Upgrade your stadium to unlock more revenue and fanbase. Higher levels give better rewards from home matches.
       </p>
+
       <div class="stadium-stats">
-        <div>Level: <span id="stadium-level">1</span></div>
+        <div>Level: <span id="stadium-level-name">Level 1 (Local)</span></div>
         <div>Capacity: <span id="stadium-capacity">5,000</span></div>
         <div>Revenue/Match: ₹<span id="stadium-revenue">500</span></div>
+        <div>Upgrade Cost: ₹<span id="stadium-upgrade-cost">100000</span></div>
+        <div>Required Manager Level: <span id="required-manager-level">Professional</span></div>
       </div>
+
       <button id="upgrade-btn">Upgrade Stadium</button>
       <p id="upgrade-msg"></p>
     </div>
   </main>
 
-  <!-- Scripts -->
-  <script src="js/shared-ui-stadium.js"></script>
   <script type="module" src="js/stadium.js"></script>
 </body>
 </html>
