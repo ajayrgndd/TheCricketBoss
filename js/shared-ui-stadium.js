@@ -1,4 +1,4 @@
-// shared-ui.js
+// shared-ui-stadium.js
 
 // XP → Level mapping
 function getManagerLevel(xp) {
@@ -35,7 +35,7 @@ async function addManagerXP(supabase, userId, eventKey) {
     lvl_up_supreme: 60,
     lvl_up_worldclass: 70,
     lvl_up_titan: 80,
-    lvl_up_boss: 90
+    lvl_up_boss: 90,
   };
 
   const xpToAdd = XP_REWARDS[eventKey] || 0;
