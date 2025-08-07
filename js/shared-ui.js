@@ -1,4 +1,4 @@
-// XP → Level mapping
+// XP → Level mapping 
 export function getManagerLevel(xp) {
   if (xp >= 13500) return "The Boss";
   if (xp >= 8500) return "Ultimate";
@@ -94,7 +94,7 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id 
       🪙 <span id="coins">${coins}</span> |
       💵 ₹<span id="cash">${cash}</span> |
       <span id="manager-level">${getManagerLevel(xp)}</span>
-      <span class="top-notification" id="notification-icon">
+      <span class="top-notification" id="notification-icon" style="cursor:pointer;">
         🔔 <span id="notification-count" style="color: yellow; font-weight: bold;">0</span>
         <div id="notification-dropdown" class="notification-dropdown" hidden>
           <ul id="notification-list"></ul>
@@ -142,11 +142,16 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id 
     loadNotifications(supabase, user_id);
   }
 
-  // Bell click toggles dropdown
+  // Bell icon toggle
   const bell = document.getElementById("notification-icon");
   const dropdownBox = document.getElementById("notification-dropdown");
-  bell.addEventListener("click", () => {
+  bell.addEventListener("click", (e) => {
+    e.stopPropagation();
     dropdownBox.hidden = !dropdownBox.hidden;
+  });
+
+  document.addEventListener("click", () => {
+    dropdownBox.hidden = true;
   });
 }
 
@@ -171,7 +176,8 @@ async function loadNotifications(supabase, userId) {
     notifications.forEach((n) => {
       const li = document.createElement("li");
       li.innerText = n.message;
-      if (!n.read) {
+      li.className = "notification-item";
+      if (!n.is_read) {
         li.style.fontWeight = "bold";
         unreadCount++;
       }
@@ -180,13 +186,13 @@ async function loadNotifications(supabase, userId) {
 
     countSpan.innerText = unreadCount;
 
-    // Optional: mark all as read once dropdown opens (can modify this logic)
+    // Mark all as read after loading
     if (unreadCount > 0) {
       await supabase
         .from("notifications")
-        .update({ read: true })
+        .update({ is_read: true })
         .eq("user_id", userId)
-        .eq("read", false);
+        .eq("is_read", false);
     }
   } catch (err) {
     console.error("❌ Notification load error:", err.message);
