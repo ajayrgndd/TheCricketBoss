@@ -10,6 +10,14 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
 );
 
+// Upgrade durations in milliseconds
+const STADIUM_UPGRADE_DURATIONS = {
+  1: 24 * 60 * 60 * 1000,
+  2: 48 * 60 * 60 * 1000,
+  3: 72 * 60 * 60 * 1000,
+  4: 96 * 60 * 60 * 1000,
+};
+
 const STADIUM_LEVELS = [
   { level: 1, name: "Local", capacity: 5000, revenue: 500, cost: 100000, requiredManagerXP: 1 },
   { level: 2, name: "Professional", capacity: 10000, revenue: 1000, cost: 250000, requiredManagerXP: 750 },
@@ -46,7 +54,7 @@ async function init() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("stadium_level, xp, cash")
+    .select("stadium_level, xp, cash, stadium_upgrade_end")
     .eq("user_id", user.id)
     .single();
 
@@ -54,38 +62,77 @@ async function init() {
 
   updateStadiumDisplay(profile.stadium_level, profile.xp);
 
-  document.getElementById('upgrade-btn')?.addEventListener('click', async () => {
+  const upgradeBtn = document.getElementById('upgrade-btn');
+  const upgradeMsg = document.getElementById('upgrade-msg');
+
+  if (profile.stadium_upgrade_end && new Date(profile.stadium_upgrade_end) > new Date()) {
+    disableUpgradeBtnWithCountdown(profile.stadium_upgrade_end);
+    return;
+  }
+
+  upgradeBtn?.addEventListener('click', async () => {
     const currentLevel = profile.stadium_level;
     if (currentLevel >= 5) {
-      document.getElementById('upgrade-msg').innerText = "Max level reached.";
+      upgradeMsg.innerText = "Max level reached.";
       return;
     }
 
     const next = STADIUM_LEVELS[currentLevel]; // 0-indexed
     if (profile.xp < next.requiredManagerXP) {
-      document.getElementById('upgrade-msg').innerText = "Not enough XP to upgrade.";
+      upgradeMsg.innerText = "Not enough XP to upgrade.";
       return;
     }
 
     if (profile.cash < next.cost) {
-      document.getElementById('upgrade-msg').innerText = "Not enough cash.";
+      upgradeMsg.innerText = "Not enough cash.";
       return;
     }
+
+    // Calculate upgrade end time
+    const now = new Date();
+    const duration = STADIUM_UPGRADE_DURATIONS[currentLevel]; // current level to next
+    const upgradeEndTime = new Date(now.getTime() + duration).toISOString();
 
     const updates = await supabase
       .from("profiles")
       .update({
-        stadium_level: currentLevel + 1,
+        stadium_upgrade_end: upgradeEndTime,
         cash: profile.cash - next.cost
       })
       .eq("user_id", user.id);
 
     if (!updates.error) {
-      const newLevel = currentLevel + 1;
-      await addManagerXP(supabase, user.id, `stadium_lvl${newLevel}`);
-      location.reload();
+      disableUpgradeBtnWithCountdown(upgradeEndTime);
     }
   });
+}
+
+function disableUpgradeBtnWithCountdown(endTime) {
+  const btn = document.getElementById('upgrade-btn');
+  const msg = document.getElementById('upgrade-msg');
+  btn.disabled = true;
+
+  function updateCountdown() {
+    const now = new Date();
+    const end = new Date(endTime);
+    const diff = end - now;
+
+    if (diff <= 0) {
+      msg.innerText = "Upgrade available!";
+      btn.disabled = false;
+      location.reload(); // To reflect the new level
+      return;
+    }
+
+    const hrs = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+    msg.innerText = `Upgrade in progress: ${hrs}h ${mins}m ${secs}s`;
+    setTimeout(updateCountdown, 1000);
+  }
+
+  updateCountdown();
 }
 
 function updateStadiumDisplay(level, xp) {
