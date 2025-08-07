@@ -1,0 +1,68 @@
+.main-container {
+  padding: 1rem;
+  margin-top: 60px;
+  margin-bottom: 80px;
+}
+
+.stadium-card {
+  background: #1e1e1e;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  color: #fff;
+  line-height: 1.8;
+}
+
+#upgrade-button {
+  background-color: #ffcc00;
+  color: #000;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  margin-top: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#upgrade-button:hover {
+  background-color: #ffe066;
+}
+
+#upgrade-message {
+  margin-top: 1rem;
+  font-weight: bold;
+  color: #ff4444;
+}
+
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background-color: #222;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  color: white;
+  z-index: 1000;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: #222;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+}
+
+.bottom-nav a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+}
