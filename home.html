@@ -330,6 +330,18 @@ const { data: players } = await supabase
   .select("name, role, batting, bowling, keeping, image_url")
   .eq("team_id", team.id);
 
+function getSkillTitle(score) {
+  if (score > 100) return "The Boss";
+  if (score > 80) return "Titan";
+  if (score > 60) return "World Class";
+  if (score > 50) return "Supreme";
+  if (score > 40) return "National";
+  if (score > 30) return "Professional";
+  if (score > 20) return "Domestic";
+  if (score > 10) return "Trainee";
+  return "Newbie";
+}
+
 const topPlayers = (players ?? [])
   .map(p => {
     const skills = {
@@ -341,7 +353,8 @@ const topPlayers = (players ?? [])
     return {
       ...p,
       topSkillName: topSkill[0],
-      topSkillValue: topSkill[1]
+      topSkillValue: topSkill[1],
+      topSkillLevel: getSkillTitle(topSkill[1])
     };
   })
   .sort((a, b) => b.topSkillValue - a.topSkillValue)
@@ -355,7 +368,7 @@ document.getElementById("top-players-list").innerHTML = topPlayers.length
           <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; object-position: top; margin-bottom:8px;" />
           <div><strong>${p.name}</strong></div>
           <div style="font-size: 0.85rem;">${p.role}</div>
-          <div style="font-size: 0.85rem; color: #ccc;">${p.topSkillName}: ${p.topSkillValue}</div>
+          <div style="font-size: 0.85rem; color: #ccc;">${p.topSkillName}: ${p.topSkillLevel}</div>
         </div>
           `).join("")}
         </div>
@@ -367,6 +380,7 @@ document.getElementById("top-players-list").innerHTML = topPlayers.length
   </script>
 </body>
 </html>
+
 
 
 
