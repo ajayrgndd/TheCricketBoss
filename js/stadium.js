@@ -1,149 +1,139 @@
-// Replace with your actual Supabase project credentials
+// ✅ Connect Supabase (no modules)
 const supabaseUrl = 'https://iukofcmatlfhfwcechdq.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
 const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-// Utility: Get current user and team info
-let currentUser = null;
-let currentTeam = null;
-let stadiumData = null;
-let stadiumLevels = {};
+const stadiumLevels = [
+  {
+    level: "Local",
+    capacity: 5000,
+    cost: 0,
+    manager_level: "Beginner",
+    ticket_rate: 50,
+    maintenance: 1000
+  },
+  {
+    level: "Domestic",
+    capacity: 10000,
+    cost: 100000,
+    manager_level: "Beginner",
+    ticket_rate: 60,
+    maintenance: 2500
+  },
+  {
+    level: "Professional",
+    capacity: 15000,
+    cost: 250000,
+    manager_level: "Professional",
+    ticket_rate: 70,
+    maintenance: 4000
+  },
+  {
+    level: "National",
+    capacity: 20000,
+    cost: 500000,
+    manager_level: "Supreme",
+    ticket_rate: 80,
+    maintenance: 6000
+  },
+  {
+    level: "World Class",
+    capacity: 35000,
+    cost: 1000000,
+    manager_level: "Ultimate",
+    ticket_rate: 100,
+    maintenance: 9000
+  }
+];
 
+let userId, teamId, currentStadium, currentManagerLevel;
+
+// ✅ Init
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadSharedUI();
-  await fetchUserAndTeam();
-  await fetchStadiumLevels();
-  await fetchStadium();
-  renderStadiumInfo();
-  setupUpgradeListener();
+  const user = await supabase.auth.getUser();
+  if (!user.data?.user) return alert("Not logged in!");
+
+  userId = user.data.user.id;
+
+  // Get team
+  const { data: team } = await supabase.from('teams').select('*').eq('user_id', userId).single();
+  if (!team) return alert("Team not found!");
+
+  teamId = team.id;
+
+  // Get profile (for manager level)
+  const { data: profile } = await supabase.from('profiles').select('manager_level').eq('id', userId).single();
+  currentManagerLevel = profile?.manager_level || 'Beginner';
+
+  // Get stadium info
+  const { data: stadium } = await supabase.from('stadiums').select('*').eq('team_id', teamId).single();
+  currentStadium = stadium;
+
+  renderCurrentStadium();
+  renderUpgradeOptions();
 });
 
-// 🔁 Load shared UI components (top and bottom nav)
-async function loadSharedUI() {
-  const script = document.createElement('script');
-  script.src = '/js/shared-ui.js';
-  document.body.appendChild(script);
+function renderCurrentStadium() {
+  const stadiumDiv = document.getElementById('current-stadium');
+  const ticketRate = stadiumLevels.find(l => l.level === currentStadium.level)?.ticket_rate || 50;
+  const estimate = Math.floor(currentStadium.capacity * ticketRate * 0.8);
+
+  stadiumDiv.innerHTML = `
+    <strong>${currentStadium.name}</strong><br/>
+    Level: ${currentStadium.level}<br/>
+    Capacity: ${currentStadium.capacity}<br/>
+    Ticket Rate: ₹${ticketRate}<br/>
+    Est. Matchday Earnings: ₹${estimate}
+  `;
 }
 
-// 🔐 Get current user and their team
-async function fetchUserAndTeam() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return alert("Not logged in");
+function renderUpgradeOptions() {
+  const container = document.getElementById('upgrade-list');
+  const currentLevelIndex = stadiumLevels.findIndex(l => l.level === currentStadium.level);
 
-  currentUser = user;
+  stadiumLevels.forEach((level, index) => {
+    const disabled = index <= currentLevelIndex;
+    const eligible = compareLevels(currentManagerLevel, level.manager_level) >= 0;
 
-  const { data: team, error } = await supabase
-    .from('teams')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
-
-  if (error || !team) return alert("Team not found.");
-  currentTeam = team;
+    const card = document.createElement('div');
+    card.className = 'upgrade-card';
+    card.innerHTML = `
+      <strong>${level.level}</strong><br/>
+      Capacity: ${level.capacity}<br/>
+      Upgrade Cost: ₹${level.cost}<br/>
+      Ticket Rate: ₹${level.ticket_rate}<br/>
+      Maintenance/Week: ₹${level.maintenance}<br/>
+      Required Manager Level: ${level.manager_level}<br/>
+      <button ${disabled || !eligible ? "disabled" : ""} onclick="upgradeStadium('${level.level}')">
+        ${disabled ? "Current" : !eligible ? "Not Eligible" : "Upgrade"}
+      </button>
+    `;
+    container.appendChild(card);
+  });
 }
 
-// 📊 Fetch all stadium level configurations
-async function fetchStadiumLevels() {
-  const { data, error } = await supabase
-    .from('stadium_levels')
-    .select('*');
+function compareLevels(userLevel, requiredLevel) {
+  const levels = [
+    "Beginner", "Expert", "Professional", "Master", "Supreme",
+    "World Class", "Ultimate", "Titan", "The Boss"
+  ];
+  return levels.indexOf(userLevel) - levels.indexOf(requiredLevel);
+}
+
+async function upgradeStadium(newLevel) {
+  const levelData = stadiumLevels.find(l => l.level === newLevel);
+  if (!levelData) return alert("Invalid upgrade.");
+
+  const { error } = await supabase.from('stadiums').update({
+    level: newLevel,
+    capacity: levelData.capacity,
+    updated_at: new Date().toISOString()
+  }).eq('id', currentStadium.id);
 
   if (error) {
-    console.error("Failed to fetch stadium levels", error);
-    return;
+    alert("Upgrade failed");
+  } else {
+    alert(`Upgraded to ${newLevel} Stadium!`);
+    location.reload();
   }
-
-  data.forEach(level => {
-    stadiumLevels[level.level] = level;
-  });
-}
-
-// 🏟️ Fetch stadium info for current team
-async function fetchStadium() {
-  const { data, error } = await supabase
-    .from('stadiums')
-    .select('*')
-    .eq('team_id', currentTeam.id)
-    .single();
-
-  if (error || !data) {
-    console.error("No stadium found.", error);
-    return;
-  }
-
-  stadiumData = data;
-  syncStadiumFieldsFromLevel();
-}
-
-// 🔄 Sync stadium fields from stadium_levels table
-function syncStadiumFieldsFromLevel() {
-  const levelInfo = stadiumLevels[stadiumData.level];
-  if (!levelInfo) return;
-
-  stadiumData.capacity = levelInfo.capacity;
-  stadiumData.ticket_price = levelInfo.ticket_price;
-  stadiumData.maintenance_cost = levelInfo.maintenance_cost;
-}
-
-// 🎨 Render stadium info to UI
-function renderStadiumInfo() {
-  if (!stadiumData) return;
-
-  document.getElementById('stadium-name').textContent = stadiumData.name;
-  document.getElementById('stadium-level').textContent = stadiumData.level;
-  document.getElementById('stadium-capacity').textContent = stadiumData.capacity.toLocaleString();
-  document.getElementById('ticket-price').textContent = `₹${stadiumData.ticket_price}`;
-  document.getElementById('weekly-maintenance').textContent = `₹${stadiumData.maintenance_cost.toLocaleString()}`;
-
-  // 💰 Estimate weekly earnings (2 matchdays/week)
-  const estimatedEarnings = stadiumData.ticket_price * stadiumData.capacity * 2;
-  document.getElementById('estimated-earnings').textContent = `₹${estimatedEarnings.toLocaleString()}`;
-
-  populateUpgradeOptions();
-}
-
-// ⏫ Populate available upgrade options
-function populateUpgradeOptions() {
-  const upgradeSelect = document.getElementById('upgrade-select');
-  upgradeSelect.innerHTML = '';
-
-  let canUpgrade = false;
-
-  Object.values(stadiumLevels).forEach(level => {
-    if (level.capacity > stadiumData.capacity) {
-      canUpgrade = true;
-      const option = document.createElement('option');
-      option.value = level.level;
-      option.textContent = `${level.level} – ₹${level.upgrade_cost.toLocaleString()}`;
-      upgradeSelect.appendChild(option);
-    }
-  });
-
-  document.getElementById('upgrade-section').style.display = canUpgrade ? 'block' : 'none';
-}
-
-// 🎯 Setup upgrade button logic
-function setupUpgradeListener() {
-  document.getElementById('upgrade-btn').addEventListener('click', async () => {
-    const newLevel = document.getElementById('upgrade-select').value;
-    const levelInfo = stadiumLevels[newLevel];
-
-    if (!levelInfo) return alert("Invalid level selected");
-
-    // TODO: Check manager level + team cash validation (if required)
-
-    const { error } = await supabase
-      .from('stadiums')
-      .update({ level: newLevel, updated_at: new Date().toISOString() })
-      .eq('id', stadiumData.id);
-
-    if (error) {
-      console.error("Upgrade failed", error);
-      return alert("Upgrade failed");
-    }
-
-    alert("Stadium upgraded successfully!");
-    await fetchStadium();
-    renderStadiumInfo();
-  });
 }
