@@ -2,7 +2,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js";
 
 export function loadSharedUI() {
-  // Top bar
   const topBar = document.createElement("div");
   topBar.className = "top-bar";
   topBar.innerHTML = `
@@ -13,7 +12,6 @@ export function loadSharedUI() {
   `;
   document.body.prepend(topBar);
 
-  // Bottom nav bar
   const bottomBar = document.createElement("div");
   bottomBar.className = "bottom-nav";
   bottomBar.innerHTML = `
@@ -25,7 +23,6 @@ export function loadSharedUI() {
   `;
   document.body.appendChild(bottomBar);
 
-  // Load data
   loadTopBarData();
 }
 
@@ -45,7 +42,7 @@ async function loadTopBarData() {
     .single();
 
   if (error || !profile) {
-    console.error("Top bar profile fetch failed:", error?.message);
+    console.error("Top bar fetch failed:", error?.message);
     return;
   }
 
@@ -54,3 +51,5 @@ async function loadTopBarData() {
   document.getElementById("coins").textContent = `💰 ${profile.coins}`;
   document.getElementById("cash").textContent = `₹${profile.cash}`;
 }
+
+loadSharedUI();
