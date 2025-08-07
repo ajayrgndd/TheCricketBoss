@@ -96,6 +96,12 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash }) {
       🪙 <span id="coins">${coins}</span> |
       💵 ₹<span id="cash">${cash}</span> |
       <span id="manager-level">${getManagerLevel(xp)}</span>
+      <span class="top-notification">
+  🔔 <span id="notification-count" style="color: yellow; font-weight: bold;">0</span>
+  <div id="notification-dropdown" class="notification-dropdown" hidden>
+    <ul id="notification-list"></ul>
+  </div>
+</span>
     </div>
   `;
   document.body.prepend(topBar);
@@ -134,3 +140,4 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash }) {
     }
   });
 }
+
