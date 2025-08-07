@@ -46,7 +46,7 @@ async function loadTopBarData() {
 
   const { data: profile, error } = await supabase
     .from("profiles")
-    .select("username, xp, coins, cash")
+    .select("manager_name, xp, coins, cash")
     .eq("user_id", user.id)
     .single();
 
@@ -55,7 +55,7 @@ async function loadTopBarData() {
     return;
   }
 
-  document.getElementById('username').textContent = profile.username || 'Manager';
+  document.getElementById('manager_name').textContent = profile.manager_name;
   document.getElementById('xp').textContent = `XP: ${profile.xp || 0}`;
   document.getElementById('coins').textContent = `💰 ${profile.coins || 0}`;
   document.getElementById('cash').textContent = `₹${profile.cash || 0}`;
