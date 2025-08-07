@@ -1,5 +1,11 @@
 import { loadSharedUI } from './shared-ui-stadium.js';
 
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadSharedUI();
+  init(); // your stadium logic
+});
+
+
 const stadiumLevels = [
   { name: "Street Ground", capacity: 1000, revenue: 100, upgradeCost: 500, requiredManagerLevel: "Beginner" },
   { name: "Local Ground", capacity: 3000, revenue: 300, upgradeCost: 1500, requiredManagerLevel: "Expert" },
