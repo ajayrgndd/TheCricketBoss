@@ -5,31 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stadium – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
-  <link rel="stylesheet" href="css/stadium.css" />
+  <script type="module" src="js/stadium.js" defer></script>
+  <script type="module" src="js/shared-ui-stadium.js" defer></script>
 </head>
 <body>
-  <main class="stadium-content">
-    <h2>Your Stadium</h2>
-    <div class="stadium-card">
-      <img src="assets/stadium.png" alt="Stadium" class="stadium-image" />
-      <p class="stadium-description">
-        Upgrade your stadium to unlock more revenue and fanbase. Higher levels give better rewards from home matches.
-      </p>
-
-      <div class="stadium-stats">
-        <div>Level: <span id="stadium-level-name">Loading...</span></div>
-        <div>Capacity: <span id="stadium-capacity">-</span></div>
-        <div>Revenue/Match: ₹<span id="stadium-revenue">-</span></div>
-        <div>Upgrade Cost: ₹<span id="stadium-upgrade-cost">-</span></div>
-        <div>Required Manager Level: <span id="required-manager-level">-</span></div>
-      </div>
-
-      <button id="upgrade-btn">Upgrade Stadium</button>
-      <p id="upgrade-msg"></p>
-    </div>
+  <main class="content">
+    <h2>Upgrade Stadium</h2>
+    <div id="stadium-info"></div>
+    <button id="upgrade-btn">Upgrade</button>
+    <p id="status-msg"></p>
   </main>
-
-  <!-- Scripts -->
-  <script type="module" src="js/stadium.js"></script>
 </body>
 </html>
