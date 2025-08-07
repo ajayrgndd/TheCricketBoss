@@ -3,30 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Stadium – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css" />
-  <link rel="stylesheet" href="css/stadium.css" />
-  <script type="module" src="js/shared-ui-stadium.js"></script>
-  <script type="module" src="js/stadium.js" defer></script>
+  <title>Stadium</title>
 </head>
 <body>
 
-  <!-- Main content area -->
-  <div class="content">
-    <h2 class="section-title">🏟️ Your Stadium</h2>
+  <h2>Your Stadium</h2>
 
-    <div class="stadium-card">
-      <div class="stadium-info">
-        <p><strong>Level:</strong> <span id="stadium-level">Loading...</span></p>
-        <p><strong>Capacity:</strong> <span id="stadium-capacity">Loading...</span></p>
-        <p><strong>Next Upgrade Cost:</strong> ₹<span id="stadium-upgrade-cost">0</span></p>
-      </div>
+  <div id="stadium-info"></div>
 
-      <button id="upgrade-btn">Upgrade Stadium</button>
-    </div>
+  <button id="upgrade-btn">Upgrade</button>
 
-    <div id="upgrade-status" class="status-message"></div>
-  </div>
+  <div id="status-msg" style="margin-top: 10px; color: green;"></div>
 
+  <script type="module" src="js/stadium.js"></script>
 </body>
 </html>
