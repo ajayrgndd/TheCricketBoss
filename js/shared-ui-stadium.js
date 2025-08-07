@@ -15,11 +15,11 @@ export function loadSharedUI() {
   const bottomBar = document.createElement('div');
   bottomBar.className = 'bottom-nav';
   bottomBar.innerHTML = `
-    <a href="team.html">Team</a>
-    <a href="scout.html">Scout</a>
-    <a href="home.html">Home</a>
-    <a href="auction.html">Auction</a>
-    <a href="store.html">Store</a>
+    <a href="team.html">🏏 Team</a>
+    <a href="scout.html">🔍 Scout</a>
+    <a href="home.html">🏠 Home</a>
+    <a href="auction.html">⚒️ Auction</a>
+    <a href="store.html">🛒 Store</a>
   `;
   document.body.appendChild(bottomBar);
 }
