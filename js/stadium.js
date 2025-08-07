@@ -1,104 +1,108 @@
-// stadium.js
-import { createClient } from "https://esm.sh/@supabase/supabase-js";
-import { addManagerXP } from "./shared-xp.js";
+// js/stadium.js
+import { loadSharedUI } from './shared-ui-stadium.js';
+import { addManagerXP } from './shared-xp.js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+
+loadSharedUI();
 
 const supabase = createClient(
-  "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+  'https://YOUR_PROJECT_ID.supabase.co',
+  'YOUR_ANON_KEY'
 );
 
-let userId;
+const STADIUM_LEVELS = [
+  { level: 1, name: "Local", capacity: 5000, revenue: 500, cost: 100000, requiredManagerXP: 1 },
+  { level: 2, name: "Town", capacity: 10000, revenue: 1000, cost: 250000, requiredManagerXP: 200 },
+  { level: 3, name: "City", capacity: 20000, revenue: 2000, cost: 500000, requiredManagerXP: 600 },
+  { level: 4, name: "National", capacity: 40000, revenue: 4000, cost: 1000000, requiredManagerXP: 1000 },
+  { level: 5, name: "World Class", capacity: 75000, revenue: 8000, cost: 2000000, requiredManagerXP: 1500 },
+];
 
-const STADIUM_LEVELS = {
-  1: { name: "Local", capacity: 5000, revenue: 500, upgradeCost: 2000 },
-  2: { name: "Domestic", capacity: 10000, revenue: 800, upgradeCost: 4000 },
-  3: { name: "Regional", capacity: 15000, revenue: 1200, upgradeCost: 8000 },
-  4: { name: "National", capacity: 20000, revenue: 1600, upgradeCost: 12000 },
-  5: { name: "Mega", capacity: 35000, revenue: 2000, upgradeCost: null }, // Max
-};
+const MANAGER_LEVELS = [
+  { xp: 0, label: "Beginner" },
+  { xp: 100, label: "Expert" },
+  { xp: 300, label: "Professional" },
+  { xp: 600, label: "Master" },
+  { xp: 1000, label: "Supreme" },
+  { xp: 1500, label: "World Class" },
+  { xp: 2000, label: "Ultimate" },
+  { xp: 3000, label: "Titan" },
+  { xp: 5000, label: "The Boss" },
+];
+
+function getManagerLevelLabel(xp) {
+  let label = "Beginner";
+  for (let lvl of MANAGER_LEVELS) {
+    if (xp >= lvl.xp) label = lvl.label;
+    else break;
+  }
+  return label;
+}
 
 async function init() {
   const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
-  if (error || !session?.user) {
-    window.location.href = "login.html";
-    return;
-  }
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) return;
 
-  userId = session.user.id;
-
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("manager_name, xp, coins, cash, stadium_level")
-    .eq("user_id", userId)
+    .select("stadium_level, xp, cash")
+    .eq("user_id", user.id)
     .single();
 
-  if (profileError || !profile) {
-    console.error("❌ Profile fetch error:", profileError?.message);
-    return;
-  }
+  if (!profile) return;
 
-  // Inject top/bottom bars
-  loadSharedUI({
-    supabase,
-    manager_name: profile.manager_name,
-    xp: profile.xp,
-    coins: profile.coins,
-    cash: profile.cash,
+  updateStadiumDisplay(profile.stadium_level, profile.xp);
+
+  document.getElementById('upgrade-btn')?.addEventListener('click', async () => {
+    const currentLevel = profile.stadium_level;
+    if (currentLevel >= 5) {
+      document.getElementById('upgrade-msg').innerText = "Max level reached.";
+      return;
+    }
+
+    const next = STADIUM_LEVELS[currentLevel]; // 0-indexed
+    if (profile.xp < next.requiredManagerXP) {
+      document.getElementById('upgrade-msg').innerText = "Not enough XP to upgrade.";
+      return;
+    }
+
+    if (profile.cash < next.cost) {
+      document.getElementById('upgrade-msg').innerText = "Not enough cash.";
+      return;
+    }
+
+    const updates = await supabase
+      .from("profiles")
+      .update({
+        stadium_level: currentLevel + 1,
+        cash: profile.cash - next.cost
+      })
+      .eq("user_id", user.id);
+
+    if (!updates.error) {
+      const newLevel = currentLevel + 1;
+      await addManagerXP(supabase, user.id, `stadium_lvl${newLevel}`);
+      location.reload();
+    }
   });
-
-  updateStadiumDisplay(profile.stadium_level || 1);
-  document
-    .getElementById("upgrade-btn")
-    .addEventListener("click", () => upgradeStadium(profile));
 }
 
-function updateStadiumDisplay(level) {
-  const data = STADIUM_LEVELS[level];
-  document.getElementById("stadium-level").innerText = `Level ${level} (${data.name})`;
-  document.getElementById("stadium-capacity").innerText = data.capacity.toLocaleString();
-  document.getElementById("stadium-revenue").innerText = data.revenue.toLocaleString();
-}
+function updateStadiumDisplay(level, xp) {
+  const el = (id) => document.getElementById(id);
+  if (!el("stadium-level-name")) return;
 
-async function upgradeStadium(profile) {
-  let level = profile.stadium_level || 1;
-  if (level >= 5) {
-    document.getElementById("upgrade-msg").innerText = "🏟️ Stadium is already at max level.";
-    return;
-  }
+  const stadium = STADIUM_LEVELS[level - 1];
+  const next = STADIUM_LEVELS[level] || null;
 
-  const next = STADIUM_LEVELS[level + 1];
-  if (profile.cash < next.upgradeCost) {
-    document.getElementById("upgrade-msg").innerText = `❌ Not enough cash. ₹${next.upgradeCost} needed.`;
-    return;
-  }
-
-  // Deduct and update in Supabase
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({
-      cash: profile.cash - next.upgradeCost,
-      stadium_level: level + 1,
-    })
-    .eq("user_id", userId);
-
-  if (updateError) {
-    console.error("❌ Upgrade error:", updateError.message);
-    document.getElementById("upgrade-msg").innerText = "⚠️ Upgrade failed. Try again.";
-    return;
-  }
-
-  // XP Reward
-  await addManagerXP(supabase, userId, `stadium_lvl${level + 1}`);
-
-  // UI updates
-  profile.stadium_level += 1;
-  profile.cash -= next.upgradeCost;
-  updateStadiumDisplay(profile.stadium_level);
-  const levelInfo = STADIUM_LEVELS[profile.stadium_level];
-  document.getElementById("upgrade-msg").innerText = `✅ Upgraded to Level ${profile.stadium_level} (${levelInfo.name})`;
+  el("stadium-level-name").innerText = `Level ${stadium.level} (${stadium.name})`;
+  el("stadium-capacity").innerText = stadium.capacity.toLocaleString();
+  el("stadium-revenue").innerText = stadium.revenue.toLocaleString();
+  el("stadium-upgrade-cost").innerText = next ? next.cost.toLocaleString() : "—";
+  el("required-manager-level").innerText = next
+    ? getManagerLevelLabel(next.requiredManagerXP)
+    : "Max";
 }
 
 init();
