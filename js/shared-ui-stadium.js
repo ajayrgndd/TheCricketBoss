@@ -10,7 +10,7 @@ export async function loadSharedUI() {
   const topBar = document.createElement('div');
   topBar.className = 'top-bar';
   topBar.innerHTML = `
-    <span id="username">Loading...</span>
+    <span id="manager_name">Loading...</span>
     <span id="xp">XP: 0</span>
     <span id="coins">💰 0</span>
     <span id="cash">₹0</span>
