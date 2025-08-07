@@ -1,13 +1,12 @@
-// js/shared-ui-stadium.js
-export function loadSharedUI() {
+export function loadSharedUI(user) {
   // Top bar
   const topBar = document.createElement('div');
   topBar.className = 'top-bar';
   topBar.innerHTML = `
-    <span id="username">Loading...</span>
-    <span id="xp">XP: 0</span>
-    <span id="coins">💰 0</span>
-    <span id="cash">₹0</span>
+    <span id="username">${user.username}</span>
+    <span id="xp">XP: ${user.xp}</span>
+    <span id="coins">💰 ${user.coins}</span>
+    <span id="cash">₹${user.cash}</span>
   `;
   document.body.prepend(topBar);
 
