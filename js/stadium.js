@@ -10,10 +10,10 @@ let userId;
 
 const STADIUM_LEVELS = {
   1: { capacity: 5000, revenue: 500, upgradeCost: 2000 },
-  2: { capacity: 8000, revenue: 800, upgradeCost: 4000 },
-  3: { capacity: 12000, revenue: 1200, upgradeCost: 8000 },
-  4: { capacity: 16000, revenue: 1600, upgradeCost: 12000 },
-  5: { capacity: 20000, revenue: 2000, upgradeCost: null }, // Max
+  2: { capacity: 10000, revenue: 800, upgradeCost: 4000 },
+  3: { capacity: 15000, revenue: 1200, upgradeCost: 8000 },
+  4: { capacity: 20000, revenue: 1600, upgradeCost: 12000 },
+  5: { capacity: 35000, revenue: 2000, upgradeCost: null }, // Max
 };
 
 async function init() {
