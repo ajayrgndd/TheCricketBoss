@@ -4,29 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stadium – TheCricketBoss</title>
-  <link rel="stylesheet" href="css/stadium.css" />
-  <script src="js/shared-ui.js" defer></script>
-  <script src="js/stadium.js" type="module" defer></script>
+  <link rel="stylesheet" href="/css/stadium.css" />
+  <script src="/js/shared-ui.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js" defer></script>
+  <script src="/js/stadium.js" defer></script>
 </head>
 <body>
+
   <!-- Top Bar -->
-  <header id="top-bar"></header>
+  <div id="top-bar"></div>
 
-  <main class="container">
-    <h2>🏟️ Your Stadium</h2>
-    <div id="stadium-info" class="card">
-      <p><strong>Name:</strong> <span id="stadium-name">Loading...</span></p>
-      <p><strong>Level:</strong> <span id="stadium-level"></span></p>
-      <p><strong>Capacity:</strong> <span id="stadium-capacity"></span></p>
-      <p><strong>Ticket Price:</strong> ₹<span id="ticket-price"></span></p>
-      <p><strong>Estimated Match Earnings:</strong> ₹<span id="earnings-estimate"></span></p>
-    </div>
+  <main>
+    <section class="stadium-info">
+      <h2>Your Stadium</h2>
+      <div id="current-stadium" class="card loading">Loading...</div>
+    </section>
 
-    <h3>Upgrade Stadium</h3>
-    <div id="upgrade-options" class="card"></div>
+    <section class="stadium-upgrades">
+      <h3>Upgrade Options</h3>
+      <div id="upgrade-list" class="upgrade-list"></div>
+    </section>
   </main>
 
   <!-- Bottom Nav -->
-  <nav id="bottom-nav"></nav>
+  <div id="bottom-nav"></div>
+
 </body>
 </html>
