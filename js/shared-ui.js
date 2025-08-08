@@ -1,63 +1,169 @@
-// js/shared-ui.js
-import { createClient } from 'https://esm.sh/@supabase/supabase-js';
-
-const supabaseUrl = "https://iukofcmatlfhfwcechdq.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"; // keep your actual anon key
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-// ✅ Get logged-in user ID
-export async function getUserId() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user ? user.id : "demo-user"; // fallback for old pages
+// XP → Level mapping 
+export function getManagerLevel(xp) {
+  if (xp >= 13500) return "The Boss";
+  if (xp >= 8500) return "Ultimate";
+  if (xp >= 5500) return "World Class";
+  if (xp >= 3500) return "Supreme";
+  if (xp >= 1750) return "Master";
+  if (xp >= 750) return "Professional";
+  if (xp >= 250) return "Expert";
+  return "Beginner";
 }
 
-// ✅ Load top & bottom navigation UI
-export async function loadSharedUI(topNavId, bottomNavId) {
-  const topNavEl = document.getElementById(topNavId);
-  const bottomNavEl = document.getElementById(bottomNavId);
+// Add XP to manager
+export async function addManagerXP(supabase, userId, eventKey) {
+  const XP_REWARDS = {
+    daily_login: 10,
+    scout_player: 10,
+    league_win: 20,
+    league_draw: 15,
+    league_loss: 10,
+    training_done: 20,
+    auction_buy: 20,
+    auction_sell: 20,
+    skill1_unlock: 50,
+    skill2_unlock: 100,
+    stadium_lvl2: 50,
+    stadium_lvl3: 75,
+    stadium_lvl4: 100,
+    lvl_up_trainee: 20,
+    lvl_up_domestic: 30,
+    lvl_up_professional: 40,
+    lvl_up_national: 50,
+    lvl_up_supreme: 60,
+    lvl_up_worldclass: 70,
+    lvl_up_titan: 80,
+    lvl_up_boss: 90
+  };
 
-  let managerName = "Guest";
-  let xp = 0;
-  let coins = 0;
-  let cash = 0;
+  const xpToAdd = XP_REWARDS[eventKey] || 0;
+  if (xpToAdd === 0) return;
 
-  const userId = await getUserId();
+  const { data: profile, error: fetchError } = await supabase
+    .from("profiles")
+    .select("xp")
+    .eq("user_id", userId)
+    .single();
 
-  if (userId !== "demo-user") {
-    const { data: profileData, error } = await supabase
-      .from("profiles")
-      .select("manager_name, xp, coins, cash")
-      .eq("user_id", userId)
-      .single();
+  if (fetchError) {
+    console.error("❌ XP Fetch Error:", fetchError.message);
+    return;
+  }
 
-    if (!error && profileData) {
-      managerName = profileData.manager_name || managerName;
-      xp = profileData.xp || 0;
-      coins = profileData.coins || 0;
-      cash = profileData.cash || 0;
+  const newXP = (profile?.xp || 0) + xpToAdd;
+  const newLevel = getManagerLevel(newXP);
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ xp: newXP, level: newLevel })
+    .eq("user_id", userId);
+
+  if (updateError) {
+    console.error("❌ XP Update Error:", updateError.message);
+  } else {
+    console.log(`✅ XP +${xpToAdd} → ${newXP} (${newLevel})`);
+    updateTopbarXPLevel(newXP, newLevel);
+  }
+}
+
+// Optional: update UI top bar
+function updateTopbarXPLevel(xp, level) {
+  const xpSpan = document.getElementById("xp");
+  const levelSpan = document.getElementById("manager-level");
+  if (xpSpan) xpSpan.innerText = xp;
+  if (levelSpan) levelSpan.innerText = `Level: ${level}`;
+}
+
+// Load top and bottom bars
+export async function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id }) {
+  // Top bar
+  const topBar = document.createElement("div");
+  topBar.className = "top-bar";
+  topBar.innerHTML = `
+    <div class="top-left">
+      <img src="assets/logo.png" alt="Logo" style="height:28px;" />
+      <div class="manager-name" id="managerName">
+        <span id="managerLabel"><a href="myprofile.html">${manager_name} ▼</a></span>
+        <div class="popup-menu" id="popupMenu">
+          <button id="logoutBtn">Logout</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      XP: <span id="xp">${xp}</span> |
+      🪙 <span id="coins">${coins}</span> |
+      💵 ₹<span id="cash">${cash}</span> |
+      <span id="manager-level">${getManagerLevel(xp)}</span>
+      <a href="inbox.html" title="Inbox" style="margin-left:10px; font-size:18px; position:relative;">
+        📩
+        <span id="unreadCount" style="
+          position:absolute;
+          top:-6px;
+          right:-10px;
+          background:red;
+          color:white;
+          border-radius:50%;
+          padding:2px 5px;
+          font-size:10px;
+          display:none;
+        ">0</span>
+      </a>
+    </div>
+  `;
+  document.body.prepend(topBar);
+
+  // Fetch unread inbox count
+  if (supabase && user_id) {
+    try {
+      const { data, error } = await supabase
+        .from("inbox")
+        .select("id", { count: "exact" })
+        .eq("receiver_id", user_id)
+        .eq("read_status", false);
+
+      if (!error) {
+        const count = data.length;
+        const countEl = document.getElementById("unreadCount");
+        if (count > 0) {
+          countEl.innerText = count;
+          countEl.style.display = "inline-block";
+        }
+      }
+    } catch (err) {
+      console.error("Inbox count fetch failed:", err);
     }
   }
 
-  if (topNavEl) {
-    topNavEl.innerHTML = `
-      <div class="top-bar">
-        <span class="top-username">${managerName}</span>
-        <span class="top-xp">XP: ${xp}</span>
-        <span class="top-coins">💰 ${coins}</span>
-        <span class="top-cash">🏦 ${cash}</span>
-      </div>
-    `;
-  }
+  // Bottom bar
+  const bottomBar = document.createElement("div");
+  bottomBar.className = "bottom-nav";
+  bottomBar.innerHTML = `
+    <a href="team.html">🏏 Team</a>
+    <a href="scout.html">🔍 Scout</a>
+    <a href="home.html">🏠 Home</a>
+    <a href="auction.html">⚒️ Auction</a>
+    <a href="store.html">🛒 Store</a>
+  `;
+  document.body.appendChild(bottomBar);
 
-  if (bottomNavEl) {
-    bottomNavEl.innerHTML = `
-      <div class="bottom-bar">
-        <a href="team.html">🏏 Team</a>
-        <a href="scout.html">🔍 Scout</a>
-        <a href="home.html">🏠 Home</a>
-        <a href="auction.html">📦 Auction</a>
-        <a href="store.html">🛒 Store</a>
-      </div>
-    `;
-  }
+  // Dropdown menu toggle
+  const dropdown = document.getElementById("managerName");
+  const popup = document.getElementById("popupMenu");
+  dropdown.addEventListener("click", () => {
+    popup.style.display = popup.style.display === "flex" ? "none" : "flex";
+  });
+
+  window.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target)) {
+      popup.style.display = "none";
+    }
+  });
+
+  // Logout handler
+  document.getElementById("logoutBtn").addEventListener("click", async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+      window.location.href = "login.html";
+    }
+  });
 }
