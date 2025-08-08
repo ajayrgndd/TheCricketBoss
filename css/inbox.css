@@ -1,0 +1,26 @@
+.message-card {
+  position: relative;
+  background: #1e1e1e;
+  border-left: 5px solid transparent;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.message-card.unread {
+  border-left-color: gold;
+}
+.message-card .delete-btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.message-card .delete-btn:hover {
+  opacity: 1;
+}
+.swipe-delete {
+  transform: translateX(-100%);
+  opacity: 0;
+}
