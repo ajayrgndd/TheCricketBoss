@@ -1,3 +1,28 @@
+/* Inbox page styling */
+#inboxHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #222;
+  color: #fff;
+  border-bottom: 1px solid #333;
+}
+
+#deleteAllBtn {
+  background: crimson;
+  border: none;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+#deleteAllBtn:hover {
+  background: darkred;
+}
+
+/* Message Card */
 .message-card {
   position: relative;
   background: #1e1e1e;
@@ -10,17 +35,39 @@
 .message-card.unread {
   border-left-color: gold;
 }
+
+/* Trash Icon */
 .message-card .delete-btn {
   position: absolute;
   right: 10px;
   top: 10px;
   cursor: pointer;
   opacity: 0.7;
+  font-size: 1.2rem;
+  color: #ccc;
 }
 .message-card .delete-btn:hover {
   opacity: 1;
+  color: red;
 }
+
+/* Swipe delete animation */
 .swipe-delete {
   transform: translateX(-100%);
   opacity: 0;
+}
+
+/* Swipe hint background */
+.swipe-bg {
+  background: #b71c1c;
+  color: white;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 15px;
+  font-size: 1.2rem;
 }
