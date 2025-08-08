@@ -187,7 +187,7 @@
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI, addManagerXP } from "./js/shared-ui.js";
+    loadSharedUI('top-nav', 'bottom-nav');
 
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
@@ -380,6 +380,7 @@ document.getElementById("top-players-list").innerHTML = topPlayers.length
   </script>
 </body>
 </html>
+
 
 
 
