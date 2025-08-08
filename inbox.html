@@ -73,41 +73,33 @@
   <!-- Bottom Nav -->
   <div id="bottom-nav"></div>
 
-  <script type="module">
-    import { loadSharedUI } from './js/shared-ui.js';
-    import { loadInboxMessages } from './js/inbox.js';
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+<script type="module">
+  import { loadSmoothUI } from './js/smooth-ui.js';
+  import { loadInboxMessages } from './js/inbox.js';
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
-    // Supabase init
-    const supabaseUrl = "https://iukofcmatlfhfwcechdq.supabase.co";
-    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
-    const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabaseUrl = "https://iukofcmatlfhfwcechdq.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Load shared UI (top & bottom nav)
-    loadSharedUI('top-nav', 'bottom-nav');
+  // Load smooth top & bottom nav
+  loadSmoothUI('top-nav', 'bottom-nav');
 
-    // Get logged-in user
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) {
-      window.location.href = "login.html";
-    } else {
-      const userId = user.id;
-      loadInboxMessages(supabase, userId);
+  // Check auth
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) {
+    window.location.href = "login.html";
+  } else {
+    const userId = user.id;
+    loadInboxMessages(supabase, userId);
 
-      // Delete All handler
-      document.getElementById("deleteAllBtn").addEventListener("click", async () => {
-        if (!confirm("Delete all messages?")) return;
+    document.getElementById("deleteAllBtn").addEventListener("click", async () => {
+      if (!confirm("Delete all messages?")) return;
+      document.getElementById("inboxContainer").innerHTML = `<p style="text-align:center; color:#aaa;">No messages yet.</p>`;
+      await supabase.from("inbox").delete().eq("user_id", userId);
+    });
+  }
+</script>
 
-        // Clear UI instantly
-        document.getElementById("inboxContainer").innerHTML = `<p style="text-align:center; color:#aaa;">No messages yet.</p>`;
-
-        // Supabase call
-        await supabase
-          .from("inbox")
-          .delete()
-          .eq("user_id", userId);
-      });
-    }
-  </script>
 </body>
 </html>
