@@ -1,6 +1,48 @@
-<div class="top-nav">
-  <span>Username</span>
-  <span>XP: 0</span>
-  <span>Coins: 0</span>
-  <span>Cash: 0</span>
+<div id="top-nav" class="top-nav">
+  <div class="top-left">
+    <span id="nav-username" class="username">Loading...</span>
+  </div>
+  <div class="top-right">
+    <span class="xp" id="nav-xp">XP: 0</span>
+    <span class="coins" id="nav-coins">Coins: 0</span>
+    <span class="cash" id="nav-cash">Cash: 0</span>
+  </div>
 </div>
+
+<style>
+  .top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: linear-gradient(90deg, #222, #111);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 14px;
+    font-size: 14px;
+    z-index: 1000;
+    border-bottom: 2px solid #444;
+    font-family: 'Poppins', sans-serif;
+  }
+  .top-left .username {
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .top-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+  }
+  .top-right span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .xp { color: #4cafef; }
+  .coins { color: #ffd700; }
+  .cash { color: #00ff88; }
+</style>
