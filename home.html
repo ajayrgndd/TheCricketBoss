@@ -1,61 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Home – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Top bar placeholder height */
+    #top-nav {
+      flex-shrink: 0;
+    }
+
+    /* Main scrollable grid area */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 15px;
+    }
+
+    .grid-item {
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .grid-item:hover {
+      background-color: #2a2a2a;
+    }
+
+    .grid-item img {
+      width: 60px;
+      height: 60px;
+      margin-bottom: 10px;
+    }
+
+    /* Bottom bar placeholder height */
+    #bottom-nav {
+      flex-shrink: 0;
+    }
+  </style>
+</head>
 <body>
-  <!-- ✅ Added nav placeholders -->
+  <!-- Top Navigation (loaded by shared-ui.js) -->
   <div id="top-nav"></div>
 
-  <div class="main">
-    <h2 style="margin-top: 60px;">Welcome back!</h2>
-    ...
-  </div>
+  <!-- Main Content -->
+  <main>
+    <div class="grid-container">
+      <div class="grid-item" onclick="location.href='team.html'">
+        <img src="images/icon-team.png" alt="Team">
+        Team
+      </div>
+      <div class="grid-item" onclick="location.href='scout.html'">
+        <img src="images/icon-scout.png" alt="Scout">
+        Scout
+      </div>
+      <div class="grid-item" onclick="location.href='league.html'">
+        <img src="images/icon-league.png" alt="League">
+        League
+      </div>
+      <div class="grid-item" onclick="location.href='match.html'">
+        <img src="images/icon-match.png" alt="Match">
+        Match
+      </div>
+      <div class="grid-item" onclick="location.href='auction.html'">
+        <img src="images/icon-auction.png" alt="Auction">
+        Auction
+      </div>
+      <div class="grid-item" onclick="location.href='store.html'">
+        <img src="images/icon-store.png" alt="Store">
+        Store
+      </div>
+      <div class="grid-item" onclick="location.href='myprofile.html'">
+        <img src="images/icon-profile.png" alt="Profile">
+        My Profile
+      </div>
+      <div class="grid-item" onclick="location.href='inbox.html'">
+        <img src="images/icon-inbox.png" alt="Inbox">
+        Inbox
+      </div>
+    </div>
+  </main>
 
+  <!-- Bottom Navigation (loaded by shared-ui.js) -->
   <div id="bottom-nav"></div>
 
+  <!-- JS -->
   <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI, addManagerXP } from "./js/shared-ui.js";
-
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
-
-    async function distributeDailyLoginXP(userId) {
-      const today = new Date().toISOString().split("T")[0];
-      const { data } = await supabase
-        .from("profiles")
-        .select("last_xp_login_date")
-        .eq("user_id", userId)
-        .single();
-      if (data?.last_xp_login_date !== today) {
-        await addManagerXP(supabase, userId, "daily_login");
-        await supabase.from("profiles")
-          .update({ last_xp_login_date: today })
-          .eq("user_id", userId);
-      }
-    }
-
-    async function main() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return location.href = "login.html";
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!profile?.manager_name || !profile?.team_name)
-        return location.href = "profile-setup.html";
-
-      // ✅ Load navs
-      await loadSharedUI("top-nav", "bottom-nav");
-
-      await distributeDailyLoginXP(user.id);
-
-      // XP & Level calculations stay the same
-      ...
-    }
-
-    main();
+    import { loadSharedUI } from './js/shared-ui.js';
+    loadSharedUI('top-nav', 'bottom-nav');
   </script>
 </body>
-
+</html>
