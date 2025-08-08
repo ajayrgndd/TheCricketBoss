@@ -7,109 +7,384 @@
   <link rel="stylesheet" href="styles/global.css" />
   <style>
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
       background-color: #121212;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      color: #fff;
+      font-family: sans-serif;
+      margin: 0;
+      padding-bottom: 80px;
     }
 
-    /* Top bar placeholder height */
-    #top-nav {
-      flex-shrink: 0;
+    .main {
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
     }
 
-    /* Main scrollable grid area */
-    main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 15px;
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background: #00e676;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:disabled {
+      background: gray;
+      cursor: not-allowed;
     }
 
     .grid-container {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 15px;
+      grid-template-columns: 1fr;
+      gap: 20px;
     }
 
     .grid-item {
       background-color: #1e1e1e;
+      padding: 16px;
       border-radius: 10px;
-      padding: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+
+    .xp-bar-container {
+      margin: 20px 0;
       text-align: center;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
     }
 
-    .grid-item:hover {
-      background-color: #2a2a2a;
+    .level-text {
+      font-size: 0.95rem;
+      margin-bottom: 6px;
     }
 
-    .grid-item img {
-      width: 60px;
-      height: 60px;
-      margin-bottom: 10px;
+    .xp-bar {
+      width: 100%;
+      height: 18px;
+      background-color: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 6px;
     }
 
-    /* Bottom bar placeholder height */
-    #bottom-nav {
-      flex-shrink: 0;
+    .xp-fill {
+      height: 100%;
+      background: linear-gradient(to right, #00e676, #00c853);
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    .xp-count {
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+
+    .quick-links {
+      margin-top: 40px;
+      text-align: center;
+    }
+
+    .quick-links h3 {
+      margin-bottom: 12px;
+    }
+
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+    }
+
+    .quick-grid a {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #1e1e1e;
+      padding: 14px 10px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #00e676;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+      transition: background 0.2s ease;
+    }
+
+    .quick-grid a:hover {
+      background-color: #2e2e2e;
+    }
+
+    .quick-grid .icon {
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+
+    .quick-grid .label {
+      font-size: 0.85rem;
     }
   </style>
 </head>
 <body>
-  <!-- Top Navigation (loaded by shared-ui.js) -->
-  <div id="top-nav"></div>
 
-  <!-- Main Content -->
-  <main>
+  <!-- Top bar & bottom nav will be injected by shared-ui.js -->
+
+  <div class="main">
+    <h2 style="margin-top: 60px;">Welcome back!</h2>
+
+    <!-- XP Progress Bar -->
+    <div class="xp-bar-container">
+      <div class="level-text" id="level-label">Level: Beginner</div>
+      <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
+      <div class="xp-count" id="xp-label">XP: 0 / 500</div>
+    </div>
+
     <div class="grid-container">
-      <div class="grid-item" onclick="location.href='team.html'">
-        <img src="images/icon-team.png" alt="Team">
-        Team
+
+      <!-- Fixture -->
+      <div class="grid-item" id="fixture-block">
+        <h3>Next Match</h3>
+        <div id="fixture-info">Loading...</div>
       </div>
-      <div class="grid-item" onclick="location.href='scout.html'">
-        <img src="images/icon-scout.png" alt="Scout">
-        Scout
+
+      <!-- Training -->
+      <div class="grid-item">
+        <h3>Match Preparation</h3>
+        <div id="trainingStatus">Checking training status...</div>
+        <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
       </div>
-      <div class="grid-item" onclick="location.href='league.html'">
-        <img src="images/icon-league.png" alt="League">
-        League
+
+      <!-- Top 3 Players -->
+      <div class="grid-item">
+        <h3>Top 3 Players</h3>
+        <div id="top-players-list" class="quick-grid" style="text-align: center;"></div>
       </div>
-      <div class="grid-item" onclick="location.href='match.html'">
-        <img src="images/icon-match.png" alt="Match">
-        Match
-      </div>
-      <div class="grid-item" onclick="location.href='auction.html'">
-        <img src="images/icon-auction.png" alt="Auction">
-        Auction
-      </div>
-      <div class="grid-item" onclick="location.href='store.html'">
-        <img src="images/icon-store.png" alt="Store">
-        Store
-      </div>
-      <div class="grid-item" onclick="location.href='myprofile.html'">
-        <img src="images/icon-profile.png" alt="Profile">
-        My Profile
-      </div>
-      <div class="grid-item" onclick="location.href='inbox.html'">
-        <img src="images/icon-inbox.png" alt="Inbox">
-        Inbox
+
+    </div>
+
+    <!-- Quick Access -->
+    <div class="quick-links">
+      <h3>Quick Access</h3>
+      <div class="quick-grid">
+        <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
+        <a href="team.html"><div class="icon">🧍‍♂️</div><div class="label">My Team</div></a>
+        <a href="matches.html"><div class="icon">📊</div><div class="label">Matches</div></a>
+        <a href="training.html"><div class="icon">🧠</div><div class="label">Training</div></a>
+        <a href="scout.html"><div class="icon">🕵️‍♂️</div><div class="label">Scout</div></a>
+        <a href="academy.html"><div class="icon">🎓</div><div class="label">Academy</div></a>
+        <a href="book-friendly.html"><div class="icon">🤝</div><div class="label">Friendly</div></a>
+        <a href="stadium.html"><div class="icon">🏟️</div><div class="label">Stadium</div></a>
+        <a href="store.html"><div class="icon">🛒</div><div class="label">Store</div></a>
+        <a href="finance.html"><div class="icon">💰</div><div class="label">Finance</div></a>
+        <a href="halloffame.html"><div class="icon">👑</div><div class="label">Hall of Fame</div></a>
+        <a href="myprofile.html"><div class="icon">⚙️</div><div class="label">Profile</div></a>
       </div>
     </div>
-  </main>
+  </div>
 
-  <!-- Bottom Navigation (loaded by shared-ui.js) -->
-  <div id="bottom-nav"></div>
-
-  <!-- JS -->
   <script type="module">
-    import { loadSharedUI } from './js/shared-ui.js';
-    loadSharedUI('top-nav', 'bottom-nav');
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { loadSharedUI, addManagerXP } from "./js/shared-ui.js";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    async function distributeDailyLoginXP(userId) {
+      const today = new Date().toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("profiles")
+        .select("last_xp_login_date")
+        .eq("user_id", userId)
+        .single();
+      if (data?.last_xp_login_date !== today) {
+        await addManagerXP(supabase, userId, "daily_login");
+        await supabase.from("profiles")
+          .update({ last_xp_login_date: today })
+          .eq("user_id", userId);
+      }
+    }
+
+   async function main() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return location.href = "login.html";
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!profile?.manager_name || !profile?.team_name)
+    return location.href = "profile-setup.html";
+
+  loadSharedUI({
+    supabase,
+    manager_name: profile.manager_name,
+    xp: profile.xp ?? 0,
+    coins: profile.coins ?? 0,
+    cash: profile.cash ?? 0
+  });
+
+  await distributeDailyLoginXP(user.id);
+
+  const xp = profile.xp ?? 0;
+  const levels = [
+    { name: "Beginner", xp: 0 },
+    { name: "Expert", xp: 250 },
+    { name: "Professional", xp: 750 },
+    { name: "Master", xp: 1750 },
+    { name: "Supreme", xp: 3500 },
+    { name: "World Class", xp: 5500 },
+    { name: "Ultimate", xp: 8500 },
+    { name: "Titan", xp: 13500 },
+    { name: "The Boss", xp: 1500000 },
+  ];
+  let currentLevel = levels[0], nextLevel = levels[1];
+  for (let i = 0; i < levels.length - 1; i++) {
+    if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
+      currentLevel = levels[i];
+      nextLevel = levels[i + 1];
+      break;
+    } else if (xp >= levels[levels.length - 1].xp) {
+      currentLevel = levels[levels.length - 1];
+      nextLevel = { name: "MAX", xp: currentLevel.xp + 1 };
+      break;
+    }
+  }
+  const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
+  document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
+  document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
+  document.getElementById("xp-fill").style.width = `${percent}%`;
+
+  // ✅ Fetch team FIRST
+  const { data: team } = await supabase
+    .from("teams")
+    .select("*")
+    .eq("owner_id", user.id)
+    .single();
+
+  if (!team) {
+    console.warn("No team found for user.");
+    return;
+  }
+
+  // ✅ Fetch fixture safely
+  try {
+    const { data: fixture } = await supabase
+      .from("matches")
+      .select("*")
+      .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+      .gte("date", new Date().toISOString())
+      .order("date", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (fixture) {
+      const opponentId = fixture.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
+      const { data: opponent } = await supabase
+        .from("teams")
+        .select("team_name")
+        .eq("id", opponentId)
+        .single();
+
+      document.getElementById("fixture-info").innerHTML = `
+        vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM
+      `;
+    } else {
+      document.getElementById("fixture-info").textContent = "No upcoming matches";
+    }
+  } catch (err) {
+    document.getElementById("fixture-info").textContent = "Error loading fixtures";
+  }
+
+  // ✅ Training status (always safe)
+  const { data: lastMatch } = await supabase
+    .from("matches")
+    .select("*")
+    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
+    .order("date", { ascending: false })
+    .limit(1)
+    .single();
+
+  const lastMatchDate = lastMatch?.date || "1970-01-01";
+  const { data: trainingLogs } = await supabase
+    .from("training_logs")
+    .select("*")
+    .eq("team_id", team.id)
+    .gte("created_at", lastMatchDate);
+
+  const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
+  document.getElementById("trainingStatus").innerHTML = trainedPlayers.size >= 3
+    ? "✅ <strong>Training Completed</strong> (3+ players trained)"
+    : "❌ <strong>Training Pending</strong> – Train 3 players";
+  document.getElementById("goTrainingBtn").disabled = trainedPlayers.size >= 3;
+
+// Top 3 Players
+const { data: players } = await supabase
+  .from("players")
+  .select("name, role, batting, bowling, keeping, image_url")
+  .eq("team_id", team.id);
+
+function getSkillTitle(score) {
+  if (score > 100) return "The Boss";
+  if (score > 80) return "Titan";
+  if (score > 60) return "World Class";
+  if (score > 50) return "Supreme";
+  if (score > 40) return "National";
+  if (score > 30) return "Professional";
+  if (score > 20) return "Domestic";
+  if (score > 10) return "Trainee";
+  return "Newbie";
+}
+
+const topPlayers = (players ?? [])
+  .map(p => {
+    const skills = {
+      Batting: p.batting ?? 0,
+      Bowling: p.bowling ?? 0,
+      Keeping: p.keeping ?? 0
+    };
+    const topSkill = Object.entries(skills).reduce((a, b) => b[1] > a[1] ? b : a);
+    return {
+      ...p,
+      topSkillName: topSkill[0],
+      topSkillValue: topSkill[1],
+      topSkillLevel: getSkillTitle(topSkill[1])
+    };
+  })
+  .sort((a, b) => b.topSkillValue - a.topSkillValue)
+  .slice(0, 3);
+
+document.getElementById("top-players-list").innerHTML = topPlayers.length
+  ? `
+    <div style="display: flex; justify-content: space-around; text-align: center;">
+      ${topPlayers.map(p => `
+        <div>
+          <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; object-position: top; margin-bottom:8px;" />
+          <div><strong>${p.name}</strong></div>
+          <div style="font-size: 0.85rem;">${p.role}</div>
+          <div style="font-size: 0.85rem; color: #ccc;">${p.topSkillName}: ${p.topSkillLevel}</div>
+        </div>
+          `).join("")}
+        </div>
+        `
+        : "No players found.";
+    }
+
+    main();
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
