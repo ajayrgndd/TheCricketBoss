@@ -74,6 +74,15 @@ function updateTopbarXPLevel(xp, level) {
   if (levelSpan) levelSpan.innerText = `Level: ${level}`;
 }
 
+// 🔹 Update Inbox Count Badge
+export function updateInboxCount(count) {
+  const badge = document.getElementById("inbox-count");
+  if (badge) {
+    badge.innerText = count > 99 ? "99+" : count;
+    badge.style.display = count > 0 ? "inline-block" : "none";
+  }
+}
+
 // Load top and bottom bars
 export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id }) {
   // Top bar
@@ -94,7 +103,12 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id 
       🪙 <span id="coins">${coins}</span> |
       💵 ₹<span id="cash">${cash}</span> |
       <span id="manager-level">${getManagerLevel(xp)}</span>
-      <a href="inbox.html" title="Inbox" style="margin-left:10px; font-size:18px;">📩</a>
+      <a href="inbox.html" title="Inbox" style="margin-left:10px; position:relative; font-size:18px;">
+        📩
+        <span id="inbox-count" 
+              style="display:none; position:absolute; top:-6px; right:-10px; background:red; color:white; font-size:10px; padding:2px 5px; border-radius:10px;">
+        </span>
+      </a>
     </div>
   `;
   document.body.prepend(topBar);
