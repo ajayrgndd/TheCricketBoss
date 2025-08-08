@@ -74,17 +74,8 @@ function updateTopbarXPLevel(xp, level) {
   if (levelSpan) levelSpan.innerText = `Level: ${level}`;
 }
 
-// 🔹 Update Inbox Count Badge
-export function updateInboxCount(count) {
-  const badge = document.getElementById("inbox-count");
-  if (badge) {
-    badge.innerText = count > 99 ? "99+" : count;
-    badge.style.display = count > 0 ? "inline-block" : "none";
-  }
-}
-
 // Load top and bottom bars
-export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id }) {
+export async function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id }) {
   // Top bar
   const topBar = document.createElement("div");
   topBar.className = "top-bar";
@@ -103,15 +94,45 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id 
       🪙 <span id="coins">${coins}</span> |
       💵 ₹<span id="cash">${cash}</span> |
       <span id="manager-level">${getManagerLevel(xp)}</span>
-      <a href="inbox.html" title="Inbox" style="margin-left:10px; position:relative; font-size:18px;">
+      <a href="inbox.html" title="Inbox" style="margin-left:10px; font-size:18px; position:relative;">
         📩
-        <span id="inbox-count" 
-              style="display:none; position:absolute; top:-6px; right:-10px; background:red; color:white; font-size:10px; padding:2px 5px; border-radius:10px;">
-        </span>
+        <span id="unreadCount" style="
+          position:absolute;
+          top:-6px;
+          right:-10px;
+          background:red;
+          color:white;
+          border-radius:50%;
+          padding:2px 5px;
+          font-size:10px;
+          display:none;
+        ">0</span>
       </a>
     </div>
   `;
   document.body.prepend(topBar);
+
+  // Fetch unread inbox count
+  if (supabase && user_id) {
+    try {
+      const { data, error } = await supabase
+        .from("inbox")
+        .select("id", { count: "exact" })
+        .eq("receiver_id", user_id)
+        .eq("read_status", false);
+
+      if (!error) {
+        const count = data.length;
+        const countEl = document.getElementById("unreadCount");
+        if (count > 0) {
+          countEl.innerText = count;
+          countEl.style.display = "inline-block";
+        }
+      }
+    } catch (err) {
+      console.error("Inbox count fetch failed:", err);
+    }
+  }
 
   // Bottom bar
   const bottomBar = document.createElement("div");
