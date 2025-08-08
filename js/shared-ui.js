@@ -94,12 +94,7 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id 
       🪙 <span id="coins">${coins}</span> |
       💵 ₹<span id="cash">${cash}</span> |
       <span id="manager-level">${getManagerLevel(xp)}</span>
-      <span class="top-notification" id="notification-icon" style="cursor:pointer;">
-        🔔 <span id="notification-count" style="color: yellow; font-weight: bold;">0</span>
-        <div id="notification-dropdown" class="notification-dropdown" hidden>
-          <ul id="notification-list"></ul>
-        </div>
-      </span>
+      <a href="inbox.html" title="Inbox" style="margin-left:10px; font-size:18px;">📩</a>
     </div>
   `;
   document.body.prepend(topBar);
@@ -136,65 +131,4 @@ export function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id 
       window.location.href = "login.html";
     }
   });
-
-  // Load notifications
-  if (user_id) {
-    loadNotifications(supabase, user_id);
-  }
-
-  // Bell icon toggle
-  const bell = document.getElementById("notification-icon");
-  const dropdownBox = document.getElementById("notification-dropdown");
-  bell.addEventListener("click", (e) => {
-    e.stopPropagation();
-    dropdownBox.hidden = !dropdownBox.hidden;
-  });
-
-  document.addEventListener("click", () => {
-    dropdownBox.hidden = true;
-  });
-}
-
-// 🔔 Load Notifications
-async function loadNotifications(supabase, userId) {
-  try {
-    const { data: notifications, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    if (error) throw error;
-
-    const list = document.getElementById("notification-list");
-    const countSpan = document.getElementById("notification-count");
-    list.innerHTML = "";
-
-    let unreadCount = 0;
-
-    notifications.forEach((n) => {
-      const li = document.createElement("li");
-      li.innerText = n.message;
-      li.className = "notification-item";
-      if (!n.is_read) {
-        li.style.fontWeight = "bold";
-        unreadCount++;
-      }
-      list.appendChild(li);
-    });
-
-    countSpan.innerText = unreadCount;
-
-    // Mark all as read after loading
-    if (unreadCount > 0) {
-      await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("user_id", userId)
-        .eq("is_read", false);
-    }
-  } catch (err) {
-    console.error("❌ Notification load error:", err.message);
-  }
 }
