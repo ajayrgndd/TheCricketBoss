@@ -1,4 +1,4 @@
-// XP → Level mapping 
+// ================== XP → Level mapping ==================
 export function getManagerLevel(xp) {
   if (xp >= 13500) return "The Boss";
   if (xp >= 8500) return "Ultimate";
@@ -10,7 +10,7 @@ export function getManagerLevel(xp) {
   return "Beginner";
 }
 
-// Add XP to manager
+// ================== Add XP to manager ==================
 export async function addManagerXP(supabase, userId, eventKey) {
   const XP_REWARDS = {
     daily_login: 10,
@@ -66,7 +66,7 @@ export async function addManagerXP(supabase, userId, eventKey) {
   }
 }
 
-// Optional: update UI top bar
+// Update XP & level display in topbar
 function updateTopbarXPLevel(xp, level) {
   const xpSpan = document.getElementById("xp");
   const levelSpan = document.getElementById("manager-level");
@@ -74,9 +74,32 @@ function updateTopbarXPLevel(xp, level) {
   if (levelSpan) levelSpan.innerText = `Level: ${level}`;
 }
 
-// Load top and bottom bars
-export async function loadSharedUI({ supabase, manager_name, xp, coins, cash, user_id }) {
-  // Top bar
+// ================== Auto-load shared UI ==================
+export async function loadSharedUI(supabase) {
+  // Check auth
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const user_id = user.id;
+
+  // Fetch profile data
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("manager_name, xp, coins, cash")
+    .eq("user_id", user_id)
+    .single();
+
+  if (error) {
+    console.error("❌ Failed to load profile:", error.message);
+    return;
+  }
+
+  const { manager_name, xp, coins, cash } = profile;
+
+  // ===== Top bar =====
   const topBar = document.createElement("div");
   topBar.className = "top-bar";
   topBar.innerHTML = `
@@ -112,29 +135,27 @@ export async function loadSharedUI({ supabase, manager_name, xp, coins, cash, us
   `;
   document.body.prepend(topBar);
 
-  // Fetch unread inbox count
-  if (supabase && user_id) {
-    try {
-      const { data, error } = await supabase
-        .from("inbox")
-        .select("id", { count: "exact" })
-        .eq("receiver_id", user_id)
-        .eq("read_status", false);
+  // ===== Fetch unread inbox count =====
+  try {
+    const { data, error: inboxError } = await supabase
+      .from("inbox")
+      .select("id", { count: "exact" })
+      .eq("receiver_id", user_id)
+      .eq("read_status", false);
 
-      if (!error) {
-        const count = data.length;
-        const countEl = document.getElementById("unreadCount");
-        if (count > 0) {
-          countEl.innerText = count;
-          countEl.style.display = "inline-block";
-        }
+    if (!inboxError) {
+      const count = data.length;
+      const countEl = document.getElementById("unreadCount");
+      if (count > 0) {
+        countEl.innerText = count;
+        countEl.style.display = "inline-block";
       }
-    } catch (err) {
-      console.error("Inbox count fetch failed:", err);
     }
+  } catch (err) {
+    console.error("Inbox count fetch failed:", err);
   }
 
-  // Bottom bar
+  // ===== Bottom bar =====
   const bottomBar = document.createElement("div");
   bottomBar.className = "bottom-nav";
   bottomBar.innerHTML = `
@@ -146,24 +167,19 @@ export async function loadSharedUI({ supabase, manager_name, xp, coins, cash, us
   `;
   document.body.appendChild(bottomBar);
 
-  // Dropdown menu toggle
+  // Dropdown toggle
   const dropdown = document.getElementById("managerName");
   const popup = document.getElementById("popupMenu");
   dropdown.addEventListener("click", () => {
     popup.style.display = popup.style.display === "flex" ? "none" : "flex";
   });
-
   window.addEventListener("click", (e) => {
-    if (!dropdown.contains(e.target)) {
-      popup.style.display = "none";
-    }
+    if (!dropdown.contains(e.target)) popup.style.display = "none";
   });
 
-  // Logout handler
+  // Logout
   document.getElementById("logoutBtn").addEventListener("click", async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-      window.location.href = "login.html";
-    }
+    await supabase.auth.signOut();
+    window.location.href = "login.html";
   });
 }
