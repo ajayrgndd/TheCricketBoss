@@ -1,12 +1,17 @@
 // js/shared-ui.js
 import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
-// Supabase config
 const supabaseUrl = "https://iukofcmatlfhfwcechdq.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
+const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"; // keep secure
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Main loader for top & bottom nav
+// ✅ Get logged-in user ID (with fallback)
+export async function getUserId() {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user ? user.id : "demo-user"; 
+}
+
+// ✅ Load shared top & bottom navigation bars
 export async function loadSharedUI(topNavId, bottomNavId) {
   const topNavEl = document.getElementById(topNavId);
   const bottomNavEl = document.getElementById(bottomNavId);
@@ -16,28 +21,23 @@ export async function loadSharedUI(topNavId, bottomNavId) {
   let coins = 0;
   let cash = 0;
 
-  // Get logged-in user
-  const { data: { user } } = await supabase.auth.getUser();
+  const userId = await getUserId();
 
-  if (user) {
-    const userId = user.id;
-
-    // Fetch profile data
-    const { data: profileData, error } = await supabase
+  if (userId !== "demo-user") {
+    const { data: profileData } = await supabase
       .from("profiles")
-      .select("username, xp, coins, cash")
-      .eq("id", userId)
+      .select("manager_name, xp, coins, cash")
+      .eq("user_id", userId) // ✅ correct column
       .single();
 
-    if (!error && profileData) {
-      username = profileData.username || username;
-      xp = profileData.xp || 0;
-      coins = profileData.coins || 0;
-      cash = profileData.cash || 0;
+    if (profileData) {
+      username = profileData.manager_name || username;
+      xp = profileData.xp ?? 0;
+      coins = profileData.coins ?? 0;
+      cash = profileData.cash ?? 0;
     }
   }
 
-  // Top Navigation
   if (topNavEl) {
     topNavEl.innerHTML = `
       <div class="top-bar">
@@ -49,7 +49,6 @@ export async function loadSharedUI(topNavId, bottomNavId) {
     `;
   }
 
-  // Bottom Navigation
   if (bottomNavEl) {
     bottomNavEl.innerHTML = `
       <div class="bottom-bar">
