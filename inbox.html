@@ -5,87 +5,103 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Inbox – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
+  <link rel="stylesheet" href="css/inbox.css" />
+  <script type="module" src="shared-ui.js"></script>
   <style>
-    body {
-      background-color: #121212;
-      color: #fff;
-      margin: 0;
-      font-family: Arial, sans-serif;
-      padding-top: 60px; /* space for top bar */
-      padding-bottom: 60px; /* space for bottom nav */
-    }
-    .inbox-container {
-      padding: 10px;
-    }
-    .message-card {
-      background: #1e1e1e;
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      border: 1px solid #333;
-    }
-    .message-header {
+    #inboxHeader {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 10px;
+      background: #222;
+      color: #fff;
+      border-bottom: 1px solid #333;
     }
-    .message-title {
-      font-weight: bold;
-      font-size: 15px;
+    #deleteAllBtn {
+      background: crimson;
+      border: none;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9rem;
     }
-    .message-date {
-      font-size: 12px;
-      color: #bbb;
+    #deleteAllBtn:hover {
+      background: darkred;
     }
-    .message-body {
-      margin-top: 5px;
-      font-size: 14px;
-      color: #ddd;
+    .message-card {
+      position: relative;
+      background: #1e1e1e;
+      border-left: 5px solid transparent;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      transition: transform 0.2s ease, opacity 0.2s ease;
     }
-    .unread {
-      border-left: 4px solid #ffcc00;
+    .message-card.unread {
+      border-left-color: gold;
+    }
+    .message-card .delete-btn {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    .message-card .delete-btn:hover {
+      opacity: 1;
+    }
+    .swipe-delete {
+      transform: translateX(-100%);
+      opacity: 0;
     }
   </style>
 </head>
 <body>
+  <!-- Top Nav -->
+  <div id="top-nav"></div>
 
-  <div class="inbox-container" id="inboxContainer">
-    <!-- Messages will be inserted here by inbox.js -->
+  <!-- Inbox Header -->
+  <div id="inboxHeader">
+    <h2>Inbox</h2>
+    <button id="deleteAllBtn">Delete All</button>
   </div>
 
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- Inbox Container -->
+  <div id="inboxContainer" style="padding: 10px;"></div>
+
+  <!-- Bottom Nav -->
+  <div id="bottom-nav"></div>
+
   <script type="module">
     import { loadSharedUI } from './shared-ui.js';
     import { loadInboxMessages } from './inbox.js';
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js';
 
-    const supabase = window.supabase.createClient(
-      'https://iukofcmatlfhfwcechdq.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
-    );
+    // Supabase init
+    const supabaseUrl = "https://iukofcmatlfhfwcechdq.supabase.co";
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch current user profile from Supabase
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      window.location.href = "login.html";
-    } else {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('manager_name, xp, coins, cash')
-        .eq('user_id', user.id)
-        .single();
+    const userId = "demo-user"; // Replace with auth user ID
 
-      loadSharedUI({
-        supabase,
-        manager_name: profile.manager_name,
-        xp: profile.xp,
-        coins: profile.coins,
-        cash: profile.cash,
-        user_id: user.id
-      });
+    loadSharedUI('top-nav', 'bottom-nav');
+    loadInboxMessages(supabase, userId);
 
-      loadInboxMessages(supabase, user.id);
-    }
+    // Delete All handler
+    document.getElementById("deleteAllBtn").addEventListener("click", async () => {
+      if (!confirm("Delete all messages?")) return;
+
+      document.getElementById("inboxContainer").innerHTML = `<p style="text-align:center; color:#aaa;">No messages yet.</p>`;
+
+      // Supabase call
+      /*
+      await supabase
+        .from("inbox")
+        .delete()
+        .eq("user_id", userId);
+      */
+    });
   </script>
-
 </body>
 </html>
