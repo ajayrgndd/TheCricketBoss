@@ -1,7 +1,27 @@
+<!-- /components/bottom-nav.html -->
 <div class="bottom-nav">
-  <a href="team.html">Team</a>
-  <a href="scout.html">Scout</a>
-  <a href="home.html">Home</a>
-  <a href="auction.html">Auction</a>
-  <a href="store.html">Store</a>
+  <a href="team.html">🏏 Team</a>
+  <a href="scout.html">🔍 Scout</a>
+  <a href="home.html">🏠 Home</a>
+  <a href="auction.html">📦 Auction</a>
+  <a href="store.html">🛒 Store</a>
 </div>
+
+<style>
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    background: linear-gradient(90deg, #111, #1a1a1a);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 6px 0;
+    z-index: 1000;
+    border-top: 1px solid #333;
+  }
+  .bottom-nav a { color:#fff; text-decoration:none; font-size:14px; padding:8px 10px; border-radius:6px; }
+  .bottom-nav a.active { background: rgba(255,255,255,0.06); color:#00e676; font-weight:700; }
+</style>
