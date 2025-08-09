@@ -40,7 +40,6 @@ export async function loadSmoothUI(topNavId, bottomNavId) {
     const bottomNavHeight = bottomNav.offsetHeight || 60;
     document.body.style.paddingTop = `${topNavHeight}px`;
     document.body.style.paddingBottom = `${bottomNavHeight}px`;
-  });
 }
 
     console.log('✅ Smooth UI loaded successfully');
