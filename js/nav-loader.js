@@ -10,7 +10,7 @@ async function loadNav() {
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
-    window.location.href = 'signin.html';
+    window.location.href = 'login.html';
     return;
   }
 
@@ -19,7 +19,7 @@ async function loadNav() {
   const { data: profile } = await supabase
     .from('profiles')
     .select('username, xp, coins, cash')
-    .eq('id', userId)
+    .eq('user_id', userId)
     .single();
 
   if (profile) {
