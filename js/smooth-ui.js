@@ -35,6 +35,13 @@ export async function loadSmoothUI(topNavId, bottomNavId) {
         bottomNav.style.opacity = '1';
       });
     }
+ // Add padding to content so it doesn't hide under fixed navs
+    const topNavHeight = topNav.offsetHeight || 60; // fallback height
+    const bottomNavHeight = bottomNav.offsetHeight || 60;
+    document.body.style.paddingTop = `${topNavHeight}px`;
+    document.body.style.paddingBottom = `${bottomNavHeight}px`;
+  });
+}
 
     console.log('✅ Smooth UI loaded successfully');
   } catch (error) {
