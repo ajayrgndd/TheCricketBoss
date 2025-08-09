@@ -1,48 +1,39 @@
-// smooth-ui.js
-export async function loadSmoothUI(topNavId, bottomNavId) {
+// js/smooth-ui.js
+import { loadNav } from './nav-loader.js';
+
+/**
+ * Loads navs then fades them in and sets body padding so content does not hide under fixed bars.
+ * @param {string} topId element ID for top nav container (default 'top-nav')
+ * @param {string} bottomId element ID for bottom nav container (default 'bottom-nav')
+ */
+export async function loadSmoothUI(topId = 'top-nav', bottomId = 'bottom-nav') {
   try {
-    // Fetch top and bottom nav HTML files
-    const [topRes, bottomRes] = await Promise.all([
-      fetch('components/top-nav.html'),
-      fetch('components/bottom-nav.html')
-    ]);
+    const result = await loadNav(topId, bottomId);
+    const topEl = result?.topEl ?? document.getElementById(topId);
+    const bottomEl = result?.bottomEl ?? document.getElementById(bottomId);
 
-    if (!topRes.ok || !bottomRes.ok) {
-      throw new Error('Failed to fetch navigation HTML files');
+    // Fade in
+    [topEl, bottomEl].forEach((el) => {
+      if (!el) return;
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 0.28s ease';
+      // ensure next frame then set to 1
+      requestAnimationFrame(() => (el.style.opacity = '1'));
+    });
+
+    // Ensure content not hidden under fixed navs
+    // Give it a tick to ensure offsetHeight is calculated correctly.
+    await new Promise((r) => setTimeout(r, 40));
+    const topH = topEl?.offsetHeight || 56;
+    const bottomH = bottomEl?.offsetHeight || 56;
+    // Only set padding if not already set (so we don't override page-specific layout)
+    if (!document.body.style.paddingTop || document.body.style.paddingTop === '0px') {
+      document.body.style.paddingTop = `${topH}px`;
     }
-
-    const topHtml = await topRes.text();
-    const bottomHtml = await bottomRes.text();
-
-    // Inject and fade-in Top Nav
-    const topNav = document.getElementById(topNavId);
-    if (topNav) {
-      topNav.style.opacity = '0';
-      topNav.innerHTML = topHtml;
-      requestAnimationFrame(() => {
-        topNav.style.transition = 'opacity 0.3s ease';
-        topNav.style.opacity = '1';
-      });
+    if (!document.body.style.paddingBottom || document.body.style.paddingBottom === '0px') {
+      document.body.style.paddingBottom = `${bottomH}px`;
     }
-
-    // Inject and fade-in Bottom Nav
-    const bottomNav = document.getElementById(bottomNavId);
-    if (bottomNav) {
-      bottomNav.style.opacity = '0';
-      bottomNav.innerHTML = bottomHtml;
-      requestAnimationFrame(() => {
-        bottomNav.style.transition = 'opacity 0.3s ease';
-        bottomNav.style.opacity = '1';
-      });
-    }
- // Add padding to content so it doesn't hide under fixed navs
-    const topNavHeight = topNav.offsetHeight || 60; // fallback height
-    const bottomNavHeight = bottomNav.offsetHeight || 60;
-    document.body.style.paddingTop = `${topNavHeight}px`;
-    document.body.style.paddingBottom = `${bottomNavHeight}px`;
-
-    console.log('✅ Smooth UI loaded successfully');
-  } catch (error) {
-    console.error('❌ Error loading Smooth UI:', error);
+  } catch (err) {
+    console.error('smooth-ui load failed:', err);
   }
 }
