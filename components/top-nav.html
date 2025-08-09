@@ -1,11 +1,14 @@
+<!-- /components/top-nav.html -->
 <div id="top-nav" class="top-nav">
   <div class="top-left">
+    <img src="/assets/logo.png" alt="Logo" style="height:26px; margin-right:10px; vertical-align:middle;">
     <span id="nav-username" class="username">Loading...</span>
   </div>
   <div class="top-right">
     <span class="xp" id="nav-xp">XP: 0</span>
     <span class="coins" id="nav-coins">Coins: 0</span>
     <span class="cash" id="nav-cash">Cash: 0</span>
+    <a href="inbox.html" title="Inbox" style="margin-left:14px; font-size:18px;">📩</a>
   </div>
 </div>
 
@@ -27,22 +30,10 @@
     border-bottom: 2px solid #444;
     font-family: 'Poppins', sans-serif;
   }
-  .top-left .username {
-    font-weight: 600;
-    font-size: 15px;
-  }
-  .top-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 500;
-  }
-  .top-right span {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .xp { color: #4cafef; }
-  .coins { color: #ffd700; }
-  .cash { color: #00ff88; }
+  .top-left { display:flex; align-items:center; gap:8px; font-weight:600; }
+  .top-right { display:flex; align-items:center; gap:12px; font-weight:500; }
+  .xp { color:#4cafef; }
+  .coins { color:#ffd700; }
+  .cash { color:#00ff88; }
+  .top-nav a { color:inherit; text-decoration:none; }
 </style>
