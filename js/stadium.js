@@ -1,4 +1,3 @@
-// js/stadium.js
 import { loadSharedUI } from './shared-ui-stadium.js';
 import { addManagerXP } from './shared-xp.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js';
@@ -10,9 +9,8 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
 );
 
-// Upgrade durations in milliseconds
 const STADIUM_UPGRADE_DURATIONS = {
-  1: 24 * 60 * 60 * 1000,
+  1: 5000, // Testing: 5s instead of 24h
   2: 48 * 60 * 60 * 1000,
   3: 72 * 60 * 60 * 1000,
   4: 96 * 60 * 60 * 1000,
@@ -47,9 +45,7 @@ function getManagerLevelLabel(xp) {
 }
 
 async function init() {
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
   const { data: profile } = await supabase
@@ -59,6 +55,13 @@ async function init() {
     .single();
 
   if (!profile) return;
+
+  // Check if an upgrade was pending and time is over → Upgrade stadium
+  if (profile.stadium_upgrade_end && new Date(profile.stadium_upgrade_end) <= new Date()) {
+    await completeUpgrade(user.id, profile.stadium_level);
+    profile.stadium_level += 1;
+    profile.stadium_upgrade_end = null;
+  }
 
   updateStadiumDisplay(profile.stadium_level, profile.xp);
 
@@ -88,12 +91,11 @@ async function init() {
       return;
     }
 
-    // Calculate upgrade end time
     const now = new Date();
-    const duration = STADIUM_UPGRADE_DURATIONS[currentLevel]; // current level to next
+    const duration = STADIUM_UPGRADE_DURATIONS[currentLevel];
     const upgradeEndTime = new Date(now.getTime() + duration).toISOString();
 
-    const updates = await supabase
+    const { error } = await supabase
       .from("profiles")
       .update({
         stadium_upgrade_end: upgradeEndTime,
@@ -101,10 +103,25 @@ async function init() {
       })
       .eq("user_id", user.id);
 
-    if (!updates.error) {
+    if (!error) {
       disableUpgradeBtnWithCountdown(upgradeEndTime);
     }
   });
+}
+
+async function completeUpgrade(userId, currentLevel) {
+  const newLevel = currentLevel + 1;
+  if (newLevel > 5) return;
+
+  await supabase
+    .from("profiles")
+    .update({
+      stadium_level: newLevel,
+      stadium_upgrade_end: null
+    })
+    .eq("user_id", userId);
+
+  await addManagerXP(supabase, userId, `stadium_lvl${newLevel}`);
 }
 
 function disableUpgradeBtnWithCountdown(endTime) {
@@ -118,9 +135,9 @@ function disableUpgradeBtnWithCountdown(endTime) {
     const diff = end - now;
 
     if (diff <= 0) {
-      msg.innerText = "Upgrade available!";
+      msg.innerText = "Upgrade complete!";
       btn.disabled = false;
-      location.reload(); // To reflect the new level
+      location.reload();
       return;
     }
 
