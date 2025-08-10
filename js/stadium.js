@@ -10,7 +10,7 @@ const supabase = createClient(
 );
 
 const STADIUM_UPGRADE_DURATIONS = {
-  1: 5000, // Testing: 5s instead of 24h
+  1: 24 * 60 * 60 * 1000,
   2: 48 * 60 * 60 * 1000,
   3: 72 * 60 * 60 * 1000,
   4: 96 * 60 * 60 * 1000,
