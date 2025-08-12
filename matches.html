@@ -62,7 +62,7 @@
         const { data: leagueMatches, error: lErr } = await supabase
           .from("fixtures")
           .select(`
-            id, date, time, home_team_id, away_team_id, status, result
+            id, match_date, match_time, home_team_id, away_team_id, is_completed, result
           `)
           .or(`home_team_id.eq.${userId},away_team_id.eq.${userId}`)
           .order("date", { ascending: true });
@@ -115,3 +115,4 @@
   </script>
 </body>
 </html>
+
