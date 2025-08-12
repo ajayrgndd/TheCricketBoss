@@ -5,108 +5,113 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Matches – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script type="module" src="js/smooth-ui.js"></script>
+  <style>
+    body { background: #121212; color: white; font-family: Arial, sans-serif; }
+    .section { margin: 20px; }
+    .match-card {
+      padding: 12px;
+      background: #1e1e1e;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .hidden-score { color: gray; font-style: italic; }
+  </style>
 </head>
 <body>
-  <h1>Matches</h1>
-  <div id="matches-container"></div>
+  <div class="section">
+    <h2>Upcoming Matches</h2>
+    <div id="upcoming-matches"></div>
 
-  <script>
-    // 1️⃣ Initialize Supabase client — make sure URL & key match your login page
-    const SUPABASE_URL = "https://iukofcmatlhfwccehdq.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"; // Replace with your real anon key
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <h2>Live Matches</h2>
+    <div id="live-matches"></div>
 
-    // 2️⃣ Check session first
-    async function checkLogin() {
-      console.log("🔍 Checking session...");
+    <h2>Completed Matches</h2>
+    <div id="completed-matches"></div>
+  </div>
+
+  <script type="module">
+    import { supabase } from "./js/supabaseClient.js";
+
+    async function getUserId() {
       const { data: { session }, error } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error("Session fetch error:", error);
-      }
-
-      console.log("Session data:", session);
-
-      if (!session) {
-        alert("Please login first");
+      if (error || !session) {
+        console.error("❌ No active session found", error);
         window.location.href = "login.html";
         return null;
       }
-
-      console.log("✅ Logged in as:", session.user.email);
-      return session.user;
+      return session.user.id;
     }
 
-    // 3️⃣ Load matches from correct table
-    async function loadMatches(user) {
+    async function fetchMatches(userId) {
       try {
-        // Example: fetching friendly matches from `matches` table
-        const { data, error } = await supabase
+        const today = new Date().toISOString().split("T")[0];
+
+        // Friendly Matches
+        const { data: friendlyMatches, error: fErr } = await supabase
           .from("matches")
           .select(`
-            id,
-            date,
-            time,
-            home_team:home_team_id ( id, name ),
-            away_team:away_team_id ( id, name ),
-            status,
-            match_result,
-            is_friendly
+            id, date, time, home_team_id, away_team_id, status, result, is_friendly
           `)
+          .or(`home_team_id.eq.${userId},away_team_id.eq.${userId}`)
           .order("date", { ascending: true });
 
-        if (error) {
-          console.error("❌ Error fetching matches:", error);
-          return;
-        }
+        if (fErr) throw fErr;
 
-        const container = document.getElementById("matches-container");
-        container.innerHTML = "";
+        // League Matches
+        const { data: leagueMatches, error: lErr } = await supabase
+          .from("fixtures")
+          .select(`
+            id, date, time, home_team_id, away_team_id, status, result
+          `)
+          .or(`home_team_id.eq.${userId},away_team_id.eq.${userId}`)
+          .order("date", { ascending: true });
 
-        if (!data || data.length === 0) {
-          container.innerHTML = "<p>No matches found.</p>";
-          return;
-        }
+        if (lErr) throw lErr;
 
-        data.forEach(match => {
-          const div = document.createElement("div");
-          div.className = "match-card";
-          div.innerHTML = `
-            <strong>${match.home_team?.name || "Unknown"} vs ${match.away_team?.name || "Unknown"}</strong><br>
-            ${match.date} ${match.time || ""}<br>
-            Status: ${match.status}<br>
-            Type: ${match.is_friendly ? "Friendly" : "League"}
-          `;
-          container.appendChild(div);
-        });
+        return [...friendlyMatches, ...leagueMatches];
       } catch (err) {
-        console.error("Unexpected error loading matches:", err);
+        console.error("❌ Match fetch failed:", err);
+        return [];
       }
     }
 
-    // 4️⃣ Main flow
+    function renderMatches(matches) {
+      const upcomingEl = document.getElementById("upcoming-matches");
+      const liveEl = document.getElementById("live-matches");
+      const completedEl = document.getElementById("completed-matches");
+
+      const now = new Date();
+
+      matches.forEach(match => {
+        const matchDateTime = new Date(`${match.date}T${match.time}`);
+        const card = document.createElement("div");
+        card.classList.add("match-card");
+
+        if (match.status === "completed") {
+          card.innerHTML = `<strong>Final:</strong> ${match.result?.score || "N/A"}`;
+          completedEl.appendChild(card);
+        }
+        else if (match.status === "live") {
+          card.innerHTML = `<strong>Live:</strong> ${
+            now >= matchDateTime ? (match.result?.score || "In Progress") : `<span class="hidden-score">Score will be visible at start</span>`
+          }`;
+          liveEl.appendChild(card);
+        }
+        else {
+          card.innerHTML = `<strong>Scheduled:</strong> ${match.date} ${match.time}`;
+          upcomingEl.appendChild(card);
+        }
+      });
+    }
+
     (async () => {
-      const user = await checkLogin();
-      if (user) {
-        await loadMatches(user);
-      }
+      const userId = await getUserId();
+      if (!userId) return;
+
+      const matches = await fetchMatches(userId);
+      renderMatches(matches);
     })();
   </script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 10px;
-      background: #121212;
-      color: white;
-    }
-    .match-card {
-      background: #1e1e1e;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-    }
-  </style>
 </body>
 </html>
