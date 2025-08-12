@@ -3,163 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Matches – TheCricketBoss</title>
+  <title>Matches – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
-  <style>
-    body {
-      background: #121212;
-      color: white;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    .match-card {
-      background: #1e1e1e;
-      margin: 10px;
-      padding: 15px;
-      border-radius: 8px;
-    }
-    .match-header {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .match-time {
-      font-size: 0.9em;
-      color: #ccc;
-    }
-    .match-score {
-      font-size: 1.1em;
-      margin-top: 8px;
-    }
-    .hidden-score {
-      color: #888;
-      font-style: italic;
-    }
-    main {
-      padding-top: 60px; /* for top nav */
-      padding-bottom: 60px; /* for bottom nav */
-    }
-  </style>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
+  <h1>Matches</h1>
+  <div id="matches-container"></div>
 
-  <!-- Top Bar (from smooth-ui.js) -->
-  <div id="top-bar"></div>
+  <script>
+    // 1️⃣ Initialize Supabase client — make sure URL & key match your login page
+    const SUPABASE_URL = "https://iukofcmatlhfwccehdq.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"; // Replace with your real anon key
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  <main id="matches-container">
-    <h2 style="padding:10px;">Your Matches</h2>
-    <div id="matches-list"></div>
-  </main>
+    // 2️⃣ Check session first
+    async function checkLogin() {
+      console.log("🔍 Checking session...");
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-  <!-- Bottom Nav (from smooth-ui.js) -->
-  <div id="bottom-nav"></div>
+      if (error) {
+        console.error("Session fetch error:", error);
+      }
 
-  <!-- Supabase Client -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2" defer></script>
-  <!-- Smooth UI -->
-  <script type="module" src="js/smooth-ui.js"></script>
+      console.log("Session data:", session);
 
-  <!-- Matches Logic -->
-  <script type="module">
-    // Wait for Supabase to be loaded from CDN
-    document.addEventListener("DOMContentLoaded", async () => {
-      const supabaseClient = window.supabase.createClient(
-        "https://iukofcmatlhfwccehdq.supabase.co",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-      );
-
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) {
+      if (!session) {
         alert("Please login first");
         window.location.href = "login.html";
-        return;
+        return null;
       }
 
-      const matchesList = document.getElementById("matches-list");
+      console.log("✅ Logged in as:", session.user.email);
+      return session.user;
+    }
 
-      async function fetchLeagueMatches() {
-        const { data, error } = await supabaseClient
-          .from("fixtures")
-          .select(`
-            id, date, time, home_team_id, away_team_id, status, match_result, result,
-            home_team:teams!fixtures_home_team_id_fkey(name),
-            away_team:teams!fixtures_away_team_id_fkey(name)
-          `)
-          .or(`home_team_id.eq.${user.id},away_team_id.eq.${user.id}`)
-          .order("date", { ascending: true });
-
-        if (error) {
-          console.error("League matches fetch error:", error);
-          return [];
-        }
-        return data.map(m => ({ ...m, type: "league" }));
-      }
-
-      async function fetchFriendlyMatches() {
-        const { data, error } = await supabaseClient
+    // 3️⃣ Load matches from correct table
+    async function loadMatches(user) {
+      try {
+        // Example: fetching friendly matches from `matches` table
+        const { data, error } = await supabase
           .from("matches")
           .select(`
-            id, date, time, home_team_id, away_team_id, status, match_result, result,
-            home_team:teams!matches_home_team_id_fkey(name),
-            away_team:teams!matches_away_team_id_fkey(name)
+            id,
+            date,
+            time,
+            home_team:home_team_id ( id, name ),
+            away_team:away_team_id ( id, name ),
+            status,
+            match_result,
+            is_friendly
           `)
-          .eq("is_friendly", true)
-          .or(`home_team_id.eq.${user.id},away_team_id.eq.${user.id}`)
           .order("date", { ascending: true });
 
         if (error) {
-          console.error("Friendly matches fetch error:", error);
-          return [];
-        }
-        return data.map(m => ({ ...m, type: "friendly" }));
-      }
-
-      function renderMatches(allMatches) {
-        matchesList.innerHTML = "";
-        if (allMatches.length === 0) {
-          matchesList.innerHTML = "<p style='padding:10px;'>No matches scheduled.</p>";
+          console.error("❌ Error fetching matches:", error);
           return;
         }
 
-        allMatches.forEach(match => {
-          const matchDate = new Date(`${match.date}T${match.time}`);
-          const now = new Date();
-          const matchStarted = now >= matchDate;
+        const container = document.getElementById("matches-container");
+        container.innerHTML = "";
 
-          const scoreHTML = match.result
-            ? `<div class="match-score">${match.result.home_score} - ${match.result.away_score}</div>`
-            : `<div class="match-score hidden-score">${matchStarted ? "No result yet" : "Scores hidden until match starts"}</div>`;
+        if (!data || data.length === 0) {
+          container.innerHTML = "<p>No matches found.</p>";
+          return;
+        }
 
-          const card = document.createElement("div");
-          card.className = "match-card";
-          card.innerHTML = `
-            <div class="match-header">
-              ${match.home_team.name} vs ${match.away_team.name}
-            </div>
-            <div class="match-time">${match.date} ${match.time}</div>
-            ${matchStarted && match.result ? scoreHTML : `<div class="match-score hidden-score">Scores hidden until match starts</div>`}
+        data.forEach(match => {
+          const div = document.createElement("div");
+          div.className = "match-card";
+          div.innerHTML = `
+            <strong>${match.home_team?.name || "Unknown"} vs ${match.away_team?.name || "Unknown"}</strong><br>
+            ${match.date} ${match.time || ""}<br>
+            Status: ${match.status}<br>
+            Type: ${match.is_friendly ? "Friendly" : "League"}
           `;
-          matchesList.appendChild(card);
+          container.appendChild(div);
         });
+      } catch (err) {
+        console.error("Unexpected error loading matches:", err);
       }
+    }
 
-      async function loadMatches() {
-        const [leagueMatches, friendlyMatches] = await Promise.all([
-          fetchLeagueMatches(),
-          fetchFriendlyMatches()
-        ]);
-
-        const merged = [...leagueMatches, ...friendlyMatches].sort((a, b) => {
-          const dateA = new Date(`${a.date}T${a.time}`);
-          const dateB = new Date(`${b.date}T${b.time}`);
-          return dateA - dateB;
-        });
-
-        renderMatches(merged);
+    // 4️⃣ Main flow
+    (async () => {
+      const user = await checkLogin();
+      if (user) {
+        await loadMatches(user);
       }
-
-      loadMatches();
-    });
+    })();
   </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      background: #121212;
+      color: white;
+    }
+    .match-card {
+      background: #1e1e1e;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+    }
+  </style>
 </body>
 </html>
