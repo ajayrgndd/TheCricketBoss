@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Matches – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css"/>
+  <script src="js/smooth-ui.js" defer></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="js/matches.js" defer></script>
+  <style>
+    body { background: #121212; color: #fff; margin: 0; }
+    .section { padding: 12px; }
+    .match-card {
+      background: #1e1e1e; margin: 10px 0; padding: 10px;
+      border-radius: 8px; display: flex; justify-content: space-between;
+      align-items: center; cursor: pointer;
+    }
+    .match-info { display: flex; align-items: center; gap: 10px; }
+    .team-logo { width: 40px; height: 40px; object-fit: contain; }
+    .match-type { font-size: 0.75em; opacity: 0.8; }
+    .score { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="top-bar"></div>
+
+  <div class="section">
+    <h2>Live Matches</h2>
+    <div id="live-matches"></div>
+
+    <h2>Upcoming Matches</h2>
+    <div id="upcoming-matches"></div>
+
+    <h2>Completed Matches</h2>
+    <div id="completed-matches"></div>
+  </div>
+
+  <div id="bottom-nav"></div>
+</body>
+</html>
