@@ -1,31 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Matches – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css"/>
-  <script src="js/smooth-ui.js" defer></script>
+  <link rel="stylesheet" href="styles/global.css">
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="js/matches.js" defer></script>
+  <script src="js/smooth-ui.js" defer></script>
   <style>
-    body { background: #121212; color: #fff; margin: 0; }
-    .section { padding: 12px; }
-    .match-card {
-      background: #1e1e1e; margin: 10px 0; padding: 10px;
-      border-radius: 8px; display: flex; justify-content: space-between;
-      align-items: center; cursor: pointer;
+    body {
+      background-color: #121212;
+      color: white;
+      margin: 0;
+      font-family: Arial, sans-serif;
     }
-    .match-info { display: flex; align-items: center; gap: 10px; }
-    .team-logo { width: 40px; height: 40px; object-fit: contain; }
-    .match-type { font-size: 0.75em; opacity: 0.8; }
-    .score { font-weight: bold; }
+    .container {
+      padding: 10px;
+      padding-top: 60px; /* for top nav */
+      padding-bottom: 70px; /* for bottom nav */
+    }
+    h2 {
+      margin-top: 20px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+      font-size: 1.2em;
+    }
+    .match-card {
+      display: flex;
+      align-items: center;
+      background: #1e1e1e;
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .match-card img {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      margin-right: 10px;
+      object-fit: cover;
+    }
+    .match-info {
+      flex: 1;
+    }
+    .match-type {
+      font-size: 0.8em;
+      color: #bbb;
+    }
+    .match-score {
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+    .match-status {
+      font-size: 0.8em;
+      color: #4caf50;
+    }
+    .completed-score {
+      color: #ff9800;
+    }
+    .upcoming-time {
+      color: #03a9f4;
+    }
   </style>
 </head>
 <body>
-  <div id="top-bar"></div>
 
-  <div class="section">
+  <!-- Top Nav -->
+  <div id="top-nav"></div>
+
+  <div class="container">
     <h2>Live Matches</h2>
     <div id="live-matches"></div>
 
@@ -36,6 +80,106 @@
     <div id="completed-matches"></div>
   </div>
 
+  <!-- Bottom Nav -->
   <div id="bottom-nav"></div>
+
+  <script>
+    const supabase = supabase.createClient(
+      'https://iukofcmatlfhfwcechdq.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
+    );
+
+    async function loadMatches() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert("Please login first");
+        window.location.href = "login.html";
+        return;
+      }
+
+      // Fetch user team ID
+      const { data: userTeam, error: teamErr } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
+
+      if (teamErr || !userTeam) {
+        console.error("User team fetch error", teamErr);
+        return;
+      }
+
+      const teamId = userTeam.id;
+
+      // Fetch League Fixtures
+      const { data: leagueFixtures } = await supabase
+        .from('fixtures')
+        .select(`
+          id, home_team_id, away_team_id, match_datetime, is_completed, result,
+          home:home_team_id (team_name, logo_url),
+          away:away_team_id (team_name, logo_url)
+        `)
+        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+
+      // Fetch Friendly Matches
+      const { data: friendlyMatches } = await supabase
+        .from('matches')
+        .select(`
+          id, home_team_id, away_team_id, date, time, status, result, is_friendly,
+          home:home_team_id (team_name, logo_url),
+          away:away_team_id (team_name, logo_url)
+        `)
+        .eq('is_friendly', true)
+        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+
+      const now = new Date();
+      const liveMatches = [];
+      const upcomingMatches = [];
+      const completedMatches = [];
+
+      function processMatch(match, type) {
+        let matchTime;
+        if (type === 'league') {
+          matchTime = match.match_datetime ? new Date(match.match_datetime) : null;
+        } else {
+          matchTime = match.date && match.time ? new Date(`${match.date}T${match.time}`) : null;
+        }
+
+        const isLive = matchTime && now >= matchTime && now < new Date(matchTime.getTime() + 3 * 60 * 60 * 1000); // 3 hrs window
+        const isCompleted = match.is_completed || match.status === 'completed';
+
+        const card = `
+          <div class="match-card" onclick="${isLive ? `window.location='match-simulation.html?id=${match.id}'` : ''}">
+            <img src="${match.home.logo_url || 'images/default-logo.png'}" alt="">
+            <div class="match-info">
+              <div>${match.home.team_name} vs ${match.away.team_name}</div>
+              <div class="match-type">${type === 'league' ? 'LEAGUE MATCH' : 'FRIENDLY'}</div>
+              ${
+                isLive
+                  ? `<div class="match-status">LIVE</div>`
+                  : isCompleted
+                    ? `<div class="completed-score">${match.result ? JSON.stringify(match.result) : 'Result not available'}</div>`
+                    : `<div class="upcoming-time">${matchTime ? matchTime.toLocaleString() : ''}</div>`
+              }
+            </div>
+          </div>
+        `;
+
+        if (isLive) liveMatches.push(card);
+        else if (isCompleted) completedMatches.push(card);
+        else upcomingMatches.push(card);
+      }
+
+      leagueFixtures.forEach(m => processMatch(m, 'league'));
+      friendlyMatches.forEach(m => processMatch(m, 'friendly'));
+
+      document.getElementById('live-matches').innerHTML = liveMatches.join('') || '<p>No live matches</p>';
+      document.getElementById('upcoming-matches').innerHTML = upcomingMatches.join('') || '<p>No upcoming matches</p>';
+      document.getElementById('completed-matches').innerHTML = completedMatches.join('') || '<p>No completed matches</p>';
+    }
+
+    loadMatches();
+  </script>
+
 </body>
 </html>
