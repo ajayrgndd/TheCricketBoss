@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('team_id')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single()
 
   if (profileError || !profile) {
