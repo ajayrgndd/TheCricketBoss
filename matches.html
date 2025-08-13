@@ -2,15 +2,40 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Matches – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css" />
-  <link rel="stylesheet" href="css/matches.css" />
+
+  <link rel="stylesheet" href="styles/global.css"/>
+  <link rel="stylesheet" href="css/matches.css"/>
+
+  <!-- JS -->
   <script type="module" src="js/matches.js"></script>
-<script type="module" src="js/smooth-ui.js"></script>
+  <script type="module" src="js/smooth-ui.js"></script>
+
+  <style>
+    /* Small, self-contained styles to support badges & chips */
+    .match-card{background:#111;border-radius:12px;padding:12px;margin:14px 0;border:1px solid #222}
+    .match-head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px}
+    .badge{font-size:.7rem;padding:4px 8px;border-radius:999px;border:1px solid #333;letter-spacing:.02em}
+    .badge-league{background:#1e293b;color:#cbd5e1}
+    .badge-friendly{background:#1b4332;color:#d1fae5}
+    .chip{font-size:.7rem;padding:4px 8px;border-radius:6px}
+    .chip-live{background:#b91c1c;color:#fff}
+    .chip-done{background:#334155;color:#e2e8f0}
+    .chip-upcoming{background:#0f766e;color:#ecfeff}
+    .start{font-size:.8rem;opacity:.8}
+    .match-body{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .team{display:flex;flex-direction:column;align-items:center;gap:6px;width:38%}
+    .team img{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#0b0b0b;border:1px solid #1f2937}
+    .name{font-weight:600;text-align:center}
+    .vs{width:24%;text-align:center;opacity:.8}
+    .score{margin-top:10px;text-align:center;font-weight:700}
+    .hidden-score{opacity:.6;font-weight:500}
+    .empty{opacity:.7;padding:16px;border:1px dashed #333;border-radius:10px;margin:8px 0}
+  </style>
 </head>
 <body>
-  <!-- Top bar -->
+  <!-- Top bar (smooth-ui.js will fill) -->
   <div id="top-bar"></div>
 
   <main>
@@ -21,9 +46,7 @@
     <div id="completed-matches" class="match-list"></div>
   </main>
 
-  <!-- Bottom nav -->
+  <!-- Bottom nav (smooth-ui.js will fill) -->
   <div id="bottom-nav"></div>
 </body>
 </html>
-
-
