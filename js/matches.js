@@ -1,166 +1,120 @@
-// matches.js
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// -------------------- Supabase Connection --------------------
-const supabaseUrl = 'https://iukofcmatlfhfwcechdq.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+const SUPABASE_URL = "https://iukofcmatlfhfwcechdq.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// -------------------- DOM Elements --------------------
-const liveMatchesContainer = document.getElementById("live-matches");
-const upcomingMatchesContainer = document.getElementById("upcoming-matches");
-const completedMatchesContainer = document.getElementById("completed-matches");
+// Load matches when page loads
+document.addEventListener("DOMContentLoaded", loadMatches);
 
-// -------------------- Utility Functions --------------------
-function formatDateTime(dateStr, timeStr) {
-    const date = new Date(`${dateStr}T${timeStr}`);
-    return date.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
-}
+async function loadMatches() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
 
-function getMatchStatus(matchDateTime) {
-    const now = new Date();
-    const start = new Date(matchDateTime);
-    const end = new Date(start.getTime() + 3 * 60 * 60 * 1000); // Assume match lasts 3 hours
+  // Find the logged-in user's team
+  const { data: teamData, error: teamError } = await supabase
+    .from("teams")
+    .select("id")
+    .eq("owner_id", user.id)
+    .single();
 
-    if (now >= start && now <= end) return "live";
-    if (now < start) return "upcoming";
-    return "completed";
-}
+  if (teamError || !teamData) {
+    console.error("Team not found", teamError);
+    return;
+  }
 
-function createMatchCard(match, type) {
-    let title = "";
-    if (type === "league") title = "LEAGUE MATCH";
-    if (type === "friendly") title = "FRIENDLY MATCH";
+  const teamId = teamData.id;
 
-    let scoreInfo = "";
-    const status = getMatchStatus(match.datetime);
+  // Fetch league matches from fixtures
+  const { data: leagueMatches, error: leagueError } = await supabase
+    .from("fixtures")
+    .select(`
+      id, home_team_id, away_team_id, match_date, match_time, is_completed, result,
+      home_team:home_team_id(team_name),
+      away_team:away_team_id(team_name)
+    `)
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .order("match_date", { ascending: true });
 
-    if (status === "live") {
-        scoreInfo = `<span class="live-label">LIVE</span>`;
-    } else if (status === "completed") {
-        if (match.result && match.result.score) {
-            scoreInfo = `<span class="score">${match.result.score}</span>`;
-        } else {
-            scoreInfo = `<span class="score">Result unavailable</span>`;
-        }
-    } else {
-        scoreInfo = `<span class="upcoming-time">${formatDateTime(match.date, match.time)}</span>`;
-    }
+  if (leagueError) {
+    console.error("Error fetching league matches:", leagueError);
+    return;
+  }
 
-    return `
-        <div class="match-card" onclick="${status === 'live' ? `window.location.href='match-simulation.html?id=${match.id}&type=${type}'` : ''}">
-            <div class="match-title">${title}</div>
-            <div class="teams">${match.home_team_name} vs ${match.away_team_name}</div>
-            <div class="match-info">${scoreInfo}</div>
-        </div>
+  // Fetch friendly matches
+  const { data: friendlyMatches, error: friendlyError } = await supabase
+    .from("matches")
+    .select(`
+      id, date, time, status, result, is_friendly,
+      home_team:home_team_id(team_name),
+      away_team:away_team_id(team_name)
+    `)
+    .eq("is_friendly", true)
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .order("date", { ascending: true });
+
+  if (friendlyError) {
+    console.error("Error fetching friendly matches:", friendlyError);
+    return;
+  }
+
+  // Combine both lists with a "type" tag
+  const allMatches = [
+    ...leagueMatches.map(m => ({
+      type: "League",
+      date: m.match_date,
+      time: m.match_time,
+      home_team: m.home_team.team_name,
+      away_team: m.away_team.team_name,
+      is_completed: m.is_completed,
+      result: m.result
+    })),
+    ...friendlyMatches.map(m => ({
+      type: "Friendly",
+      date: m.date,
+      time: m.time,
+      home_team: m.home_team.team_name,
+      away_team: m.away_team.team_name,
+      is_completed: m.status === "completed",
+      result: m.result
+    }))
+  ];
+
+  // Split into upcoming & completed
+  const upcomingContainer = document.getElementById("upcoming-matches");
+  const completedContainer = document.getElementById("completed-matches");
+
+  upcomingContainer.innerHTML = "";
+  completedContainer.innerHTML = "";
+
+  allMatches.forEach(match => {
+    const card = document.createElement("div");
+    card.className = "match-card";
+
+    card.innerHTML = `
+      <div class="match-top">
+        <div class="match-label">${match.type}</div>
+      </div>
+      <div class="teams">${match.home_team} vs ${match.away_team}</div>
+      <div class="match-time">${new Date(match.date).toDateString()} ${match.time}</div>
+      <div class="score">${
+        match.is_completed ? formatResult(match.result) : "Starts soon..."
+      }</div>
     `;
+
+    if (match.is_completed) {
+      completedContainer.appendChild(card);
+    } else {
+      upcomingContainer.appendChild(card);
+    }
+  });
 }
 
-// -------------------- Fetch Functions --------------------
-async function fetchMatches() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        window.location.href = "login.html";
-        return;
-    }
-
-    const { data: myTeam, error: teamError } = await supabase
-        .from("teams")
-        .select("id, team_name")
-        .eq("user_id", user.id)
-        .single();
-
-    if (teamError || !myTeam) {
-        console.error("Error fetching team:", teamError);
-        return;
-    }
-
-    const teamId = myTeam.id;
-
-    // Fetch League fixtures (fixtures table)
-    const { data: leagueFixtures, error: leagueError } = await supabase
-        .from("fixtures")
-        .select(`
-            id, home_team_id, away_team_id, match_date, match_time, result,
-            home_team:home_team_id (team_name),
-            away_team:away_team_id (team_name)
-        `)
-        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-        .order("match_date", { ascending: true });
-
-    if (leagueError) {
-        console.error("Error fetching league fixtures:", leagueError);
-    }
-
-    // Fetch Friendly matches (matches table)
-    const { data: friendlyMatches, error: friendlyError } = await supabase
-        .from("matches")
-        .select(`
-            id, home_team_id, away_team_id, date, time, result, is_friendly,
-            home_team:home_team_id (team_name),
-            away_team:away_team_id (team_name)
-        `)
-        .eq("is_friendly", true)
-        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-        .order("date", { ascending: true });
-
-    if (friendlyError) {
-        console.error("Error fetching friendly matches:", friendlyError);
-    }
-
-    const allMatches = [];
-
-    if (leagueFixtures) {
-        leagueFixtures.forEach(fix => {
-            allMatches.push({
-                id: fix.id,
-                type: "league",
-                home_team_name: fix.home_team.team_name,
-                away_team_name: fix.away_team.team_name,
-                date: fix.match_date,
-                time: fix.match_time,
-                datetime: `${fix.match_date}T${fix.match_time}`,
-                result: fix.result
-            });
-        });
-    }
-
-    if (friendlyMatches) {
-        friendlyMatches.forEach(mat => {
-            allMatches.push({
-                id: mat.id,
-                type: "friendly",
-                home_team_name: mat.home_team.team_name,
-                away_team_name: mat.away_team.team_name,
-                date: mat.date,
-                time: mat.time,
-                datetime: `${mat.date}T${mat.time}`,
-                result: mat.result
-            });
-        });
-    }
-
-    // Separate matches into Live, Upcoming, Completed
-    const liveMatches = [];
-    const upcomingMatches = [];
-    const completedMatches = [];
-
-    allMatches.forEach(match => {
-        const status = getMatchStatus(match.datetime);
-        if (status === "live") liveMatches.push(match);
-        if (status === "upcoming") upcomingMatches.push(match);
-        if (status === "completed") completedMatches.push(match);
-    });
-
-    // Render
-    liveMatchesContainer.innerHTML = liveMatches.map(m => createMatchCard(m, m.type)).join("");
-    upcomingMatchesContainer.innerHTML = upcomingMatches.map(m => createMatchCard(m, m.type)).join("");
-    completedMatchesContainer.innerHTML = completedMatches.map(m => createMatchCard(m, m.type)).join("");
+function formatResult(result) {
+  if (!result) return "No result";
+  if (result.score) return `${result.score}`;
+  return JSON.stringify(result);
 }
-
-// -------------------- Init --------------------
-document.addEventListener("DOMContentLoaded", async () => {
-    await fetchMatches();
-    if (typeof initSmoothUI === "function") {
-        initSmoothUI(); // from smooth-ui.js
-    }
-});
