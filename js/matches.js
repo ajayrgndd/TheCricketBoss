@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return
   }
 
+  // Get user's team
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('team_id')
@@ -42,15 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (friendlyError) console.error('Friendly matches fetch error:', friendlyError)
 
-  // Get all unique team IDs from both match lists
-  const allTeamIds = Array.from(
-    new Set([
-      ...(leagueMatches || []).flatMap(m => [m.home_team_id, m.away_team_id]),
-      ...(friendlyMatches || []).flatMap(m => [m.home_team_id, m.away_team_id])
-    ])
-  )
+  // Collect all team IDs
+  const allTeamIds = Array.from(new Set([
+    ...(leagueMatches || []).flatMap(m => [m.home_team_id, m.away_team_id]),
+    ...(friendlyMatches || []).flatMap(m => [m.home_team_id, m.away_team_id])
+  ]))
 
-  // Fetch team info separately
+  // Fetch team data
   const { data: teams, error: teamsError } = await supabase
     .from('teams')
     .select('id, name, logo_url')
@@ -58,15 +57,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (teamsError) console.error('Teams fetch error:', teamsError)
 
-  // Map teams by ID for quick lookup
   const teamMap = {}
-  teams?.forEach(t => {
-    teamMap[t.id] = t
+  teams?.forEach(team => {
+    teamMap[team.id] = team
   })
 
-  // Merge both types of matches
+  // Merge matches
   const allMatches = [...(leagueMatches || []), ...(friendlyMatches || [])]
-  allMatches.sort((a, b) => new Date(`${a.match_date}T${a.match_time}`) - new Date(`${b.match_date}T${b.match_time}`))
+  allMatches.sort((a, b) =>
+    new Date(`${a.match_date}T${a.match_time}`) - new Date(`${b.match_date}T${b.match_time}`)
+  )
 
   const now = new Date()
   const upcoming = []
