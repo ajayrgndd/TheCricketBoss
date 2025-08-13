@@ -5,114 +5,108 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Matches – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
-  <script type="module" src="js/smooth-ui.js"></script>
   <style>
-    body { background: #121212; color: white; font-family: Arial, sans-serif; }
-    .section { margin: 20px; }
-    .match-card {
-      padding: 12px;
-      background: #1e1e1e;
-      border-radius: 8px;
-      margin-bottom: 10px;
+    body {
+      background-color: #121212;
+      color: white;
+      margin: 0;
+      font-family: Arial, sans-serif;
     }
-    .hidden-score { color: gray; font-style: italic; }
+    .content {
+      padding: 70px 10px 70px; /* space for fixed bars */
+    }
+    h2 {
+      margin-top: 20px;
+      margin-bottom: 10px;
+      font-size: 1.2em;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+    }
+    .match-card {
+      background: #1e1e1e;
+      margin-bottom: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #333;
+    }
+    .match-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .match-label {
+      font-size: 0.75em;
+      background: #444;
+      padding: 3px 6px;
+      border-radius: 4px;
+      color: #ccc;
+    }
+    .teams {
+      margin: 8px 0;
+      font-size: 1em;
+      font-weight: bold;
+      text-align: center;
+    }
+    .match-time {
+      font-size: 0.85em;
+      color: #bbb;
+      text-align: center;
+    }
+    .score {
+      font-size: 0.9em;
+      text-align: center;
+      margin-top: 5px;
+    }
+    /* Fixed top & bottom bars */
+    .top-bar, .bottom-nav {
+      position: fixed;
+      left: 0; right: 0;
+      background: #222;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+    }
+    .top-bar { top: 0; border-bottom: 1px solid #444; }
+    .bottom-nav { bottom: 0; border-top: 1px solid #444; }
+    .bottom-nav a {
+      flex: 1;
+      color: white;
+      text-align: center;
+      font-size: 0.85em;
+      text-decoration: none;
+      padding: 5px;
+    }
   </style>
 </head>
 <body>
-  <div class="section">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <span id="username">Manager</span>
+    <span>XP: <span id="xp">0</span></span>
+    <span>💰<span id="coins">0</span> 💵<span id="cash">0</span></span>
+  </div>
+
+  <div class="content">
     <h2>Upcoming Matches</h2>
     <div id="upcoming-matches"></div>
-
-    <h2>Live Matches</h2>
-    <div id="live-matches"></div>
 
     <h2>Completed Matches</h2>
     <div id="completed-matches"></div>
   </div>
 
-  <script type="module">
-    import { supabase } from "./js/supabaseClient.js";
+  <!-- Bottom Navigation -->
+  <div class="bottom-nav">
+    <a href="team.html">Team</a>
+    <a href="scout.html">Scout</a>
+    <a href="home.html">Home</a>
+    <a href="auction.html">Auction</a>
+    <a href="store.html">Store</a>
+  </div>
 
-    async function getUserId() {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error || !session) {
-        console.error("❌ No active session found", error);
-        window.location.href = "login.html";
-        return null;
-      }
-      return session.user.id;
-    }
-
-    async function fetchMatches(userId) {
-      try {
-        const today = new Date().toISOString().split("T")[0];
-
-        // Friendly Matches
-        const { data: friendlyMatches, error: fErr } = await supabase
-          .from("matches")
-          .select(`
-            id, date, time, home_team_id, away_team_id, status, result, is_friendly
-          `)
-          .or(`home_team_id.eq.${userId},away_team_id.eq.${userId}`)
-          .order("date", { ascending: true });
-
-        if (fErr) throw fErr;
-
-        // League Matches
-        const { data: leagueMatches, error: lErr } = await supabase
-          .from("fixtures")
-          .select(`
-            id, match_date, match_time, home_team_id, away_team_id, is_completed, result
-          `)
-          .or(`home_team_id.eq.${userId},away_team_id.eq.${userId}`)
-          .order("date", { ascending: true });
-
-        if (lErr) throw lErr;
-
-        return [...friendlyMatches, ...leagueMatches];
-      } catch (err) {
-        console.error("❌ Match fetch failed:", err);
-        return [];
-      }
-    }
-
-    function renderMatches(matches) {
-      const upcomingEl = document.getElementById("upcoming-matches");
-      const liveEl = document.getElementById("live-matches");
-      const completedEl = document.getElementById("completed-matches");
-
-      const now = new Date();
-
-      matches.forEach(match => {
-        const matchDateTime = new Date(`${match.date}T${match.time}`);
-        const card = document.createElement("div");
-        card.classList.add("match-card");
-
-        if (match.status === "completed") {
-          card.innerHTML = `<strong>Final:</strong> ${match.result?.score || "N/A"}`;
-          completedEl.appendChild(card);
-        }
-        else if (match.status === "live") {
-          card.innerHTML = `<strong>Live:</strong> ${
-            now >= matchDateTime ? (match.result?.score || "In Progress") : `<span class="hidden-score">Score will be visible at start</span>`
-          }`;
-          liveEl.appendChild(card);
-        }
-        else {
-          card.innerHTML = `<strong>Scheduled:</strong> ${match.date} ${match.time}`;
-          upcomingEl.appendChild(card);
-        }
-      });
-    }
-
-    (async () => {
-      const userId = await getUserId();
-      if (!userId) return;
-
-      const matches = await fetchMatches(userId);
-      renderMatches(matches);
-    })();
-  </script>
+  <script src="matches.js"></script>
 </body>
 </html>
-
