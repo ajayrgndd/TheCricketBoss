@@ -2,112 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Matches – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
-  <style>
-    body {
-      background-color: #121212;
-      color: white;
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
-    .content {
-      padding: 70px 10px 70px; /* space for fixed bars */
-    }
-    h2 {
-      margin-top: 20px;
-      margin-bottom: 10px;
-      font-size: 1.2em;
-      border-bottom: 1px solid #444;
-      padding-bottom: 5px;
-    }
-    .match-card {
-      background: #1e1e1e;
-      margin-bottom: 12px;
-      padding: 10px;
-      border-radius: 8px;
-      display: flex;
-      flex-direction: column;
-      border: 1px solid #333;
-    }
-    .match-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .match-label {
-      font-size: 0.75em;
-      background: #444;
-      padding: 3px 6px;
-      border-radius: 4px;
-      color: #ccc;
-    }
-    .teams {
-      margin: 8px 0;
-      font-size: 1em;
-      font-weight: bold;
-      text-align: center;
-    }
-    .match-time {
-      font-size: 0.85em;
-      color: #bbb;
-      text-align: center;
-    }
-    .score {
-      font-size: 0.9em;
-      text-align: center;
-      margin-top: 5px;
-    }
-    /* Fixed top & bottom bars */
-    .top-bar, .bottom-nav {
-      position: fixed;
-      left: 0; right: 0;
-      background: #222;
-      z-index: 999;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-    }
-    .top-bar { top: 0; border-bottom: 1px solid #444; }
-    .bottom-nav { bottom: 0; border-top: 1px solid #444; }
-    .bottom-nav a {
-      flex: 1;
-      color: white;
-      text-align: center;
-      font-size: 0.85em;
-      text-decoration: none;
-      padding: 5px;
-    }
-  </style>
+  <link rel="stylesheet" href="styles/matches.css" />
+  <script defer src="matches.js"></script>
+  <script defer src="smooth-ui.js"></script>
 </head>
 <body>
-  <!-- Top Bar -->
-  <div class="top-bar">
-    <span id="username">Manager</span>
-    <span>XP: <span id="xp">0</span></span>
-    <span>💰<span id="coins">0</span> 💵<span id="cash">0</span></span>
-  </div>
+  <!-- Top bar -->
+  <div id="top-bar"></div>
 
-  <div class="content">
+  <main>
     <h2>Upcoming Matches</h2>
-    <div id="upcoming-matches"></div>
+    <div id="upcoming-matches" class="match-list"></div>
 
     <h2>Completed Matches</h2>
-    <div id="completed-matches"></div>
-  </div>
+    <div id="completed-matches" class="match-list"></div>
+  </main>
 
-  <!-- Bottom Navigation -->
-  <div class="bottom-nav">
-    <a href="team.html">Team</a>
-    <a href="scout.html">Scout</a>
-    <a href="home.html">Home</a>
-    <a href="auction.html">Auction</a>
-    <a href="store.html">Store</a>
-  </div>
-
-  <script src="js/matches.js"></script>
+  <!-- Bottom nav -->
+  <div id="bottom-nav"></div>
 </body>
 </html>
-
