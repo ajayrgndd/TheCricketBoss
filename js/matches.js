@@ -1,101 +1,74 @@
-document.addEventListener("DOMContentLoaded", async () => {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    window.location.href = "index.html"
-    return
-  }
+// matches.js
 
-  const FALLBACK_LOGO = "images/default_team_logo.png"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-  try {
-    // 1. Fetch upcoming matches for logged-in user's league group
-    const { data: myProfile, error: myProfileErr } = await supabase
-      .from("profiles")
-      .select("team_id, league_group_id")
-      .eq("id", user.id)
-      .single()
+// Supabase init
+const supabaseUrl = 'https://iukofcmatlfhfwcechdq.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (myProfileErr) throw myProfileErr
-    if (!myProfile) throw new Error("Profile not found")
-
-    const { data: matches, error: matchesErr } = await supabase
-      .from("matches")
-      .select("*")
-      .eq("league_group_id", myProfile.league_group_id)
-      .order("match_date", { ascending: true })
-
-    if (matchesErr) throw matchesErr
-
-    // 2. Gather all team IDs from matches
-    const allTeamIds = [...new Set(matches.flatMap(m => [m.home_team_id, m.away_team_id]))]
-
-    // 3. Fetch team names/logos from teams table
-    let teamMap = {}
-    if (allTeamIds.length) {
-      const { data: teams, error: teamsErr } = await supabase
-        .from("teams")
-        .select("id, team_name, logo_url")
-        .in("id", allTeamIds)
-
-      if (teamsErr) {
-        console.error("Teams fetch error:", teamsErr)
-      } else {
-        teamMap = Object.fromEntries(
-          (teams || []).map(t => [
-            t.id,
-            { name: t.team_name, logo: t.logo_url || FALLBACK_LOGO }
-          ])
-        )
-      }
-
-      // 4. Check for missing IDs and fetch from profiles table
-      const missingIds = allTeamIds.filter(id => !teamMap[id])
-      if (missingIds.length) {
-        const { data: userTeams, error: userTeamsErr } = await supabase
-          .from("profiles")
-          .select("team_id, team_name, team_logo_url")
-          .in("team_id", missingIds)
-
-        if (userTeamsErr) {
-          console.error("User teams fetch error:", userTeamsErr)
-        } else {
-          for (const ut of userTeams || []) {
-            teamMap[ut.team_id] = {
-              name: ut.team_name,
-              logo: ut.team_logo_url || FALLBACK_LOGO
-            }
-          }
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Get current logged-in user
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+            console.error('User not logged in');
+            return;
         }
-      }
+
+        // Fetch profile to get team_id
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('team_id')
+            .eq('id', user.id)
+            .single();
+
+        if (profileError || !profile) {
+            console.error('Profile not found:', profileError);
+            return;
+        }
+
+        const teamId = profile.team_id;
+
+        // Fetch upcoming fixtures for the user's team
+        const today = new Date().toISOString().split('T')[0];
+
+        const { data: fixtures, error: fixturesError } = await supabase
+            .from('fixtures')
+            .select(`
+                id,
+                match_date,
+                home_team:home_team_id ( id, team_name ),
+                away_team:away_team_id ( id, team_name )
+            `)
+            .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+            .gte('match_date', today)
+            .order('match_date', { ascending: true });
+
+        if (fixturesError) {
+            console.error('Error fetching fixtures:', fixturesError);
+            return;
+        }
+
+        const matchesList = document.getElementById('matches-list');
+        matchesList.innerHTML = '';
+
+        if (!fixtures.length) {
+            matchesList.innerHTML = '<p>No upcoming matches.</p>';
+            return;
+        }
+
+        fixtures.forEach(match => {
+            const home = match.home_team?.team_name || 'Unknown';
+            const away = match.away_team?.team_name || 'Unknown';
+            const date = new Date(match.match_date).toLocaleDateString();
+
+            const li = document.createElement('li');
+            li.textContent = `${date} — ${home} vs ${away}`;
+            matchesList.appendChild(li);
+        });
+
+    } catch (err) {
+        console.error('Unexpected error:', err);
     }
-
-    // 5. Render matches
-    const matchesContainer = document.getElementById("matches-list")
-    matchesContainer.innerHTML = ""
-
-    for (const match of matches) {
-      const homeTeam = teamMap[match.home_team_id] || { name: "Unknown", logo: FALLBACK_LOGO }
-      const awayTeam = teamMap[match.away_team_id] || { name: "Unknown", logo: FALLBACK_LOGO }
-
-      const matchCard = document.createElement("div")
-      matchCard.className = "match-card"
-
-      matchCard.innerHTML = `
-        <div class="team">
-          <img src="${homeTeam.logo}" alt="${homeTeam.name}" />
-          <span>${homeTeam.name}</span>
-        </div>
-        <div class="vs">vs</div>
-        <div class="team">
-          <img src="${awayTeam.logo}" alt="${awayTeam.name}" />
-          <span>${awayTeam.name}</span>
-        </div>
-        <div class="match-date">${new Date(match.match_date).toLocaleDateString()}</div>
-      `
-
-      matchesContainer.appendChild(matchCard)
-    }
-  } catch (err) {
-    console.error("Error loading matches:", err)
-  }
-})
+});
