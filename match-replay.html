@@ -1,92 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Replay – TheCricketBoss</title>
+<link rel="stylesheet" href="styles/global.css">
+<style>
+#log {
+  height: 300px;
+  overflow-y: auto;
+  background: #222;
+  color: #fff;
+  padding: 10px;
+  font-family: monospace;
+}
+</style>
+</head>
+<body>
+<h1>Match Replay</h1>
+<div id="log"></div>
+<button id="playBtn">▶ Play Replay</button>
+
 <script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { supabase } from './supabaseClient.js';
 
-  const supabase = createClient(
-    'https://iukofcmatlfhfwcechdq.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
-  );
+const params = new URLSearchParams(window.location.search);
+const matchId = params.get('id');
+let events = [];
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const matchId = urlParams.get("match_id");
-  const summaryDiv = document.getElementById("summary");
+async function fetchEvents() {
+    const { data, error } = await supabase
+        .from('match_events')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('ball_number', { ascending: true });
+    if (error) console.error(error);
+    events = data;
+}
 
-  if (!matchId) {
-    summaryDiv.innerHTML = "<p>❌ Match ID not found in URL.</p>";
-  } else {
-    const { data: match, error } = await supabase
-      .from("matches")
-      .select("*")
-      .eq("id", matchId)
-      .single();
-
-    if (error || !match) {
-      summaryDiv.innerHTML = "<p>❌ Could not load match details.</p>";
-    } else {
-      const [home, away, winner] = await Promise.all([
-        supabase.from("teams").select("team_name").eq("id", match.home_team_id).single(),
-        supabase.from("teams").select("team_name").eq("id", match.away_team_id).single(),
-        supabase.from("teams").select("team_name").eq("id", match.winner_team_id).single(),
-      ]);
-
-      const formatDate = (d) => new Date(d).toLocaleDateString("en-IN", {
-        day: "numeric", month: "short", year: "numeric"
-      });
-
-      const matchDate = match.date ? formatDate(match.date) : "Unknown";
-      const type = match.is_friendly ? "Friendly Match" : "League Match";
-      const result = match.match_result || (winner?.data?.team_name ? `Winner: ${winner.data.team_name}` : "Result not available");
-
-      // Fetch match events (ball-by-ball)
-      const { data: events } = await supabase
-        .from("match_events")
-        .select("*")
-        .eq("match_id", matchId)
-        .order("innings", { ascending: true })
-        .order("ball_number", { ascending: true });
-
-      // Generate scorecards
-      const scorecard = {};
-      events.forEach(e => {
-        if (!scorecard[e.innings]) scorecard[e.innings] = {};
-        if (!scorecard[e.innings][e.batsman_name]) {
-          scorecard[e.innings][e.batsman_name] = { runs: 0, balls: 0 };
+document.getElementById('playBtn').addEventListener('click', async () => {
+    await fetchEvents();
+    const log = document.getElementById('log');
+    log.innerHTML = "";
+    let i = 0;
+    const interval = setInterval(() => {
+        if (i >= events.length) {
+            clearInterval(interval);
+            log.innerHTML += "<br>🏆 Match Finished!";
+            return;
         }
-        scorecard[e.innings][e.batsman_name].runs += e.runs_scored;
-        scorecard[e.innings][e.batsman_name].balls += 1;
-      });
-
-      // Render
-      summaryDiv.innerHTML = `
-        <p><strong>Date:</strong> ${matchDate}</p>
-        <p><strong>Match Type:</strong> ${type}</p>
-        <p><strong>Home Team:</strong> ${home?.data?.team_name}</p>
-        <p><strong>Away Team:</strong> ${away?.data?.team_name}</p>
-        <p><strong>Result:</strong> <span class="highlight">${result}</span></p>
-        <hr/>
-        ${[1, 2].map(inning => {
-          const batters = scorecard[inning];
-          if (!batters) return "";
-
-          const teamName = inning === 1 ? home.data.team_name : away.data.team_name;
-
-          return `
-            <h3>Innings ${inning}: ${teamName}</h3>
-            <ul>
-              ${Object.entries(batters).map(([name, stats]) =>
-                `<li>${name}: ${stats.runs} runs (${stats.balls} balls)</li>`).join("")
-              }
-            </ul>
-          `;
-        }).join("")}
-
-        <hr/>
-        <h3>📜 Ball-by-Ball</h3>
-        <div style="max-height:300px; overflow-y:auto; background:#222; padding:10px; border-radius:8px;">
-          ${events.map(e => `
-            <p><strong>${e.innings}.${e.ball_number}:</strong> ${e.commentary}</p>
-          `).join("")}
-        </div>
-      `;
-    }
-  }
+        log.innerHTML += events[i].description + "<br>";
+        log.scrollTop = log.scrollHeight;
+        i++;
+    }, 1000); // 1 second per ball
+});
 </script>
+</body>
+</html>
