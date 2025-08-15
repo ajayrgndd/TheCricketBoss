@@ -1,59 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Match Replay – TheCricketBoss</title>
-<link rel="stylesheet" href="styles/global.css">
-<style>
-#log {
-  height: 300px;
-  overflow-y: auto;
-  background: #222;
-  color: #fff;
-  padding: 10px;
-  font-family: monospace;
-}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Match Replay</title>
+  <link rel="stylesheet" href="styles/global.css"/>
+  <style>
+    body{background:#0b0b0f;color:#fff;font-family:sans-serif;margin:0}
+    .wrap{max-width:720px;margin:0 auto;padding:16px}
+    .score{background:#12121a;border:1px solid #1f2530;border-radius:12px;padding:16px;margin:12px 0}
+    .comm{background:#0f1117;border:1px solid #1d2430;border-radius:12px;padding:12px;height:360px;overflow:auto}
+    .row{padding:6px 0;border-bottom:1px dashed #243046}
+    .row:last-child{border-bottom:none}
+    .meta{opacity:.7;font-size:.9rem}
+    .btns{display:flex;gap:8px;margin:8px 0}
+    button{background:#10b981;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+  </style>
 </head>
 <body>
-<h1>Match Replay</h1>
-<div id="log"></div>
-<button id="playBtn">▶ Play Replay</button>
-
-<script type="module">
-import { supabase } from './supabaseClient.js';
-
-const params = new URLSearchParams(window.location.search);
-const matchId = params.get('id');
-let events = [];
-
-async function fetchEvents() {
-    const { data, error } = await supabase
-        .from('match_events')
-        .select('*')
-        .eq('match_id', matchId)
-        .order('ball_number', { ascending: true });
-    if (error) console.error(error);
-    events = data;
-}
-
-document.getElementById('playBtn').addEventListener('click', async () => {
-    await fetchEvents();
-    const log = document.getElementById('log');
-    log.innerHTML = "";
-    let i = 0;
-    const interval = setInterval(() => {
-        if (i >= events.length) {
-            clearInterval(interval);
-            log.innerHTML += "<br>🏆 Match Finished!";
-            return;
-        }
-        log.innerHTML += events[i].description + "<br>";
-        log.scrollTop = log.scrollHeight;
-        i++;
-    }, 1000); // 1 second per ball
-});
-</script>
+  <div class="wrap">
+    <h2 id="title">Match Replay</h2>
+    <div class="score">
+      <div id="scoreline">0/0 (0.0)</div>
+      <div class="meta" id="meta"></div>
+      <div class="btns">
+        <button id="pauseBtn">Pause</button>
+        <button id="resumeBtn">Resume</button>
+      </div>
+    </div>
+    <div class="comm" id="feed"></div>
+  </div>
+  <script type="module" src="js/match-simulation.js"></script>
 </body>
 </html>
