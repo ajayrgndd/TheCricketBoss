@@ -1,208 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Match Simulation – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css" />
-  <style>
-    body {
-      margin: 0;
-      background: #0e0e1a;
-      color: white;
-      font-family: sans-serif;
-      padding: 16px;
-    }
-
-    .scoreboard {
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 20px;
-    }
-
-    .player-cards {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      justify-content: center;
-      margin-bottom: 30px;
-    }
-
-    .card {
-      background: #1f1b3a;
-      border: 1px solid #444;
-      border-radius: 10px;
-      padding: 16px;
-      width: 260px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
-    }
-
-    .card h3 {
-      margin: 0 0 10px;
-      font-size: 18px;
-    }
-
-    .card .meta {
-      font-size: 14px;
-      color: #ccc;
-      margin-bottom: 6px;
-    }
-
-    .card .skill {
-      font-size: 13px;
-      margin: 3px 0;
-    }
-
-    .commentary {
-      background: #111;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 14px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .highlight {
-      color: #00e676;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Replay – TheCricketBoss</title>
+<link rel="stylesheet" href="styles/global.css">
+<style>
+#log {
+  height: 300px;
+  overflow-y: auto;
+  background: #222;
+  color: #fff;
+  padding: 10px;
+  font-family: monospace;
+}
+</style>
 </head>
 <body>
-  <div class="scoreboard" id="scoreboard">Loading match...</div>
+<h1>Match Replay</h1>
+<div id="log"></div>
+<button id="playBtn">▶ Play Replay</button>
 
-  <div class="player-cards" id="playerCards">
-    <!-- Batter 1, Batter 2, Current Bowler, Next Bowler -->
-  </div>
+<script type="module">
+import { supabase } from './supabaseClient.js';
 
-  <div class="commentary" id="commentary">
-    Loading commentary...
-  </div>
+const params = new URLSearchParams(window.location.search);
+const matchId = params.get('id');
+let events = [];
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI } from "./js/shared-ui.js";
+async function fetchEvents() {
+    const { data, error } = await supabase
+        .from('match_events')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('ball_number', { ascending: true });
+    if (error) console.error(error);
+    events = data;
+}
 
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const matchId = urlParams.get("match_id");
-    if (!matchId) {
-      document.body.innerHTML = "<h2>❌ Match ID not found</h2>";
-      throw new Error("Match ID not found");
-    }
-
-    async function fetchMatchData() {
-      const { data: match } = await supabase
-        .from("matches")
-        .select("*")
-        .eq("id", matchId)
-        .single();
-
-      const { data: events } = await supabase
-        .from("match_events")
-        .select("*")
-        .eq("match_id", matchId)
-        .order("ball_no", { ascending: true });
-
-      const { data: homeTeam } = await supabase
-        .from("teams")
-        .select("*")
-        .eq("id", match.home_team_id)
-        .single();
-
-      const { data: awayTeam } = await supabase
-        .from("teams")
-        .select("*")
-        .eq("id", match.away_team_id)
-        .single();
-
-      const { data: players } = await supabase
-        .from("players")
-        .select("*")
-        .or(`team_id.eq.${match.home_team_id},team_id.eq.${match.away_team_id}`);
-
-      return { match, events, homeTeam, awayTeam, players };
-    }
-
-    function getSkillPoints(player) {
-      let base = 0;
-      base += player.batting + player.bowling + player.experience;
-      base += (player.fitness ?? 0) + (player.form ?? 0);
-      if (player.skill1) base += 5;
-      if (player.skill2) base += 5;
-      return base;
-    }
-
-    function renderMatch({ match, events, homeTeam, awayTeam, players }) {
-      const scoreboard = document.getElementById("scoreboard");
-      const cards = document.getElementById("playerCards");
-      const commentaryBox = document.getElementById("commentary");
-
-      // Basic score info
-      const runs = events.reduce((sum, e) => sum + (e.runs || 0), 0);
-      const wickets = events.filter(e => e.event_type === "wicket").length;
-      const balls = events.length;
-
-      scoreboard.textContent = `${homeTeam.team_name} ${runs}/${wickets} (${Math.floor(balls/6)}.${balls%6})`;
-
-      // Dummy logic: last 2 batters and last bowler
-      const lastBall = events[events.length - 1] || {};
-      const strikerId = lastBall.batter_id;
-      const bowlerId = lastBall.bowler_id;
-
-      const batters = players.filter(p => p.team_id === homeTeam.id).slice(0, 2);
-      const bowlers = players.filter(p => p.team_id === awayTeam.id).filter(p => p.bowling > 0).slice(0, 2);
-
-      cards.innerHTML = "";
-
-      batters.forEach((b, i) => {
-        const isStriker = b.id === strikerId;
-        const name = isStriker ? `${b.name} *` : b.name;
-        cards.innerHTML += `
-          <div class="card">
-            <h3>${name}</h3>
-            <div class="meta">Batsman</div>
-            <div class="skill">Batting: ${b.batting}</div>
-            <div class="skill">Form: ${b.form} | Fitness: ${b.fitness}</div>
-            <div class="skill">Experience: ${b.experience}</div>
-            <div class="skill">Skill1: ${b.skill1 || '–'} | Skill2: ${b.skill2 || '–'}</div>
-            <div class="skill highlight">Total Power: ${getSkillPoints(b)}</div>
-          </div>
-        `;
-      });
-
-      bowlers.forEach((b, i) => {
-        const label = i === 0 ? "Current Bowler" : "Next Bowler";
-        cards.innerHTML += `
-          <div class="card">
-            <h3>${b.name}</h3>
-            <div class="meta">${label}</div>
-            <div class="skill">Bowling: ${b.bowling}</div>
-            <div class="skill">Form: ${b.form} | Fitness: ${b.fitness}</div>
-            <div class="skill">Experience: ${b.experience}</div>
-            <div class="skill">Skill1: ${b.skill1 || '–'} | Skill2: ${b.skill2 || '–'}</div>
-            <div class="skill highlight">Total Power: ${getSkillPoints(b)}</div>
-          </div>
-        `;
-      });
-
-      commentaryBox.innerHTML = events
-        .slice(-10)
-        .map(e => `<div>⚾ Over ${Math.floor(e.ball_no/6)}.${e.ball_no%6}: ${e.commentary}</div>`)
-        .join("");
-    }
-
-    async function simulateLoop() {
-      const data = await fetchMatchData();
-      renderMatch(data);
-    }
-
-    simulateLoop();
-    setInterval(simulateLoop, 5000); // refresh every 5s
-  </script>
+document.getElementById('playBtn').addEventListener('click', async () => {
+    await fetchEvents();
+    const log = document.getElementById('log');
+    log.innerHTML = "";
+    let i = 0;
+    const interval = setInterval(() => {
+        if (i >= events.length) {
+            clearInterval(interval);
+            log.innerHTML += "<br>🏆 Match Finished!";
+            return;
+        }
+        log.innerHTML += events[i].description + "<br>";
+        log.scrollTop = log.scrollHeight;
+        i++;
+    }, 1000); // 1 second per ball
+});
+</script>
 </body>
 </html>
