@@ -1,35 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Match Replay</title>
-  <link rel="stylesheet" href="styles/global.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Match Simulation – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <link rel="stylesheet" href="css/match-simulation.css" />
   <style>
-    body{background:#0b0b0f;color:#fff;font-family:sans-serif;margin:0}
-    .wrap{max-width:720px;margin:0 auto;padding:16px}
-    .score{background:#12121a;border:1px solid #1f2530;border-radius:12px;padding:16px;margin:12px 0}
-    .comm{background:#0f1117;border:1px solid #1d2430;border-radius:12px;padding:12px;height:360px;overflow:auto}
-    .row{padding:6px 0;border-bottom:1px dashed #243046}
-    .row:last-child{border-bottom:none}
-    .meta{opacity:.7;font-size:.9rem}
-    .btns{display:flex;gap:8px;margin:8px 0}
-    button{background:#10b981;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+    body{background:#0b0b0f;color:#e5e7eb;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+    .header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px}
+    .teams{display:flex;align-items:center;gap:16px}
+    .team{display:flex;align-items:center;gap:10px;background:#0f172a;border:1px solid #1f2937;padding:10px 12px;border-radius:14px}
+    .team img{width:44px;height:44px;border-radius:10px;object-fit:cover;background:#0b0b0b;border:1px solid #1f2937}
+    .vs{opacity:.7}
+    .scorebox{display:flex;align-items:center;gap:16px}
+    .score{font-size:1.4rem;font-weight:800}
+    .sub{opacity:.8;font-size:.9rem}
+    .controls{display:flex;align-items:center;gap:10px}
+    .btn{background:#111827;border:1px solid #374151;color:#e5e7eb;padding:8px 12px;border-radius:10px;cursor:pointer}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .speed{background:#0b1020;border:1px solid #24324a;color:#aac0ff;padding:6px;border-radius:8px}
+    .grid{display:grid;grid-template-columns: 1.2fr .8fr; gap:16px}
+    .card{background:#0f172a;border:1px solid #1f2937;border-radius:16px;padding:14px}
+    .timeline{display:flex;flex-wrap:wrap;gap:6px}
+    .ball{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:999px;border:1px solid #334155;background:#0b1220;font-size:.8rem}
+    .ball.w{background:#7f1d1d;color:#fff;border-color:#7f1d1d}
+    .ball.b{background:#064e3b;color:#cffafe;border-color:#065f46}
+    .commentary{height:360px;overflow:auto;background:#0b1020;border:1px solid #1f2937;border-radius:12px;padding:10px}
+    .com-line{padding:8px 6px;border-bottom:1px dashed #223049;font-size:.95rem}
+    .players{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .p{display:flex;align-items:center;justify-content:space-between;background:#0b1020;border:1px solid #1f2937;padding:8px 10px;border-radius:10px}
+    .p .n{opacity:.9}
+    .p .m{opacity:.7;font-size:.85rem}
   </style>
+
+  <!-- Supabase client -->
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js';
+    window.supabase = createClient(
+      'https://iukofcmatlfhfwcechdq.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
+    );
+  </script>
+
+  <script defer src="js/match-simulation.js"></script>
 </head>
 <body>
   <div class="wrap">
-    <h2 id="title">Match Replay</h2>
-    <div class="score">
-      <div id="scoreline">0/0 (0.0)</div>
-      <div class="meta" id="meta"></div>
-      <div class="btns">
-        <button id="pauseBtn">Pause</button>
-        <button id="resumeBtn">Resume</button>
+    <div class="header">
+      <div class="teams">
+        <div class="team" id="homeTeam">
+          <img id="homeLogo" src="" alt="">
+          <div>
+            <div id="homeName">Home</div>
+            <div class="sub" id="homeSub">—</div>
+          </div>
+        </div>
+        <div class="vs">vs</div>
+        <div class="team" id="awayTeam">
+          <img id="awayLogo" src="" alt="">
+          <div>
+            <div id="awayName">Away</div>
+            <div class="sub" id="awaySub">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scorebox">
+        <div class="score" id="liveScore">0/0</div>
+        <div class="sub" id="liveOver">0.0</div>
+      </div>
+
+      <div class="controls">
+        <button id="playPause" class="btn">Pause</button>
+        <select id="speed" class="speed">
+          <option value="1500">1.5s / ball</option>
+          <option value="1000">1.0s / ball</option>
+          <option value="500">0.5s / ball</option>
+        </select>
+        <button id="skip" class="btn">Skip to End</button>
       </div>
     </div>
-    <div class="comm" id="feed"></div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="sub" style="margin-bottom:8px">Ball-by-ball</div>
+        <div id="timeline" class="timeline"></div>
+      </div>
+      <div class="card">
+        <div class="sub" style="margin-bottom:8px">Commentary</div>
+        <div id="commentary" class="commentary"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="sub" style="margin-bottom:8px">Playing XI</div>
+      <div class="players" id="playersPane"></div>
+    </div>
   </div>
-  <script type="module" src="js/match-simulation.js"></script>
 </body>
 </html>
