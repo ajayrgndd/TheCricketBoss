@@ -24,8 +24,14 @@ async function init() {
     return;
   }
 
-  // load teams + summary + events (or simulate friendly if none)
+  // load teams + summary + events
   const meta = await loadMeta(type, id);
+  if (!meta) {
+    appendCommentary("⚠ Could not load match metadata.");
+    disableControls();
+    return;
+  }
+
   await loadTeams(meta);
   events = await loadEvents(type, id);
 
@@ -36,13 +42,12 @@ async function init() {
   }
 
   if (!events.length) {
-    // league without events yet = not simulated
     appendCommentary("No commentary available yet. This match hasn't been simulated.");
     disableControls();
     return;
   }
 
-  // players pane (from lineups if available, else top XI names from first innings)
+  // players pane
   await renderXI(meta);
 
   // header
@@ -61,7 +66,7 @@ async function init() {
   });
   document.getElementById('skip').addEventListener('click', skipToEnd);
 
-  // go
+  // start playback
   timer = setInterval(tick, speed);
 }
 
@@ -92,7 +97,6 @@ function tick(isFast = false) {
   const e = events[idx++];
   renderBall(e);
   if (!isFast && idx >= events.length) {
-    // end reached
     finalizeHeader();
   }
 }
@@ -117,7 +121,7 @@ function renderBall(e) {
   document.getElementById('timeline').appendChild(pill);
 
   // commentary line
-  appendCommentary(`Ov ${e.over}.${e.ball_in_over} – ${e.commentary}`);
+  appendCommentary(`Ov ${e.over}.${e.ball_in_over} – ${e.commentary || ''}`);
 }
 
 function appendCommentary(line) {
@@ -141,6 +145,7 @@ async function loadMeta(type, id) {
     const { data: f } = await sb.from('fixtures')
       .select('id, home_team_id, away_team_id')
       .eq('id', id).maybeSingle();
+    if (!f) return null;
     return {
       homeTeamId: f.home_team_id,
       awayTeamId: f.away_team_id,
@@ -150,6 +155,7 @@ async function loadMeta(type, id) {
     const { data: m } = await sb.from('matches')
       .select('id, home_team_id, away_team_id')
       .eq('id', id).maybeSingle();
+    if (!m) return null;
     return {
       homeTeamId: m.home_team_id,
       awayTeamId: m.away_team_id,
@@ -184,7 +190,6 @@ async function loadEvents(type, id) {
 }
 
 async function renderXI(meta) {
-  // Try default_lineups; fall back to players table top XI
   const [homeXI, awayXI] = await Promise.all([pickXI(meta.homeTeamId), pickXI(meta.awayTeamId)]);
   const pane = document.getElementById('playersPane');
   pane.innerHTML = '';
@@ -215,13 +220,12 @@ async function pickXI(team_id) {
 }
 
 // ────────────────────────────────────────────────────────────
-/** Client fallback sim for FRIENDLY only (when no events exist) */
+// Client fallback sim for FRIENDLY only
+// ────────────────────────────────────────────────────────────
 async function simulateFriendlyClient(homeTeamId, awayTeamId, matchId) {
-  // load XIs
   const [homeXI, awayXI] = await Promise.all([pickXI(homeTeamId), pickXI(awayTeamId)]);
   if (homeXI.length < 11 || awayXI.length < 11) return { events: [] };
 
-  // local sim (mirror server logic, shorter)
   function simInnings(batters, bowlers, battingTeamId, bowlingTeamId, target) {
     const MAX_OVERS = 20, BPO = 6;
     let total = 0, wkts = 0, balls = 0;
@@ -268,9 +272,8 @@ async function simulateFriendlyClient(homeTeamId, awayTeamId, matchId) {
   const inn2 = simInnings(awayXI, homeXI, awayTeamId, homeTeamId, inn1.total + 1);
   const evts = [...inn1.events, ...inn2.events];
 
-  // persist to DB (friendly only)
-  const evtRows = evts.map((e, i) => ({ match_id: matchId, ...e, ball_number: i + 1 }));
-  await sb.from('match_events').insert(evtRows);
+  // persist to DB
+  await sb.from('match_events').insert(evts.map((e, i) => ({ match_id: matchId, ...e, ball_number: i + 1 })));
 
   const summary = {
     home: { runs: inn1.total, wkts: inn1.wkts, balls: inn1.balls },
@@ -280,9 +283,6 @@ async function simulateFriendlyClient(homeTeamId, awayTeamId, matchId) {
   };
 
   await sb.from('matches').update({ result: summary, status: 'completed', sim_seeded: true }).eq('id', matchId);
-
-  // write player_stats (friendly) — NO experience bump
-  // (we won't compute per-player in this client fallback to keep it simple)
 
   return { events: evts };
 }
