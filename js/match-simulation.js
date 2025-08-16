@@ -8,7 +8,7 @@ const FALLBACK_LOGO = 'https://placehold.co/64x64?text=•';
 let events = [];
 let idx = 0;
 let timer = null;
-let speed = 1500;
+let speed = 1500;          // ~1.5s per ball (auto)
 let running = true;
 let state = { runs: 0, wkts: 0, balls: 0 };
 
@@ -24,19 +24,18 @@ async function init() {
     return;
   }
 
-  // load teams + summary + events
+  // load teams+summary meta and then ball-by-ball events
   const meta = await loadMeta(type, id);
   if (!meta) {
-    appendCommentary("⚠ Could not load match metadata.");
+    appendCommentary("Could not load match metadata.");
     disableControls();
     return;
   }
 
-  await loadTeams(meta);
   events = await loadEvents(type, id);
 
+  // if no events for a FRIENDLY, simulate client-side and persist
   if (!events.length && type === 'friendly') {
-    // simulate fresh friendly (client fallback)
     const sim = await simulateFriendlyClient(meta.homeTeamId, meta.awayTeamId, id);
     events = sim.events;
   }
@@ -47,7 +46,7 @@ async function init() {
     return;
   }
 
-  // players pane
+  // players pane (best-effort XI)
   await renderXI(meta);
 
   // header
@@ -58,22 +57,23 @@ async function init() {
   document.getElementById('homeLogo').onerror = (e)=> e.target.src = FALLBACK_LOGO;
   document.getElementById('awayLogo').onerror = (e)=> e.target.src = FALLBACK_LOGO;
 
-  // wire controls
+  // controls
   document.getElementById('playPause').addEventListener('click', togglePlay);
   document.getElementById('speed').addEventListener('change', (e) => {
-    speed = Number(e.target.value);
+    speed = Number(e.target.value) || 1500;
     if (running) { clearInterval(timer); timer = setInterval(tick, speed); }
   });
   document.getElementById('skip').addEventListener('click', skipToEnd);
 
-  // start playback
+  // go
   timer = setInterval(tick, speed);
 }
 
 function disableControls() {
-  document.getElementById('playPause').disabled = true;
-  document.getElementById('speed').disabled = true;
-  document.getElementById('skip').disabled = true;
+  ['playPause','speed','skip'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.disabled = true;
+  });
 }
 
 function togglePlay() {
@@ -92,13 +92,12 @@ function skipToEnd() {
 function tick(isFast = false) {
   if (idx >= events.length) {
     clearInterval(timer);
+    finalizeHeader();
     return;
   }
   const e = events[idx++];
   renderBall(e);
-  if (!isFast && idx >= events.length) {
-    finalizeHeader();
-  }
+  if (!isFast && idx >= events.length) finalizeHeader();
 }
 
 function renderBall(e) {
@@ -114,14 +113,14 @@ function renderBall(e) {
 
   // timeline pill
   const pill = document.createElement('div');
-  const isW = e.wicket;
+  const isW = !!e.wicket;
   const txt = isW ? 'W' : String(e.runs_scored ?? 0);
   pill.className = `ball ${isW ? 'w' : (txt === '4' || txt === '6') ? 'b' : ''}`;
   pill.textContent = txt;
   document.getElementById('timeline').appendChild(pill);
 
   // commentary line
-  appendCommentary(`Ov ${e.over}.${e.ball_in_over} – ${e.commentary || ''}`);
+  appendCommentary(`Ov ${e.over}.${e.ball_in_over} – ${e.commentary}`);
 }
 
 function appendCommentary(line) {
@@ -142,25 +141,19 @@ function finalizeHeader() {
 // ────────────────────────────────────────────────────────────
 async function loadMeta(type, id) {
   if (type === 'league') {
-    const { data: f } = await sb.from('fixtures')
+    const { data: f, error } = await sb.from('fixtures')
       .select('id, home_team_id, away_team_id')
       .eq('id', id).maybeSingle();
-    if (!f) return null;
-    return {
-      homeTeamId: f.home_team_id,
-      awayTeamId: f.away_team_id,
-      ...(await resolveTeamNamesAndLogos(f.home_team_id, f.away_team_id)),
-    };
+    if (error || !f) return null;
+    const names = await resolveTeamNamesAndLogos(f.home_team_id, f.away_team_id);
+    return { homeTeamId: f.home_team_id, awayTeamId: f.away_team_id, ...names };
   } else {
-    const { data: m } = await sb.from('matches')
+    const { data: m, error } = await sb.from('matches')
       .select('id, home_team_id, away_team_id')
       .eq('id', id).maybeSingle();
-    if (!m) return null;
-    return {
-      homeTeamId: m.home_team_id,
-      awayTeamId: m.away_team_id,
-      ...(await resolveTeamNamesAndLogos(m.home_team_id, m.away_team_id)),
-    };
+    if (error || !m) return null;
+    const names = await resolveTeamNamesAndLogos(m.home_team_id, m.away_team_id);
+    return { homeTeamId: m.home_team_id, awayTeamId: m.away_team_id, ...names };
   }
 }
 
@@ -168,7 +161,6 @@ async function resolveTeamNamesAndLogos(homeId, awayId) {
   const { data: teams } = await sb.from('teams')
     .select('id, team_name, logo_url')
     .in('id', [homeId, awayId]);
-
   const get = (tid) => teams?.find(t => t.id === tid) || { team_name: 'Unknown', logo_url: FALLBACK_LOGO };
   const h = get(homeId), a = get(awayId);
   return {
@@ -215,12 +207,13 @@ async function pickXI(team_id) {
     const { data: players } = await sb.from('players').select('*').in('id', dl.player_ids.slice(0, 11));
     return players ?? [];
   }
-  const { data: players } = await sb.from('players').select('*').eq('team_id', team_id).order('batting', { ascending: false }).limit(11);
+  const { data: players } = await sb.from('players')
+    .select('*').eq('team_id', team_id).order('batting', { ascending: false }).limit(11);
   return players ?? [];
 }
 
 // ────────────────────────────────────────────────────────────
-// Client fallback sim for FRIENDLY only
+// Client fallback sim for FRIENDLY only (persists to DB)
 // ────────────────────────────────────────────────────────────
 async function simulateFriendlyClient(homeTeamId, awayTeamId, matchId) {
   const [homeXI, awayXI] = await Promise.all([pickXI(homeTeamId), pickXI(awayTeamId)]);
@@ -272,8 +265,9 @@ async function simulateFriendlyClient(homeTeamId, awayTeamId, matchId) {
   const inn2 = simInnings(awayXI, homeXI, awayTeamId, homeTeamId, inn1.total + 1);
   const evts = [...inn1.events, ...inn2.events];
 
-  // persist to DB
-  await sb.from('match_events').insert(evts.map((e, i) => ({ match_id: matchId, ...e, ball_number: i + 1 })));
+  // persist to DB (friendly only)
+  const evtRows = evts.map((e, i) => ({ match_id: matchId, ...e, ball_number: i + 1 }));
+  await sb.from('match_events').insert(evtRows);
 
   const summary = {
     home: { runs: inn1.total, wkts: inn1.wkts, balls: inn1.balls },
