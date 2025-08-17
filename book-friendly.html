@@ -18,10 +18,9 @@
       margin: 20px 0;
     }
     .main {
-  padding-top: 80px;
-  padding-bottom: 90px;
-}
-
+      padding-top: 80px;
+      padding-bottom: 90px;
+    }
     .find-opponents-section {
       text-align: center;
       margin-bottom: 20px;
@@ -79,7 +78,6 @@
   </style>
 </head>
 <body>
- <body>
   <div class="main">
     <h2>📖 Book a Friendly Match</h2>
     <div class="find-opponents-section">
@@ -118,6 +116,7 @@
     const modal = document.getElementById("challengeModal");
     const confirmBtn = document.getElementById("confirmChallengeBtn");
 
+    // 🔍 Find available opponents
     findBtn.addEventListener("click", async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return window.location.href = "login.html";
@@ -132,7 +131,7 @@
         .limit(10);
 
       listDiv.innerHTML = "";
-      opponents.forEach(team => {
+      opponents?.forEach(team => {
         const div = document.createElement("div");
         div.className = "opponent-card";
         div.innerHTML = `
@@ -151,6 +150,7 @@
       });
     });
 
+    // ✅ Confirm and insert match
     confirmBtn.addEventListener("click", async () => {
       const date = document.getElementById("matchDate").value;
       const time = document.getElementById("matchTime").value;
@@ -168,9 +168,13 @@
         return alert("❌ Match time must be 2 to 48 hours from now.");
       }
 
+      // 👉 Split into date + time
+      const matchDate = matchDateTime.toISOString().split("T")[0]; // YYYY-MM-DD
+      const matchTime = matchDateTime.toISOString().split("T")[1].split(".")[0]; // HH:MM:SS
+
       const { error } = await supabase.from("matches").insert([{
-        date,
-        time,
+        date: matchDate,
+        start_time: matchTime,
         home_team_id: challengerTeamId,
         away_team_id: selectedOpponentId,
         is_friendly: true,
@@ -186,15 +190,16 @@
       }
     });
 
+    // Load shared UI (coins, cash, xp, etc.)
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
       loadSharedUI({
         supabase,
-        manager_name: profile.manager_name,
-        xp: profile.xp ?? 0,
-        coins: profile.coins ?? 0,
-        cash: profile.cash ?? 0,
+        manager_name: profile?.manager_name,
+        xp: profile?.xp ?? 0,
+        coins: profile?.coins ?? 0,
+        cash: profile?.cash ?? 0,
       });
     }
   </script>
