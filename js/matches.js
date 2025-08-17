@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Fetch friendly matches (matches table)
   const { data: friendlyRows, error: friendlyErr } = await supabase
     .from('matches')
-    .select('id, home_team_id, away_team_id, date, time, result, status, is_friendly')
+    .select('id, home_team_id, away_team_id, date, start_time, result, status, is_friendly')
     .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
     .order('date', { ascending: true })
 
