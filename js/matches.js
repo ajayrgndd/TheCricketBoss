@@ -39,7 +39,7 @@ function buildStartFromFixture(row) {
 function buildStartFromFriendly(row) {
   // matches table: date (DATE), time (TIME)
   if (!row.date || !row.time) return null
-  return new Date(`${row.date}T${row.time}`)
+  return new Date(`${row.date}T${row.start_time}`)
 }
 
 function statusFromTime(start, isCompletedFlag) {
