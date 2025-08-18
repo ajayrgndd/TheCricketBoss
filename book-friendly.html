@@ -168,10 +168,6 @@
         return alert("❌ Match time must be 2 to 48 hours from now.");
       }
 
-      // 👉 Split into date + time
-      const matchDate = matchDateTime.toISOString().split("T")[0]; // YYYY-MM-DD
-      const matchTime = matchDateTime.toISOString().split("T")[1].split(".")[0]; // HH:MM:SS
-
       const { error } = await supabase.from("matches").insert([{
         date: matchDate,
         start_time: matchTime,
