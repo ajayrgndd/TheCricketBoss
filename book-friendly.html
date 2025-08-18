@@ -150,41 +150,48 @@
       });
     });
 
-    // ✅ Confirm and insert match
-    confirmBtn.addEventListener("click", async () => {
-      const date = document.getElementById("matchDate").value;
-      const time = document.getElementById("matchTime").value;
-      if (!date || !time) return alert("Select both date and time.");
+   // ✅ Confirm and insert match
+confirmBtn.addEventListener("click", async () => {
+  const date = document.getElementById("matchDate").value;
+  const time = document.getElementById("matchTime").value;
+  if (!date || !time) return alert("Select both date and time.");
 
-      const matchDateTime = new Date(`${date}T${time}:00`);
-      const now = new Date();
-      const diff = (matchDateTime - now) / 1000;
+  // Local datetime from inputs
+  const localDateTime = new Date(`${date}T${time}:00`);
+  const now = new Date();
+  const diff = (localDateTime - now) / 1000;
 
-      const day = matchDateTime.toLocaleDateString('en-US', { weekday: 'long' });
-      if (["Monday", "Thursday"].includes(day)) {
-        return alert("❌ Friendly matches are not allowed on Mondays or Thursdays.");
-      }
-      if (diff < 7200 || diff > 172800) {
-        return alert("❌ Match time must be 2 to 48 hours from now.");
-      }
+  const day = localDateTime.toLocaleDateString('en-US', { weekday: 'long' });
+  if (["Monday", "Thursday"].includes(day)) {
+    return alert("❌ Friendly matches are not allowed on Mondays or Thursdays.");
+  }
+  if (diff < 7200 || diff > 172800) {
+    return alert("❌ Match time must be 2 to 48 hours from now.");
+  }
 
-      const { error } = await supabase.from("matches").insert([{
-        date,
-        start_time,
-        home_team_id: challengerTeamId,
-        away_team_id: selectedOpponentId,
-        is_friendly: true,
-        status: "scheduled"
-      }]);
+  // 👉 Convert to UTC before saving
+  const utcDateTime = new Date(localDateTime.toISOString());
+  const matchDate = utcDateTime.toISOString().split("T")[0];          // YYYY-MM-DD
+  const matchTime = utcDateTime.toISOString().split("T")[1].split(".")[0]; // HH:MM:SS
 
-      if (error) {
-        alert("❌ Booking failed.");
-        console.error(error);
-      } else {
-        alert("✅ Match successfully scheduled!");
-        window.location.href = "matches.html";
-      }
-    });
+  const { error } = await supabase.from("matches").insert([{
+    date: matchDate,
+    start_time: matchTime,   // ✅ now defined
+    home_team_id: challengerTeamId,
+    away_team_id: selectedOpponentId,
+    is_friendly: true,
+    status: "scheduled"
+  }]);
+
+  if (error) {
+    alert("❌ Booking failed.");
+    console.error(error);
+  } else {
+    alert("✅ Match successfully scheduled!");
+    window.location.href = "matches.html";
+  }
+});
+
 
     // Load shared UI (coins, cash, xp, etc.)
     const { data: { user } } = await supabase.auth.getUser();
