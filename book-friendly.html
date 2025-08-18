@@ -169,8 +169,8 @@
       }
 
       const { error } = await supabase.from("matches").insert([{
-        date: matchDate,
-        start_time: matchTime,
+        date,
+        start_time,
         home_team_id: challengerTeamId,
         away_team_id: selectedOpponentId,
         is_friendly: true,
