@@ -1,1 +1,207 @@
-<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0"/> <title>Book Friendly Match – TheCricketBoss</title> <link rel="stylesheet" href="styles/global.css" /> <style> body { background: #121212; color: white; font-family: sans-serif; margin: 0; padding: 0 16px 100px; } h2 { text-align: center; margin: 20px 0; } .main { padding-top: 80px; padding-bottom: 90px; } .find-opponents-section { text-align: center; margin-bottom: 20px; } .opponent-list { margin-top: 20px; } .opponent-card { background: #1e1e2f; margin-bottom: 14px; padding: 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; } .opponent-card strong { font-size: 16px; } .challenge-btn { padding: 10px; font-size: 14px; background-color: #00e676; border: none; border-radius: 6px; cursor: pointer; } .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; } .modal-content { background: #1e1e2f; padding: 20px; border-radius: 10px; max-width: 400px; width: 100%; } .modal-content h3 { margin-top: 0; } .modal-content input, .modal-content button { width: 100%; padding: 10px; margin-top: 12px; font-size: 14px; } </style> </head> <body> <body> <div class="main"> <h2>📖 Book a Friendly Match</h2> <div class="find-opponents-section"> <button id="findOpponentsBtn" class="challenge-btn">🔍 Find Opponents</button> </div> </div> <div class="opponent-list" id="opponentList"></div> <div class="modal" id="challengeModal" style="display:none;"> <div class="modal-content"> <h3>📆 Set Match Time</h3> <label>Date:</label> <input type="date" id="matchDate"> <label>Time:</label> <input type="time" id="matchTime"> <button id="confirmChallengeBtn">✅ Confirm Challenge</button> <button onclick="document.getElementById('challengeModal').style.display='none'">Cancel</button> </div> </div> <script type="module"> import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'; import { loadSharedUI } from './js/shared-ui.js'; const supabase = createClient( "https://iukofcmatlfhfwcechdq.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" ); let challengerTeamId = null; let selectedOpponentId = null; const findBtn = document.getElementById("findOpponentsBtn"); const listDiv = document.getElementById("opponentList"); const modal = document.getElementById("challengeModal"); const confirmBtn = document.getElementById("confirmChallengeBtn"); findBtn.addEventListener("click", async () => { const { data: { user } } = await supabase.auth.getUser(); if (!user) return window.location.href = "login.html"; const teamRes = await supabase.from("teams").select("id").eq("owner_id", user.id).single(); challengerTeamId = teamRes?.data?.id; const { data: opponents } = await supabase .from("teams") .select("id, team_name, manager_name") .neq("id", challengerTeamId) .limit(10); listDiv.innerHTML = ""; opponents.forEach(team => { const div = document.createElement("div"); div.className = "opponent-card"; div.innerHTML = <strong>${team.team_name}</strong> <span>Manager: ${team.manager_name || 'Unknown'}</span> <button class="challenge-btn" data-id="${team.id}">🎯 Challenge</button> ; listDiv.appendChild(div); }); listDiv.querySelectorAll(".challenge-btn").forEach(btn => { btn.addEventListener("click", (e) => { selectedOpponentId = e.target.dataset.id; modal.style.display = "flex"; }); }); }); confirmBtn.addEventListener("click", async () => { const date = document.getElementById("matchDate").value; const time = document.getElementById("matchTime").value; if (!date || !time) return alert("Select both date and time."); const matchDateTime = new Date(${date}T${time}:00); const now = new Date(); const diff = (matchDateTime - now) / 1000; const day = matchDateTime.toLocaleDateString('en-US', { weekday: 'long' }); if (["Monday", "Thursday"].includes(day)) { return alert("❌ Friendly matches are not allowed on Mondays or Thursdays."); } if (diff < 7200 || diff > 172800) { return alert("❌ Match time must be 2 to 48 hours from now."); } const { error } = await supabase.from("matches").insert([{ date, time, home_team_id: challengerTeamId, away_team_id: selectedOpponentId, is_friendly: true, status: "scheduled" }]); if (error) { alert("❌ Booking failed."); console.error(error); } else { alert("✅ Match successfully scheduled!"); window.location.href = "matches.html"; } }); const { data: { user } } = await supabase.auth.getUser(); if (user) { const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user.id).single(); loadSharedUI({ supabase, manager_name: profile.manager_name, xp: profile.xp ?? 0, coins: profile.coins ?? 0, cash: profile.cash ?? 0, }); } </script> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Book Friendly Match – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    body {
+      background: #121212;
+      color: white;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0 16px 100px;
+    }
+    h2 {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .main {
+      padding-top: 80px;
+      padding-bottom: 90px;
+    }
+    .find-opponents-section {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .opponent-list {
+      margin-top: 20px;
+    }
+    .opponent-card {
+      background: #1e1e2f;
+      margin-bottom: 14px;
+      padding: 14px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .opponent-card strong {
+      font-size: 16px;
+    }
+    .challenge-btn {
+      padding: 10px;
+      font-size: 14px;
+      background-color: #00e676;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: #1e1e2f;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 400px;
+      width: 100%;
+    }
+    .modal-content h3 {
+      margin-top: 0;
+    }
+    .modal-content input,
+    .modal-content button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <h2>📖 Book a Friendly Match</h2>
+    <div class="find-opponents-section">
+      <button id="findOpponentsBtn" class="challenge-btn">🔍 Find Opponents</button>
+    </div>
+  </div>
+
+  <div class="opponent-list" id="opponentList"></div>
+
+  <div class="modal" id="challengeModal" style="display:none;">
+    <div class="modal-content">
+      <h3>📆 Set Match Time</h3>
+      <label>Date:</label>
+      <input type="date" id="matchDate">
+      <label>Time:</label>
+      <input type="time" id="matchTime">
+      <button id="confirmChallengeBtn">✅ Confirm Challenge</button>
+      <button onclick="document.getElementById('challengeModal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    import { loadSharedUI } from './js/shared-ui.js';
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    let challengerTeamId = null;
+    let selectedOpponentId = null;
+
+    const findBtn = document.getElementById("findOpponentsBtn");
+    const listDiv = document.getElementById("opponentList");
+    const modal = document.getElementById("challengeModal");
+    const confirmBtn = document.getElementById("confirmChallengeBtn");
+
+    // 🔍 Find available opponents
+    findBtn.addEventListener("click", async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return window.location.href = "login.html";
+
+      const teamRes = await supabase.from("teams").select("id").eq("owner_id", user.id).single();
+      challengerTeamId = teamRes?.data?.id;
+
+      const { data: opponents } = await supabase
+        .from("teams")
+        .select("id, team_name, manager_name")
+        .neq("id", challengerTeamId)
+        .limit(10);
+
+      listDiv.innerHTML = "";
+      opponents?.forEach(team => {
+        const div = document.createElement("div");
+        div.className = "opponent-card";
+        div.innerHTML = `
+          <strong>${team.team_name}</strong>
+          <span>Manager: ${team.manager_name || 'Unknown'}</span>
+          <button class="challenge-btn" data-id="${team.id}">🎯 Challenge</button>
+        `;
+        listDiv.appendChild(div);
+      });
+
+      listDiv.querySelectorAll(".challenge-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          selectedOpponentId = e.target.dataset.id;
+          modal.style.display = "flex";
+        });
+      });
+    });
+
+    // ✅ Confirm and insert match
+    confirmBtn.addEventListener("click", async () => {
+      const date = document.getElementById("matchDate").value;
+      const time = document.getElementById("matchTime").value;
+      if (!date || !time) return alert("Select both date and time.");
+
+      const matchDateTime = new Date(`${date}T${time}:00`);
+      const now = new Date();
+      const diff = (matchDateTime - now) / 1000;
+
+      const day = matchDateTime.toLocaleDateString('en-US', { weekday: 'long' });
+      if (["Monday", "Thursday"].includes(day)) {
+        return alert("❌ Friendly matches are not allowed on Mondays or Thursdays.");
+      }
+      if (diff < 7200 || diff > 172800) {
+        return alert("❌ Match time must be 2 to 48 hours from now.");
+      }
+
+      // 👉 Split into date + time
+      const matchDate = matchDateTime.toISOString().split("T")[0]; // YYYY-MM-DD
+      const matchTime = matchDateTime.toISOString().split("T")[1].split(".")[0]; // HH:MM:SS
+
+      const { error } = await supabase.from("matches").insert([{
+        date: matchDate,
+        start_time: matchTime,
+        home_team_id: challengerTeamId,
+        away_team_id: selectedOpponentId,
+        is_friendly: true,
+        status: "scheduled"
+      }]);
+
+      if (error) {
+        alert("❌ Booking failed.");
+        console.error(error);
+      } else {
+        alert("✅ Match successfully scheduled!");
+        window.location.href = "matches.html";
+      }
+    });
+
+    // Load shared UI (coins, cash, xp, etc.)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
+      loadSharedUI({
+        supabase,
+        manager_name: profile?.manager_name,
+        xp: profile?.xp ?? 0,
+        coins: profile?.coins ?? 0,
+        cash: profile?.cash ?? 0,
+      });
+    }
+  </script>
+</body>
+</html>
