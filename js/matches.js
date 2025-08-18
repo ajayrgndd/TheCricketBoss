@@ -25,21 +25,20 @@ const LIVE_WINDOW_MIN = 210 // ~3.5 hours
 const toDate = (v) => (v ? new Date(v) : null)
 
 function buildStartFromFixture(row) {
-  // Prefer match_datetime if present (timestamp with tz)
   if (row.match_datetime) return toDate(row.match_datetime)
-  if (row.match_date) return toDate(row.match_date) // already timestamp with tz
+  if (row.match_date) return toDate(row.match_date)
 
-  // Last resort: combine date + time if you ever store them separately
   if (row.match_date && row.match_time) {
-    return new Date(`${row.match_date}T${row.match_time}`)
+    // Combine as UTC
+    return new Date(`${row.match_date}T${row.match_time}Z`)
   }
   return null
 }
 
 function buildStartFromFriendly(row) {
-  // matches table: date (DATE), time (TIME)
   if (!row.date || !row.start_time) return null
-  return new Date(`${row.date}T${row.start_time}`)
+  // DB stores UTC → add Z so JS interprets correctly
+  return new Date(`${row.date}T${row.start_time}Z`)
 }
 
 function statusFromTime(start, isCompletedFlag) {
