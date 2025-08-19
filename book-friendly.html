@@ -1,207 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Book Friendly – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css"/>
+  <link rel="stylesheet" href="styles/global.css">
+  <script src="js/smooth-ui.js" defer></script>
   <style>
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #121212;
+      background: #121212;
       color: #fff;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
     }
-
     main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 80px 16px 80px; /* space for top & bottom nav */
+      padding: 90px 15px 80px; /* spacing to avoid top/bottom nav overlap */
     }
-
     h1 {
-      font-size: 20px;
-      margin-bottom: 16px;
       text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 20px;
     }
-
-    .card {
+    .form-section {
       background: #1e1e1e;
       border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      margin-bottom: 25px;
     }
-
-    .search-box {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: bold;
     }
-
-    .search-box input {
-      flex: 1;
+    select, input {
+      width: 100%;
       padding: 10px;
       border-radius: 8px;
       border: none;
+      margin-bottom: 15px;
+      font-size: 1rem;
     }
-
-    .search-box button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #ff9800;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .opponents-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .opponent {
-      background: #2a2a2a;
-      padding: 12px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .opponent button {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      background: #4caf50;
-      color: #fff;
-      cursor: pointer;
-    }
-
-    .time-select {
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .time-select label {
-      font-size: 14px;
-    }
-
-    .time-select input {
-      padding: 8px;
-      border-radius: 6px;
-      border: none;
-    }
-
-    .book-btn {
+    button {
       width: 100%;
-      margin-top: 16px;
       padding: 12px;
+      background: #ff5722;
+      color: #fff;
       border: none;
       border-radius: 8px;
-      background: #2196f3;
-      color: #fff;
-      font-size: 16px;
-      font-weight: bold;
+      font-size: 1.1rem;
       cursor: pointer;
+    }
+    button:disabled {
+      background: #777;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 1rem;
     }
   </style>
 </head>
 <body>
-  
-  <!-- Top + Bottom Nav -->
-  <script src="js/smooth-ui.js"></script>
+
+  <!-- Top Nav will be injected by smooth-ui.js -->
 
   <main>
-    <h1>Book Friendly Match</h1>
+    <h1>Book a Friendly Match</h1>
+    <div class="form-section">
+      <label for="opponent">Choose Opponent:</label>
+      <select id="opponent">
+        <option value="">-- Select Team --</option>
+        <option value="bot1">Bot Warriors</option>
+        <option value="bot2">AI Strikers</option>
+        <option value="bot3">Sim Kings</option>
+        <!-- Later: dynamically fetched teams -->
+      </select>
 
-    <div class="card">
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search team by name..."/>
-        <button onclick="searchTeams()">Search</button>
-      </div>
-      <div id="searchResults" class="opponents-list"></div>
-    </div>
+      <label for="time">Select Match Time:</label>
+      <input type="datetime-local" id="time" />
 
-    <div class="card">
-      <h2>Suggested Opponents</h2>
-      <div id="suggestedOpponents" class="opponents-list">
-        <!-- Filled by JS -->
-      </div>
-    </div>
-
-    <div class="card" id="bookingCard" style="display:none;">
-      <h2>Schedule Match</h2>
-      <p id="selectedOpponent"></p>
-      <div class="time-select">
-        <label for="matchTime">Choose match time (min 2 hrs later)</label>
-        <input type="datetime-local" id="matchTime"/>
-      </div>
-      <button class="book-btn" onclick="bookFriendly()">Book Friendly</button>
+      <button id="bookBtn">Book Friendly</button>
+      <div class="status" id="statusMsg"></div>
     </div>
   </main>
 
+  <!-- Bottom Nav will be injected by smooth-ui.js -->
+
   <script>
-    let chosenOpponent = null;
+    document.addEventListener("DOMContentLoaded", () => {
+      const bookBtn = document.getElementById("bookBtn");
+      const statusMsg = document.getElementById("statusMsg");
 
-    function searchTeams() {
-      const query = document.getElementById('searchInput').value.trim();
-      const resultsDiv = document.getElementById('searchResults');
-      resultsDiv.innerHTML = "";
+      bookBtn.addEventListener("click", () => {
+        const opponent = document.getElementById("opponent").value;
+        const time = document.getElementById("time").value;
 
-      if(!query) return;
+        if (!opponent || !time) {
+          statusMsg.textContent = "Please select opponent and time!";
+          statusMsg.style.color = "orange";
+          return;
+        }
 
-      // Fake search result
-      const teams = [
-        {id: 1, name: "Mumbai Strikers"},
-        {id: 2, name: "Delhi Warriors"}
-      ];
-      teams.forEach(team => {
-        const div = document.createElement('div');
-        div.className = "opponent";
-        div.innerHTML = `<span>${team.name}</span>
-          <button onclick="selectOpponent('${team.name}')">Select</button>`;
-        resultsDiv.appendChild(div);
+        // TODO: Save booking to Supabase (friendlies are in matches table with type='friendly')
+        statusMsg.textContent = "Friendly booked successfully!";
+        statusMsg.style.color = "lightgreen";
+        bookBtn.disabled = true;
+
+        setTimeout(() => {
+          bookBtn.disabled = false;
+          statusMsg.textContent = "";
+        }, 5000);
       });
-    }
-
-    function loadSuggestions() {
-      const opponents = ["Chennai Superstars", "Kolkata Titans", "Punjab Panthers", "Hyderabad Eagles", "Kerala Kings"];
-      const container = document.getElementById("suggestedOpponents");
-      container.innerHTML = "";
-      opponents.forEach(name => {
-        const div = document.createElement('div');
-        div.className = "opponent";
-        div.innerHTML = `<span>${name}</span>
-          <button onclick="selectOpponent('${name}')">Select</button>`;
-        container.appendChild(div);
-      });
-    }
-
-    function selectOpponent(name) {
-      chosenOpponent = name;
-      document.getElementById("bookingCard").style.display = "block";
-      document.getElementById("selectedOpponent").innerText = "Opponent: " + name;
-    }
-
-    function bookFriendly() {
-      const time = document.getElementById("matchTime").value;
-      if(!time || !chosenOpponent) {
-        alert("Please select opponent and time.");
-        return;
-      }
-
-      alert(`Friendly booked vs ${chosenOpponent} at ${time}`);
-      // TODO: Save to Supabase (matches + fixtures with is_friendly = true)
-    }
-
-    window.onload = loadSuggestions;
+    });
   </script>
+
 </body>
 </html>
