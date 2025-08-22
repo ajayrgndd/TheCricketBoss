@@ -58,7 +58,20 @@
     );
 
     const $ = (id) => document.getElementById(id);
-    const fmtWhen = (ts) => ts ? new Date(ts).toLocaleString() : '';
+
+    // 👇 Custom formatter: "DD-MM-YYYY, HH:MM AM/PM"
+    function formatDateTime(ts) {
+      if (!ts) return "";
+      const d = new Date(ts);
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const yyyy = d.getFullYear();
+      const h24 = d.getHours();
+      const hh = String(h24 % 12 || 12).padStart(2, "0");
+      const min = String(d.getMinutes()).padStart(2, "0");
+      const ampm = h24 >= 12 ? "PM" : "AM";
+      return `${dd}-${mm}-${yyyy}, ${hh}:${min} ${ampm}`;
+    }
 
     const badge = (kind) =>
       `<span class="badge ${kind==='league'?'badge-league':'badge-friendly'}">${kind==='league'?'League':'Friendly'}</span>`;
@@ -72,7 +85,7 @@
     function card(m){
       const homeLogo = m.home_logo || 'images/logo.png';
       const awayLogo = m.away_logo || 'images/logo.png';
-      const when = fmtWhen(m.kickoff_at);
+      const when = formatDateTime(m.kickoff_at);
 
       const div = document.createElement('div');
       div.className = 'match-card';
@@ -123,7 +136,7 @@
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
       if (error) { console.error(error); return; }
 
-      // Split & sort by kickoff time desc/asc as you prefer
+      // Split & sort by kickoff time
       const upcoming = (data ?? [])
         .filter(m => m.status === 'scheduled')
         .sort((a,b)=> new Date(a.kickoff_at) - new Date(b.kickoff_at));
