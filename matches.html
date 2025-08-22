@@ -57,7 +57,7 @@
     loadSmoothUI('top-bar', 'bottom-nav');
   </script>
 
-  <!-- Inline logic -->
+  <!-- Inline logic (uses RPC + realtime) -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -68,6 +68,7 @@
 
     const $ = (id) => document.getElementById(id);
 
+    // 👇 Custom formatter: "DD-MM-YYYY, HH:MM AM/PM"
     function formatDateTime(ts) {
       if (!ts) return "";
       const d = new Date(ts);
@@ -84,16 +85,27 @@
     const badge = (kind) =>
       `<span class="badge ${kind==='league'?'badge-league':'badge-friendly'}">${kind==='league'?'League':'Friendly'}</span>`;
 
-    const statusChip = (s) =>
-      `<span class="chip ${
-        s==='running' ? 'chip-live' :
-        s==='completed'? 'chip-done' : 'chip-upcoming'
-      }">${s==='running'?'LIVE':s==='completed'?'Completed':'Scheduled'}</span>`;
+    // Frontend LIVE definition: only LIVE at/after kickoff time (not earlier)
+    function isFrontEndLive(m) {
+      if (m.status === 'completed' || m.status === 'cancelled') return false;
+      const now = Date.now();
+      const ko = new Date(m.kickoff_at).getTime();
+      return now >= ko; // show LIVE only from scheduled kickoff onward
+    }
+
+    const statusChip = (m) => {
+      const s = m.status;
+      const live = isFrontEndLive(m);
+      const cls = live ? 'chip-live' : (s === 'completed' ? 'chip-done' : 'chip-upcoming');
+      const txt = live ? 'LIVE' : (s === 'completed' ? 'Completed' : 'Scheduled');
+      return `<span class="chip ${cls}">${txt}</span>`;
+    };
 
     function card(m){
       const homeLogo = m.home_logo || 'images/logo.png';
       const awayLogo = m.away_logo || 'images/logo.png';
       const when = formatDateTime(m.kickoff_at);
+      const live = isFrontEndLive(m);
 
       const div = document.createElement('div');
       div.className = 'match-card';
@@ -101,7 +113,7 @@
         <div class="match-head">
           ${badge(m.kind)}
           <div class="start">${when}</div>
-          ${statusChip(m.status)}
+          ${statusChip(m)}
         </div>
 
         <div class="match-body">
@@ -125,10 +137,14 @@
         </div>
       `;
 
-      if (m.status === 'running') {
+      // Click behavior:
+      // - Only allow live page if it's LIVE (per frontend rule) AND backend is running (so there is a stream)
+      if (live && m.status === 'running') {
         div.onclick = () => location.href = `friendly-match.html?id=${m.id}`;
       } else if (m.status === 'completed') {
         div.onclick = () => location.href = `friendly-replay.html?id=${m.id}`;
+      } else {
+        div.style.cursor = 'default';
       }
 
       return div;
@@ -138,15 +154,17 @@
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { location.href = "login.html"; return; }
 
+      // Feed with names/logos (RLS-safe via RPC)
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
       if (error) { console.error(error); return; }
 
+      // Partition using FRONTEND live logic
       const live = (data ?? [])
-        .filter(m => m.status === 'running')
+        .filter(m => isFrontEndLive(m))
         .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
 
       const upcoming = (data ?? [])
-        .filter(m => m.status === 'scheduled')
+        .filter(m => !isFrontEndLive(m) && m.status !== 'completed' && m.status !== 'cancelled')
         .sort((a,b)=> new Date(a.kickoff_at) - new Date(b.kickoff_at));
 
       const completed = (data ?? [])
@@ -165,6 +183,7 @@
         ? '' : '<div class="empty">No completed matches yet</div>';
       completed.forEach(m => $('completed-matches').appendChild(card(m)));
 
+      // Realtime: refresh when any of my team’s matches update
       const { data: myTeam } = await supabase
         .from('teams').select('id').eq('owner_id', user.id).maybeSingle();
       if (!myTeam) return;
