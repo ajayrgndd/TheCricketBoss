@@ -52,7 +52,7 @@ const row = (m) => {
     .select('id,status,kickoff_at,date,start_time,home_team_id,away_team_id,is_friendly')
     .eq('is_friendly', true)
     /* 🔧 QUOTE the UUID inside .or() */
-    .or(`home_team_id.eq.'${teamId}',away_team_id.eq.'${teamId}'`)
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
     .order('kickoff_at', { ascending: false })
     .limit(50);
 
