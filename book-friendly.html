@@ -1,207 +1,120 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Book Friendly – TheCricketBoss</title>
-  <link rel="stylesheet" href="styles/global.css"/>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+<!doctype html><html><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Book Friendly</title>
+<style>
+  body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
+  .wrap{max-width:720px;margin:0 auto;padding:16px}
+  .card{background:#121825;border:1px solid #1d263a;border-radius:14px;padding:16px;margin:12px 0}
+  input,button{width:100%;padding:12px;border-radius:10px;border:1px solid #26314b;background:#0f1522;color:#e7ecf3}
+  .pill{padding:10px;border:1px solid #26314b;border-radius:999px;background:#0f1522;margin:6px 0;cursor:pointer}
+  .row{display:grid;gap:10px}
+</style>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
 
-    main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 80px 16px 80px; /* space for top & bottom nav */
-    }
+let meTeamId=null, opponentId=null;
 
-    h1 {
-      font-size: 20px;
-      margin-bottom: 16px;
-      text-align: center;
-    }
+const fmt2 = n => String(n).padStart(2,'0');
+function defaultKickoffLocalPlus(mins){
+  const t = new Date(Date.now() + mins*60000); // user is IST, so local = IST
+  return `${t.getFullYear()}-${fmt2(t.getMonth()+1)}-${fmt2(t.getDate())}T${fmt2(t.getHours())}:${fmt2(t.getMinutes())}`;
+}
+function splitLocalDatetime(s){ // "YYYY-MM-DDTHH:MM"
+  const [d,tm] = s.split('T'); return { date:d, time: tm + ':00' };
+}
 
-    .card {
-      background: #1e1e1e;
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-    }
+async function init(){
+  // current user's team
+  const { data:{ user } } = await supabase.auth.getUser();
+  if(!user){ location.href='login.html'; return; }
+  const { data: team } = await supabase.from('teams').select('id,team_name').eq('owner_id', user.id).maybeSingle();
+  if(!team){ alert('Team not found'); return; }
+  meTeamId = team.id;
+  document.getElementById('kickoff').value = defaultKickoffLocalPlus(120+5); // ≥2h (add 5 mins buffer)
 
-    .search-box {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
+  // suggestions
+  const { data: sugg } = await supabase.rpc('suggest_bot_opponents');
+  const box = document.getElementById('suggestions'); box.innerHTML='';
+  (sugg||[]).forEach(t=>{
+    const b=document.createElement('div'); b.className='pill'; b.textContent=t.team_name;
+    b.onclick=()=>{ opponentId=t.id; document.getElementById('opponent').value=t.team_name; };
+    box.appendChild(b);
+  });
 
-    .search-box input {
-      flex: 1;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-    }
-
-    .search-box button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #ff9800;
-      color: #fff;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .opponents-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .opponent {
-      background: #2a2a2a;
-      padding: 12px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .opponent button {
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      background: #4caf50;
-      color: #fff;
-      cursor: pointer;
-    }
-
-    .time-select {
-      margin-top: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .time-select label {
-      font-size: 14px;
-    }
-
-    .time-select input {
-      padding: 8px;
-      border-radius: 6px;
-      border: none;
-    }
-
-    .book-btn {
-      width: 100%;
-      margin-top: 16px;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      background: #2196f3;
-      color: #fff;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  
-  <!-- Top + Bottom Nav -->
-  <script src="js/smooth-ui.js"></script>
-
-  <main>
-    <h1>Book Friendly Match</h1>
-
-    <div class="card">
-      <div class="search-box">
-        <input type="text" id="searchInput" placeholder="Search team by name..."/>
-        <button onclick="searchTeams()">Search</button>
-      </div>
-      <div id="searchResults" class="opponents-list"></div>
-    </div>
-
-    <div class="card">
-      <h2>Suggested Opponents</h2>
-      <div id="suggestedOpponents" class="opponents-list">
-        <!-- Filled by JS -->
-      </div>
-    </div>
-
-    <div class="card" id="bookingCard" style="display:none;">
-      <h2>Schedule Match</h2>
-      <p id="selectedOpponent"></p>
-      <div class="time-select">
-        <label for="matchTime">Choose match time (min 2 hrs later)</label>
-        <input type="datetime-local" id="matchTime"/>
-      </div>
-      <button class="book-btn" onclick="bookFriendly()">Book Friendly</button>
-    </div>
-  </main>
-
-  <script>
-    let chosenOpponent = null;
-
-    function searchTeams() {
-      const query = document.getElementById('searchInput').value.trim();
-      const resultsDiv = document.getElementById('searchResults');
-      resultsDiv.innerHTML = "";
-
-      if(!query) return;
-
-      // Fake search result
-      const teams = [
-        {id: 1, name: "Mumbai Strikers"},
-        {id: 2, name: "Delhi Warriors"}
-      ];
-      teams.forEach(team => {
-        const div = document.createElement('div');
-        div.className = "opponent";
-        div.innerHTML = `<span>${team.name}</span>
-          <button onclick="selectOpponent('${team.name}')">Select</button>`;
-        resultsDiv.appendChild(div);
+  // live search
+  const inp = document.getElementById('opponent');
+  let timer=null;
+  inp.addEventListener('input', async ()=>{
+    clearTimeout(timer);
+    timer=setTimeout(async ()=>{
+      const q=inp.value.trim(); if(!q) return;
+      const { data: res } = await supabase.rpc('search_teams', { q });
+      const list=document.getElementById('results'); list.innerHTML='';
+      (res||[]).forEach(t=>{
+        const li=document.createElement('div'); li.className='pill';
+        li.textContent=`${t.team_name}${t.is_bot?' (BOT)':''}`;
+        li.onclick=()=>{ opponentId=t.id; inp.value=t.team_name; list.innerHTML=''; };
+        list.appendChild(li);
       });
-    }
+    }, 250);
+  });
 
-    function loadSuggestions() {
-      const opponents = ["Chennai Superstars", "Kolkata Titans", "Punjab Panthers", "Hyderabad Eagles", "Kerala Kings"];
-      const container = document.getElementById("suggestedOpponents");
-      container.innerHTML = "";
-      opponents.forEach(name => {
-        const div = document.createElement('div');
-        div.className = "opponent";
-        div.innerHTML = `<span>${name}</span>
-          <button onclick="selectOpponent('${name}')">Select</button>`;
-        container.appendChild(div);
-      });
-    }
+  document.getElementById('book').onclick = book;
+}
 
-    function selectOpponent(name) {
-      chosenOpponent = name;
-      document.getElementById("bookingCard").style.display = "block";
-      document.getElementById("selectedOpponent").innerText = "Opponent: " + name;
-    }
+async function book(){
+  const name = document.getElementById('opponent').value.trim();
+  const dt = document.getElementById('kickoff').value;
+  if(!name || !opponentId){ alert('Pick an opponent'); return; }
+  if(!dt){ alert('Pick kickoff'); return; }
 
-    function bookFriendly() {
-      const time = document.getElementById("matchTime").value;
-      if(!time || !chosenOpponent) {
-        alert("Please select opponent and time.");
-        return;
-      }
+  // prepare date/time from local (IST) input
+  const { date, time } = splitLocalDatetime(dt);
 
-      alert(`Friendly booked vs ${chosenOpponent} at ${time}`);
-      // TODO: Save to Supabase (matches + fixtures with is_friendly = true)
-    }
+  // client-side precheck (nice errors before insert)
+  const { data: verdict } = await supabase.rpc('precheck_friendly', {
+    p_date: date, p_time: time, p_home: meTeamId, p_away: opponentId
+  });
+  if(verdict !== 'ok'){
+    const msg = {
+      too_soon: 'Kickoff must be at least 2 hours from now (IST).',
+      invalid_day: 'No friendlies on Mondays or Thursdays (league days).',
+      home_quota_exceeded: 'You reached today’s friendly limit (testing cap = 100).',
+      away_quota_exceeded: 'Opponent has reached today’s friendly limit.',
+    }[verdict] || verdict;
+    alert('Cannot book: ' + msg);
+    return;
+  }
 
-    window.onload = loadSuggestions;
-  </script>
-</body>
-</html>
+  // insert into matches (server trigger re-computes times and enforces again)
+  const { data, error } = await supabase.from('matches').insert({
+    date, start_time: time,
+    home_team_id: meTeamId,
+    away_team_id: opponentId,
+    is_friendly: true,
+    status: 'scheduled'
+  }).select('id').single();
+
+  if(error){ alert('Booking failed: '+error.message); return; }
+  alert('✅ Friendly booked! It will auto-start 45 minutes before kickoff.');
+  location.href = 'friendly.html';
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</head><body>
+<div class="wrap">
+  <div class="card">
+    <h2>Book a Friendly</h2>
+    <div class="row">
+      <input id="opponent" placeholder="Search team name…"/>
+      <div id="results"></div>
+      <div id="suggestions"></div>
+      <label>Kickoff (IST, must be ≥ 2 hours):</label>
+      <input id="kickoff" type="datetime-local"/>
+      <button id="book">Book Friendly</button>
+    </div>
+  </div>
+</div>
+</body></html>
