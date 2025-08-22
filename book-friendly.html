@@ -1,120 +1,179 @@
-<!doctype html><html><head>
-<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Book Friendly</title>
-<style>
-  body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
-  .wrap{max-width:720px;margin:0 auto;padding:16px}
-  .card{background:#121825;border:1px solid #1d263a;border-radius:14px;padding:16px;margin:12px 0}
-  input,button{width:100%;padding:12px;border-radius:10px;border:1px solid #26314b;background:#0f1522;color:#e7ecf3}
-  .pill{padding:10px;border:1px solid #26314b;border-radius:999px;background:#0f1522;margin:6px 0;cursor:pointer}
-  .row{display:grid;gap:10px}
-</style>
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-const supabase = createClient("https://iukofcmatlfhfwcechdq.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE");
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Book Friendly</title>
+  <style>
+    body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
+    .wrap{max-width:720px;margin:0 auto;padding:16px}
+    .card{background:#121825;border:1px solid #1d263a;border-radius:14px;padding:16px;margin:12px 0}
+    input,button{width:100%;padding:12px;border-radius:10px;border:1px solid #26314b;background:#0f1522;color:#e7ecf3}
+    .pill{padding:10px;border:1px solid #26314b;border-radius:999px;background:#0f1522;margin:6px 0;cursor:pointer}
+    .row{display:grid;gap:10px}
+  </style>
+</head>
+<body>
 
-let meTeamId=null, opponentId=null;
+  <!-- Top bar (smooth-ui.js will fill) -->
+  <div id="top-bar"></div>
 
-const fmt2 = n => String(n).padStart(2,'0');
-function defaultKickoffLocalPlus(mins){
-  const t = new Date(Date.now() + mins*60000); // user is IST, so local = IST
-  return `${t.getFullYear()}-${fmt2(t.getMonth()+1)}-${fmt2(t.getDate())}T${fmt2(t.getHours())}:${fmt2(t.getMinutes())}`;
-}
-function splitLocalDatetime(s){ // "YYYY-MM-DDTHH:MM"
-  const [d,tm] = s.split('T'); return { date:d, time: tm + ':00' };
-}
-
-async function init(){
-  // current user's team
-  const { data:{ user } } = await supabase.auth.getUser();
-  if(!user){ location.href='login.html'; return; }
-  const { data: team } = await supabase.from('teams').select('id,team_name').eq('owner_id', user.id).maybeSingle();
-  if(!team){ alert('Team not found'); return; }
-  meTeamId = team.id;
-  document.getElementById('kickoff').value = defaultKickoffLocalPlus(120+5); // ≥2h (add 5 mins buffer)
-
-  // suggestions
-  const { data: sugg } = await supabase.rpc('suggest_bot_opponents');
-  const box = document.getElementById('suggestions'); box.innerHTML='';
-  (sugg||[]).forEach(t=>{
-    const b=document.createElement('div'); b.className='pill'; b.textContent=t.team_name;
-    b.onclick=()=>{ opponentId=t.id; document.getElementById('opponent').value=t.team_name; };
-    box.appendChild(b);
-  });
-
-  // live search
-  const inp = document.getElementById('opponent');
-  let timer=null;
-  inp.addEventListener('input', async ()=>{
-    clearTimeout(timer);
-    timer=setTimeout(async ()=>{
-      const q=inp.value.trim(); if(!q) return;
-      const { data: res } = await supabase.rpc('search_teams', { q });
-      const list=document.getElementById('results'); list.innerHTML='';
-      (res||[]).forEach(t=>{
-        const li=document.createElement('div'); li.className='pill';
-        li.textContent=`${t.team_name}${t.is_bot?' (BOT)':''}`;
-        li.onclick=()=>{ opponentId=t.id; inp.value=t.team_name; list.innerHTML=''; };
-        list.appendChild(li);
-      });
-    }, 250);
-  });
-
-  document.getElementById('book').onclick = book;
-}
-
-async function book(){
-  const name = document.getElementById('opponent').value.trim();
-  const dt = document.getElementById('kickoff').value;
-  if(!name || !opponentId){ alert('Pick an opponent'); return; }
-  if(!dt){ alert('Pick kickoff'); return; }
-
-  // prepare date/time from local (IST) input
-  const { date, time } = splitLocalDatetime(dt);
-
-  // client-side precheck (nice errors before insert)
-  const { data: verdict } = await supabase.rpc('precheck_friendly', {
-    p_date: date, p_time: time, p_home: meTeamId, p_away: opponentId
-  });
-  if(verdict !== 'ok'){
-    const msg = {
-      too_soon: 'Kickoff must be at least 2 hours from now (IST).',
-      invalid_day: 'No friendlies on Mondays or Thursdays (league days).',
-      home_quota_exceeded: 'You reached today’s friendly limit (testing cap = 100).',
-      away_quota_exceeded: 'Opponent has reached today’s friendly limit.',
-    }[verdict] || verdict;
-    alert('Cannot book: ' + msg);
-    return;
-  }
-
-  // insert into matches (server trigger re-computes times and enforces again)
-  const { data, error } = await supabase.from('matches').insert({
-    date, start_time: time,
-    home_team_id: meTeamId,
-    away_team_id: opponentId,
-    is_friendly: true,
-    status: 'scheduled'
-  }).select('id').single();
-
-  if(error){ alert('Booking failed: '+error.message); return; }
-  alert('✅ Friendly booked! It will auto-start 45 minutes before kickoff.');
-  location.href = 'friendly.html';
-}
-
-document.addEventListener('DOMContentLoaded', init);
-</script>
-</head><body>
-<div class="wrap">
-  <div class="card">
-    <h2>Book a Friendly</h2>
-    <div class="row">
-      <input id="opponent" placeholder="Search team name…"/>
-      <div id="results"></div>
-      <div id="suggestions"></div>
-      <label>Kickoff (IST, must be ≥ 2 hours):</label>
-      <input id="kickoff" type="datetime-local"/>
-      <button id="book">Book Friendly</button>
+  <div class="wrap">
+    <div class="card">
+      <h2>Book a Friendly</h2>
+      <div class="row">
+        <input id="opponent" placeholder="Search team name…"/>
+        <div id="results"></div>
+        <div id="suggestions"></div>
+        <label>Kickoff (IST, must be ≥ 2 hours):</label>
+        <input id="kickoff" type="datetime-local"/>
+        <button id="book">Book Friendly</button>
+      </div>
     </div>
   </div>
-</div>
-</body></html>
+
+  <!-- Bottom nav (smooth-ui.js will fill) -->
+  <div id="bottom-nav"></div>
+
+  <!-- Load smooth top+bottom nav into the containers above -->
+  <script type="module">
+    import { loadSmoothUI } from "./js/smooth-ui.js";
+    // Defer until DOM is ready so containers exist
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => loadSmoothUI('top-bar','bottom-nav'), { once:true });
+    } else {
+      loadSmoothUI('top-bar','bottom-nav');
+    }
+  </script>
+
+  <!-- Page logic -->
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    let meTeamId=null, opponentId=null;
+
+    const fmt2 = n => String(n).padStart(2,'0');
+    function defaultKickoffLocalPlus(mins){
+      const t = new Date(Date.now() + mins*60000); // local time (IST devices will show IST)
+      return `${t.getFullYear()}-${fmt2(t.getMonth()+1)}-${fmt2(t.getDate())}T${fmt2(t.getHours())}:${fmt2(t.getMinutes())}`;
+    }
+    function splitLocalDatetime(s){ // "YYYY-MM-DDTHH:MM"
+      const [d,tm] = s.split('T'); return { date:d, time: tm + ':00' };
+    }
+
+    async function init(){
+      try {
+        // 1) Ensure user session BEFORE doing anything (prevents nav redirect races)
+        const { data:{ user } } = await supabase.auth.getUser();
+        if(!user){ location.href='login.html'; return; }
+
+        // 2) Resolve my team
+        const { data: team, error: teamErr } = await supabase
+          .from('teams')
+          .select('id,team_name')
+          .eq('owner_id', user.id)
+          .maybeSingle();
+
+        if (teamErr || !team) { alert('Team not found'); return; }
+        meTeamId = team.id;
+
+        // 3) Default kickoff ≥ 2h (+5 min buffer)
+        const kickoffEl = document.getElementById('kickoff');
+        kickoffEl.value = defaultKickoffLocalPlus(125);
+        // also set min on the input to prevent too-soon picks in UI
+        kickoffEl.min = defaultKickoffLocalPlus(120);
+
+        // 4) Bot suggestions
+        const { data: sugg } = await supabase.rpc('suggest_bot_opponents');
+        const box = document.getElementById('suggestions'); box.innerHTML='';
+        (sugg||[]).forEach(t=>{
+          const b=document.createElement('div'); b.className='pill'; b.textContent=t.team_name;
+          b.onclick=()=>{ opponentId=t.id; document.getElementById('opponent').value=t.team_name; };
+          box.appendChild(b);
+        });
+
+        // 5) Live search
+        const inp = document.getElementById('opponent');
+        let timer=null;
+        inp.addEventListener('input', ()=>{
+          clearTimeout(timer);
+          timer=setTimeout(async ()=>{
+            const q=inp.value.trim(); if(!q) { document.getElementById('results').innerHTML=''; return; }
+            const { data: res } = await supabase.rpc('search_teams', { q });
+            const list=document.getElementById('results'); list.innerHTML='';
+            (res||[]).forEach(t=>{
+              const li=document.createElement('div'); li.className='pill';
+              li.textContent=`${t.team_name}${t.is_bot?' (BOT)':''}`;
+              li.onclick=()=>{ opponentId=t.id; inp.value=t.team_name; list.innerHTML=''; };
+              list.appendChild(li);
+            });
+          }, 250);
+        });
+
+        document.getElementById('book').onclick = book;
+      } catch (e) {
+        console.error(e);
+        alert('Something went wrong loading the page.');
+      }
+    }
+
+    async function book(){
+      const name = document.getElementById('opponent').value.trim();
+      const dt = document.getElementById('kickoff').value;
+      if(!name || !opponentId){ alert('Pick an opponent'); return; }
+      if(!dt){ alert('Pick kickoff'); return; }
+
+      const { date, time } = splitLocalDatetime(dt);
+
+      // Pre-check (friendly rules)
+      const { data: verdict, error: preErr } = await supabase.rpc('precheck_friendly', {
+        p_date: date, p_time: time, p_home: meTeamId, p_away: opponentId
+      });
+      if (preErr) {
+        alert('Cannot book: precheck failed.');
+        return;
+      }
+      if(verdict !== 'ok'){
+        const msg = {
+          too_soon: 'Kickoff must be at least 2 hours from now (IST).',
+          invalid_day: 'No friendlies on Mondays or Thursdays (league days).',
+          home_quota_exceeded: 'You reached today’s friendly limit (testing cap = 100).',
+          away_quota_exceeded: 'Opponent has reached today’s friendly limit.',
+        }[verdict] || verdict;
+        alert('Cannot book: ' + msg);
+        return;
+      }
+
+      // Insert
+      const { error } = await supabase.from('matches').insert({
+        date, start_time: time,
+        home_team_id: meTeamId,
+        away_team_id: opponentId,
+        is_friendly: true,
+        status: 'scheduled'
+      });
+
+      if(error){
+        console.error(error);
+        alert('Booking failed: '+ error.message);
+        return;
+      }
+
+      alert('✅ Friendly booked! It will auto-start 45 minutes before kickoff.');
+      location.href = 'friendly.html';
+    }
+
+    // Start after DOM ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init, { once:true });
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
