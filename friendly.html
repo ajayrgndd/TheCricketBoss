@@ -1,98 +1,143 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Friendlies</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Book Friendly</title>
   <style>
-    body { background:#fff; color:#000; font-family:system-ui; margin:0; }
-    .wrap { max-width:800px; margin:20px auto; padding:0 12px; }
-    h3 { margin:16px 0 8px; }
-    .card { padding:8px; border:1px solid #26314b; border-radius:10px; margin:6px 0; cursor:pointer; }
-    .muted { color:#555; font-size:12px; }
+    body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
+    .wrap{max-width:720px;margin:0 auto;padding:16px}
+    .card{background:#121825;border:1px solid #1d263a;border-radius:14px;padding:16px;margin:12px 0}
+    input,button{width:100%;padding:12px;border-radius:10px;border:1px solid #26314b;background:#0f1522;color:#e7ecf3}
+    .pill{padding:10px;border:1px solid #26314b;border-radius:999px;background:#0f1522;margin:6px 0;cursor:pointer}
+    .row{display:grid;gap:10px}
   </style>
 </head>
 <body>
-<div class="wrap">
-  <h3>Live</h3><div id="live"></div>
-  <h3>Upcoming</h3><div id="upcoming"></div>
-  <h3>Completed</h3><div id="completed"></div>
-</div>
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+  <!-- Top bar (smooth-ui.js will fill) -->
+  <div id="top-bar"></div>
 
-/* Your Supabase project creds */
-const supabase = createClient(
-  "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-);
+  <div class="wrap">
+    <div class="card">
+      <h2>Book a Friendly</h2>
+      <div class="row">
+        <input id="opponent" placeholder="Search team name…"/>
+        <div id="results"></div>
+        <div id="suggestions"></div>
+        <label>Kickoff (IST, must be ≥ 2 hours):</label>
+        <input id="kickoff" type="datetime-local"/>
+        <button id="book">Book Friendly</button>
+      </div>
+    </div>
+  </div>
 
-const $ = (id) => document.getElementById(id);
+  <!-- Bottom nav (smooth-ui.js will fill) -->
+  <div id="bottom-nav"></div>
 
-function whenText(m) {
-  if (m.kickoff_at) return new Date(m.kickoff_at).toLocaleString();
-  // fallback if kickoff_at is null
-  return `${m.date} ${m.start_time ?? ""}`;
-}
+  <!-- Load smooth top+bottom nav into the containers above -->
+  <script type="module">
+    import { loadSmoothUI } from "./js/smooth-ui.js";
+    loadSmoothUI('top-bar','bottom-nav');
+  </script>
 
-function row(m) {
-  const d = document.createElement("div");
-  d.className = "card";
-  const vs = `${m.home_team_name ?? m.home_team_id} vs ${m.away_team_name ?? m.away_team_id}`;
-  d.innerHTML = `
-    <div>${vs}</div>
-    <div class="muted">${m.status} • ${whenText(m)}</div>
-  `;
-  if (m.status === "running") {
-    d.style.borderColor = "#2aa";
-    d.style.fontWeight = "600";
-    d.onclick = () => location.href = `friendly-match.html?id=${m.id}`;
-  } else if (m.status === "completed") {
-    d.onclick = () => location.href = `friendly-replay.html?id=${m.id}`;
-  }
-  return d;
-}
+  <!-- Page logic -->
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
 
-async function load() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) { location.href = "login.html"; return; }
+    let meTeamId=null, opponentId=null;
 
-  // find my team id (for realtime filters)
-  const { data: myTeam } = await supabase
-    .from("teams").select("id").eq("owner_id", user.id).maybeSingle();
-  if (!myTeam) return;
+    const fmt2 = n => String(n).padStart(2,'0');
+    function defaultKickoffLocalPlus(mins){
+      const t = new Date(Date.now() + mins*60000); // local time (IST on your devices)
+      return `${t.getFullYear()}-${fmt2(t.getMonth()+1)}-${fmt2(t.getDate())}T${fmt2(t.getHours())}:${fmt2(t.getMinutes())}`;
+    }
+    function splitLocalDatetime(s){ // "YYYY-MM-DDTHH:MM"
+      const [d,tm] = s.split('T'); return { date:d, time: tm + ':00' };
+    }
 
-  // fetch friendlies WITH team names via RPC (RLS-safe)
-  const { data, error } = await supabase.rpc("get_friendly_matches_for_user");
-  if (error) { console.error(error); return; }
+    async function init(){
+      // current user's team
+      const { data:{ user } } = await supabase.auth.getUser();
+      if(!user){ location.href='login.html'; return; }
+      const { data: team } = await supabase.from('teams').select('id,team_name').eq('owner_id', user.id).maybeSingle();
+      if(!team){ alert('Team not found'); return; }
+      meTeamId = team.id;
+      document.getElementById('kickoff').value = defaultKickoffLocalPlus(120+5); // ≥2h (add 5 mins buffer)
 
-  const upcoming = (data ?? []).filter(m => m.status === "scheduled");
-  const live     = (data ?? []).filter(m => m.status === "running");
-  const done     = (data ?? []).filter(m => m.status === "completed");
+      // suggestions
+      const { data: sugg } = await supabase.rpc('suggest_bot_opponents');
+      const box = document.getElementById('suggestions'); box.innerHTML='';
+      (sugg||[]).forEach(t=>{
+        const b=document.createElement('div'); b.className='pill'; b.textContent=t.team_name;
+        b.onclick=()=>{ opponentId=t.id; document.getElementById('opponent').value=t.team_name; };
+        box.appendChild(b);
+      });
 
-  $("upcoming").innerHTML = "";  upcoming.forEach(m => $("upcoming").appendChild(row(m)));
-  $("live").innerHTML     = "";  live.forEach(m => $("live").appendChild(row(m)));
-  $("completed").innerHTML= "";  done.forEach(m => $("completed").appendChild(row(m)));
+      // live search
+      const inp = document.getElementById('opponent');
+      let timer=null;
+      inp.addEventListener('input', async ()=>{
+        clearTimeout(timer);
+        timer=setTimeout(async ()=>{
+          const q=inp.value.trim(); if(!q) return;
+          const { data: res } = await supabase.rpc('search_teams', { q });
+          const list=document.getElementById('results'); list.innerHTML='';
+          (res||[]).forEach(t=>{
+            const li=document.createElement('div'); li.className='pill';
+            li.textContent=`${t.team_name}${t.is_bot?' (BOT)':''}`;
+            li.onclick=()=>{ opponentId=t.id; inp.value=t.team_name; list.innerHTML=''; };
+            list.appendChild(li);
+          });
+        }, 250);
+      });
 
-  // Realtime: reload when my team’s matches update
-  supabase.channel("matches-friendlies")
-    .on("postgres_changes", {
-      event: "UPDATE",
-      schema: "public",
-      table: "matches",
-      filter: `home_team_id=eq.${myTeam.id}`
-    }, () => location.reload())
-    .on("postgres_changes", {
-      event: "UPDATE",
-      schema: "public",
-      table: "matches",
-      filter: `away_team_id=eq.${myTeam.id}`
-    }, () => location.reload())
-    .subscribe();
-}
+      document.getElementById('book').onclick = book;
+    }
 
-load();
-</script>
+    async function book(){
+      const name = document.getElementById('opponent').value.trim();
+      const dt = document.getElementById('kickoff').value;
+      if(!name || !opponentId){ alert('Pick an opponent'); return; }
+      if(!dt){ alert('Pick kickoff'); return; }
+
+      // prepare date/time from local (IST) input
+      const { date, time } = splitLocalDatetime(dt);
+
+      // client-side precheck (nice errors before insert)
+      const { data: verdict } = await supabase.rpc('precheck_friendly', {
+        p_date: date, p_time: time, p_home: meTeamId, p_away: opponentId
+      });
+      if(verdict !== 'ok'){
+        const msg = {
+          too_soon: 'Kickoff must be at least 2 hours from now (IST).',
+          invalid_day: 'No friendlies on Mondays or Thursdays (league days).',
+          home_quota_exceeded: 'You reached today’s friendly limit (testing cap = 100).',
+          away_quota_exceeded: 'Opponent has reached today’s friendly limit.',
+        }[verdict] || verdict;
+        alert('Cannot book: ' + msg);
+        return;
+      }
+
+      // insert into matches (server trigger re-computes times and enforces again)
+      const { data, error } = await supabase.from('matches').insert({
+        date, start_time: time,
+        home_team_id: meTeamId,
+        away_team_id: opponentId,
+        is_friendly: true,
+        status: 'scheduled'
+      }).select('id').single();
+
+      if(error){ alert('Booking failed: '+error.message); return; }
+      alert('✅ Friendly booked! It will auto-start 45 minutes before kickoff.');
+      location.href = 'matches.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
