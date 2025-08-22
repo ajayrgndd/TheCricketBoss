@@ -38,6 +38,9 @@
   <div id="top-bar"></div>
 
   <main>
+    <h2>Live Matches</h2>
+    <div id="live-matches" class="match-list"></div>
+
     <h2>Upcoming Matches</h2>
     <div id="upcoming-matches" class="match-list"></div>
 
@@ -54,7 +57,7 @@
     loadSmoothUI('top-bar', 'bottom-nav');
   </script>
 
-  <!-- Inline logic (uses RPC + realtime) -->
+  <!-- Inline logic -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -65,7 +68,6 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // 👇 Custom formatter: "DD-MM-YYYY, HH:MM AM/PM"
     function formatDateTime(ts) {
       if (!ts) return "";
       const d = new Date(ts);
@@ -123,11 +125,9 @@
         </div>
       `;
 
-      // Click behavior
       if (m.status === 'running') {
         div.onclick = () => location.href = `friendly-match.html?id=${m.id}`;
       } else if (m.status === 'completed') {
-        // both league & friendly use the same replay route (ball_by_ball is public for completed)
         div.onclick = () => location.href = `friendly-replay.html?id=${m.id}`;
       }
 
@@ -138,11 +138,13 @@
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { location.href = "login.html"; return; }
 
-      // Feed with names/logos (RLS-safe via RPC)
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
       if (error) { console.error(error); return; }
 
-      // Split & sort by kickoff time
+      const live = (data ?? [])
+        .filter(m => m.status === 'running')
+        .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
+
       const upcoming = (data ?? [])
         .filter(m => m.status === 'scheduled')
         .sort((a,b)=> new Date(a.kickoff_at) - new Date(b.kickoff_at));
@@ -150,6 +152,10 @@
       const completed = (data ?? [])
         .filter(m => m.status === 'completed')
         .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
+
+      $('live-matches').innerHTML = live.length
+        ? '' : '<div class="empty">No live matches</div>';
+      live.forEach(m => $('live-matches').appendChild(card(m)));
 
       $('upcoming-matches').innerHTML = upcoming.length
         ? '' : '<div class="empty">No upcoming matches</div>';
@@ -159,7 +165,6 @@
         ? '' : '<div class="empty">No completed matches yet</div>';
       completed.forEach(m => $('completed-matches').appendChild(card(m)));
 
-      // Realtime: refresh when any of my team’s matches update
       const { data: myTeam } = await supabase
         .from('teams').select('id').eq('owner_id', user.id).maybeSingle();
       if (!myTeam) return;
