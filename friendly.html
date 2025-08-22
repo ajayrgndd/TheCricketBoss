@@ -1,3 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Friendlies</title>
+  <style>
+    body { background:#fff; color:#000; font-family:system-ui; margin:0; }
+    .wrap { max-width:800px; margin:20px auto; padding:0 12px; }
+    h3 { margin:16px 0 8px; }
+    .card { padding:8px; border:1px solid #26314b; border-radius:10px; margin:6px 0; cursor:pointer; }
+    .muted { color:#555; font-size:12px; }
+  </style>
+</head>
+<body>
 <div class="wrap">
   <h3>Live</h3><div id="live"></div>
   <h3>Upcoming</h3><div id="upcoming"></div>
@@ -7,76 +22,77 @@
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-/* 🔧 FIXED: wrap URL + KEY in quotes */
+/* Your Supabase project creds */
 const supabase = createClient(
   "https://iukofcmatlfhfwcechdq.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
 );
 
-const el = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(id);
 
-const row = (m) => {
-  const d = document.createElement('div');
-  d.style.padding = '8px';
-  d.style.border = '1px solid #26314b';
-  d.style.borderRadius = '10px';
-  d.style.margin = '6px 0';
-  d.textContent = `${m.home_team_id} vs ${m.away_team_id} • ${m.status} • ${new Date(m.kickoff_at || m.date).toLocaleString()}`;
-  if (m.status === 'running') {
-    d.style.borderColor = '#2aa';
-    d.style.fontWeight = '600';
+function whenText(m) {
+  if (m.kickoff_at) return new Date(m.kickoff_at).toLocaleString();
+  // fallback if kickoff_at is null
+  return `${m.date} ${m.start_time ?? ""}`;
+}
+
+function row(m) {
+  const d = document.createElement("div");
+  d.className = "card";
+  const vs = `${m.home_team_name ?? m.home_team_id} vs ${m.away_team_name ?? m.away_team_id}`;
+  d.innerHTML = `
+    <div>${vs}</div>
+    <div class="muted">${m.status} • ${whenText(m)}</div>
+  `;
+  if (m.status === "running") {
+    d.style.borderColor = "#2aa";
+    d.style.fontWeight = "600";
     d.onclick = () => location.href = `friendly-match.html?id=${m.id}`;
-  }
-  if (m.status === 'completed') {
+  } else if (m.status === "completed") {
     d.onclick = () => location.href = `friendly-replay.html?id=${m.id}`;
   }
   return d;
-};
+}
 
-(async () => {
+async function load() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) { location.href = "login.html"; return; }
 
-  // Get my team id
-  const { data: myTeam, error: teamErr } = await supabase
-    .from('teams')
-    .select('id')
-    .eq('owner_id', user.id)
-    .maybeSingle();
-  if (teamErr || !myTeam) { console.warn('No team found'); return; }
-  const teamId = myTeam.id;
+  // find my team id (for realtime filters)
+  const { data: myTeam } = await supabase
+    .from("teams").select("id").eq("owner_id", user.id).maybeSingle();
+  if (!myTeam) return;
 
-  // Fetch my friendlies (RLS allows this)
-  const { data, error } = await supabase
-    .from('matches')
-    .select('id,status,kickoff_at,date,start_time,home_team_id,away_team_id,is_friendly')
-    .eq('is_friendly', true)
-    /* 🔧 QUOTE the UUID inside .or() */
-    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-    .order('kickoff_at', { ascending: false })
-    .limit(50);
-
+  // fetch friendlies WITH team names via RPC (RLS-safe)
+  const { data, error } = await supabase.rpc("get_friendly_matches_for_user");
   if (error) { console.error(error); return; }
 
-  const upcoming = (data || []).filter(m => m.status === 'scheduled');
-  const live     = (data || []).filter(m => m.status === 'running');
-  const done     = (data || []).filter(m => m.status === 'completed');
+  const upcoming = (data ?? []).filter(m => m.status === "scheduled");
+  const live     = (data ?? []).filter(m => m.status === "running");
+  const done     = (data ?? []).filter(m => m.status === "completed");
 
-  el('upcoming').innerHTML = ''; upcoming.forEach(m => el('upcoming').appendChild(row(m)));
-  el('live').innerHTML     = ''; live.forEach(m => el('live').appendChild(row(m)));
-  el('completed').innerHTML= ''; done.forEach(m => el('completed').appendChild(row(m)));
+  $("upcoming").innerHTML = "";  upcoming.forEach(m => $("upcoming").appendChild(row(m)));
+  $("live").innerHTML     = "";  live.forEach(m => $("live").appendChild(row(m)));
+  $("completed").innerHTML= "";  done.forEach(m => $("completed").appendChild(row(m)));
 
-  // Realtime updates for my matches (🔧 also quote UUID in filter)
-  supabase.channel('matches-friendlies')
-    .on('postgres_changes', {
-      event: 'UPDATE', schema: 'public', table: 'matches',
-      filter: `home_team_id=eq.'${teamId}'`
+  // Realtime: reload when my team’s matches update
+  supabase.channel("matches-friendlies")
+    .on("postgres_changes", {
+      event: "UPDATE",
+      schema: "public",
+      table: "matches",
+      filter: `home_team_id=eq.${myTeam.id}`
     }, () => location.reload())
-    .on('postgres_changes', {
-      event: 'UPDATE', schema: 'public', table: 'matches',
-      filter: `away_team_id=eq.'${teamId}'`
+    .on("postgres_changes", {
+      event: "UPDATE",
+      schema: "public",
+      table: "matches",
+      filter: `away_team_id=eq.${myTeam.id}`
     }, () => location.reload())
     .subscribe();
-})();
-</script>
+}
 
+load();
+</script>
+</body>
+</html>
