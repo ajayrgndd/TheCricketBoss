@@ -1,0 +1,53 @@
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+const supabase = createClient(https://iukofcmatlfhfwcechdq.supabase.co, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE);
+const matchId = new URLSearchParams(location.search).get('id');
+
+const feed = document.getElementById('feed');
+
+function line(b){ 
+  const d = document.createElement('div'); 
+  d.textContent = `I${b.innings} ${b.over_number}.${b.ball_in_over}: ${b.commentary ?? `Runs ${b.runs_scored}${b.wicket?' + W':''}`}`;
+  feed.prepend(d);
+}
+
+(async () => {
+  // 1) confirm match is running
+  const { data: m } = await supabase.from('matches').select('status').eq('id', matchId).single();
+  if (!m || m.status !== 'running') {
+    feed.textContent = 'Match not live yet.';
+    // optional: if completed, send to replay
+    if (m?.status === 'completed') location.href = `friendly-replay.html?id=${matchId}`;
+    return;
+  }
+
+  // 2) (optional) fetch last few balls so mid-join isn’t blank
+  const { data: last } = await supabase
+    .from('ball_by_ball')
+    .select('innings,over_number,ball_in_over,runs_scored,wicket,commentary')
+    .eq('match_id', matchId)
+    .order('innings').order('over_number').order('ball_in_over')
+    .limit(18);
+  (last ?? []).slice(-12).forEach(line); // show recent dozen
+
+  // 3) subscribe to new inserts
+  supabase
+    .channel('bbb-'+matchId)
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ball_by_ball', filter: `match_id=eq.${matchId}` },
+        payload => line(payload.new))
+    .subscribe();
+
+  // 4) also watch match status flip to 'completed'
+  supabase
+    .channel('m-'+matchId)
+    .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+        p => {
+          if (p.new.status === 'completed') {
+            location.href = `friendly-replay.html?id=${matchId}`;
+          }
+        })
+    .subscribe();
+})();
+</script>
