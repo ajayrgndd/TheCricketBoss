@@ -25,6 +25,9 @@
   </style>
 </head>
 <body>
+
+  <div id="top-bar"></div>
+
   <div class="wrap">
     <div class="card" id="header">
       <div class="match-head">
@@ -56,6 +59,17 @@
     </div>
   </div>
 
+  <div id="bottom-nav"></div>
+
+  <script type="module">
+    import { loadSmoothUI } from "./js/smooth-ui.js";
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => loadSmoothUI('top-bar','bottom-nav'), { once:true });
+    } else {
+      loadSmoothUI('top-bar','bottom-nav');
+    }
+  </script>
+
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
     const supabase = createClient(
@@ -66,7 +80,6 @@
     const params = new URLSearchParams(location.search);
     const matchId = params.get('id');
 
-    // same DD-MM-YYYY, HH:MM AM/PM as matches.html
     function fmt(ts){
       if(!ts) return '';
       const d = new Date(ts);
@@ -107,14 +120,13 @@
     document.getElementById('nextOver').onclick = nextOver;
 
     async function load(){
-      // league match row (completed or running -> but replay is for completed)
       const { data: m } = await supabase
         .from('matches')
         .select('id,status,kickoff_at,home_team_id,away_team_id,result,is_friendly')
         .eq('id', matchId).single();
 
-      // ensure this is league (is_friendly=false); if friendly, redirect
-      if (m.is_friendly) { location.href = `friendly-replay.html?id=${matchId}`; return; }
+      // ensure league
+      if (m?.is_friendly) { location.href = `friendly-replay.html?id=${matchId}`; return; }
 
       const [home, away] = await Promise.all([
         supabase.from('teams').select('team_name,logo_url').eq('id', m.home_team_id).maybeSingle(),
