@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>League Replay – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css"/>
+  <style>
+    body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
+    .wrap{max-width:900px;margin:0 auto;padding:16px}
+    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;margin:14px 0}
+    .match-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+    .badge{font-size:.75rem;padding:6px 10px;border-radius:999px;border:1px solid #1f2937}
+    .badge-league{background:#1e293b;color:#cbd5e1}
+    .chip-done{background:#334155;color:#e2e8f0;padding:6px 10px;border-radius:8px;font-size:.75rem}
+    .start{opacity:.9;font-size:.9rem}
+    .teams{display:flex;align-items:center;justify-content:space-between;padding:10px 6px}
+    .team{display:flex;align-items:center;gap:10px}
+    .team img{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#0b0b0b;border:1px solid #1f2937}
+    .vs{opacity:.7;font-weight:600}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+    .controls button{background:#0f172a;color:#e5e7eb;border:1px solid #334155;border-radius:10px;padding:10px 14px;cursor:pointer}
+    .feed{height:55vh;overflow:auto;border:1px solid #1f2937;border-radius:10px;padding:10px;background:#0d1422}
+    .line{padding:6px 4px;border-bottom:1px dashed #1f2937;font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="header">
+      <div class="match-head">
+        <span class="badge badge-league">League</span>
+        <div class="start" id="when">—</div>
+        <span class="chip-done">Completed</span>
+      </div>
+      <div class="teams">
+        <div class="team">
+          <img id="homeLogo" src="images/logo.png" alt="Home"/>
+          <div id="homeName" style="font-weight:700">Home</div>
+        </div>
+        <div class="vs">vs</div>
+        <div class="team">
+          <img id="awayLogo" src="images/logo.png" alt="Away"/>
+          <div id="awayName" style="font-weight:700">Away</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="controls">
+        <button id="play">▶️ Play</button>
+        <button id="pause">⏸ Pause</button>
+        <button id="nextBall">⏭ Next ball</button>
+        <button id="nextOver">⏭⏭ Next over</button>
+      </div>
+      <div class="feed" id="feed"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    const params = new URLSearchParams(location.search);
+    const matchId = params.get('id');
+
+    // same DD-MM-YYYY, HH:MM AM/PM as matches.html
+    function fmt(ts){
+      if(!ts) return '';
+      const d = new Date(ts);
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      const h24 = d.getHours();
+      const hh = String(h24 % 12 || 12).padStart(2,'0');
+      const m  = String(d.getMinutes()).padStart(2,'0');
+      const am = h24 >= 12 ? 'PM' : 'AM';
+      return `${dd}-${mm}-${yyyy}, ${hh}:${m} ${am}`;
+    }
+
+    const feed = document.getElementById('feed');
+    const line = (b) => {
+      const d = document.createElement('div');
+      d.className='line';
+      d.textContent = `I${b.innings} ${b.over_number}.${b.ball_in_over}: ${b.commentary ?? `Runs ${b.runs_scored}${b.wicket?' + W':''}`}`;
+      feed.prepend(d);
+    };
+
+    let balls=[], i=0, playing=false, timer;
+    function play(){ if(!playing){ playing=true; step(); } }
+    function pause(){ playing=false; if(timer) clearTimeout(timer); }
+    function nextBall(){ if(i < balls.length){ line(balls[i++]); } }
+    function nextOver(){
+      if(i >= balls.length) return;
+      const currentOver = balls[i].over_number, currentInn=balls[i].innings;
+      while(i < balls.length && balls[i].innings===currentInn && balls[i].over_number===currentOver){
+        line(balls[i++]);
+      }
+    }
+    function step(){ if(i >= balls.length){ playing=false; return; } line(balls[i++]); timer=setTimeout(step, 350); }
+
+    document.getElementById('play').onclick = play;
+    document.getElementById('pause').onclick = pause;
+    document.getElementById('nextBall').onclick = nextBall;
+    document.getElementById('nextOver').onclick = nextOver;
+
+    async function load(){
+      // league match row (completed or running -> but replay is for completed)
+      const { data: m } = await supabase
+        .from('matches')
+        .select('id,status,kickoff_at,home_team_id,away_team_id,result,is_friendly')
+        .eq('id', matchId).single();
+
+      // ensure this is league (is_friendly=false); if friendly, redirect
+      if (m.is_friendly) { location.href = `friendly-replay.html?id=${matchId}`; return; }
+
+      const [home, away] = await Promise.all([
+        supabase.from('teams').select('team_name,logo_url').eq('id', m.home_team_id).maybeSingle(),
+        supabase.from('teams').select('team_name,logo_url').eq('id', m.away_team_id).maybeSingle()
+      ]);
+
+      document.getElementById('homeName').textContent = home.data?.team_name ?? m.home_team_id;
+      document.getElementById('awayName').textContent = away.data?.team_name ?? m.away_team_id;
+      document.getElementById('homeLogo').src = home.data?.logo_url || 'images/logo.png';
+      document.getElementById('awayLogo').src = away.data?.logo_url || 'images/logo.png';
+      document.getElementById('when').textContent = fmt(m.kickoff_at);
+
+      const { data } = await supabase
+        .from('ball_by_ball')
+        .select('innings,over_number,ball_in_over,runs_scored,wicket,commentary')
+        .eq('match_id', matchId)
+        .order('innings').order('over_number').order('ball_in_over');
+
+      balls = data ?? [];
+    }
+
+    load();
+  </script>
+</body>
+</html>
