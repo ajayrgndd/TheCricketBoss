@@ -10,7 +10,7 @@
     .wrap{max-width:900px;margin:0 auto;padding:16px}
     .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;margin:14px 0}
     .match-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-    .badge{font-size:.75rem;padding:6px 10px;border-radius:999px;border:1px solid #234;border:1px solid #1f2937}
+    .badge{font-size:.75rem;padding:6px 10px;border-radius:999px;border:1px solid #1f2937}
     .badge-friendly{background:#1b4332;color:#d1fae5}
     .chip-done{background:#334155;color:#e2e8f0;padding:6px 10px;border-radius:8px;font-size:.75rem}
     .start{opacity:.9;font-size:.9rem}
@@ -25,6 +25,9 @@
   </style>
 </head>
 <body>
+
+  <div id="top-bar"></div>
+
   <div class="wrap">
     <div class="card" id="header">
       <div class="match-head">
@@ -56,6 +59,17 @@
     </div>
   </div>
 
+  <div id="bottom-nav"></div>
+
+  <script type="module">
+    import { loadSmoothUI } from "./js/smooth-ui.js";
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => loadSmoothUI('top-bar','bottom-nav'), { once:true });
+    } else {
+      loadSmoothUI('top-bar','bottom-nav');
+    }
+  </script>
+
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
     const supabase = createClient(
@@ -66,7 +80,6 @@
     const params = new URLSearchParams(location.search);
     const matchId = params.get('id');
 
-    // same DD-MM-YYYY, HH:MM AM/PM format as matches.html
     function fmt(ts){
       if(!ts) return '';
       const d = new Date(ts);
@@ -102,8 +115,7 @@
     }
     function step(){
       if(i >= balls.length){ playing=false; return; }
-      line(balls[i++]);
-      timer = setTimeout(step, 350);
+      line(balls[i++]); timer = setTimeout(step, 350);
     }
 
     document.getElementById('play').onclick = play;
@@ -112,14 +124,14 @@
     document.getElementById('nextOver').onclick = nextOver;
 
     async function load(){
-      // match header (public for completed)
       const { data: m } = await supabase
         .from('matches')
-        .select('id, status, kickoff_at, home_team_id, away_team_id, result')
+        .select('id,status,kickoff_at,home_team_id,away_team_id,result,is_friendly')
         .eq('id', matchId).single();
 
-      // get names/logos via teams (completed replays are public, but teams RLS might hide;
-      // fall back to IDs if not accessible)
+      // ensure friendly
+      if (m && !m.is_friendly) { location.href = `league-replay.html?id=${matchId}`; return; }
+
       const [home, away] = await Promise.all([
         supabase.from('teams').select('team_name,logo_url').eq('id', m.home_team_id).maybeSingle(),
         supabase.from('teams').select('team_name,logo_url').eq('id', m.away_team_id).maybeSingle()
@@ -131,7 +143,6 @@
       document.getElementById('awayLogo').src = away.data?.logo_url || 'images/logo.png';
       document.getElementById('when').textContent = fmt(m.kickoff_at);
 
-      // load balls
       const { data } = await supabase
         .from('ball_by_ball')
         .select('innings,over_number,ball_in_over,runs_scored,wicket,commentary')
