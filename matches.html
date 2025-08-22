@@ -48,6 +48,12 @@
   <!-- Bottom nav (smooth-ui.js will fill) -->
   <div id="bottom-nav"></div>
 
+  <!-- Call smooth UI into #top-bar / #bottom-nav -->
+  <script type="module">
+    import { loadSmoothUI } from './js/smooth-ui.js';
+    loadSmoothUI('top-bar', 'bottom-nav');
+  </script>
+
   <!-- Inline logic (uses RPC + realtime) -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
