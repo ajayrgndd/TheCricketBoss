@@ -8,12 +8,11 @@
   <link rel="stylesheet" href="styles/global.css"/>
   <link rel="stylesheet" href="css/matches.css"/>
 
-  <!-- JS -->
-  <script type="module" src="js/matches.js"></script>
+  <!-- JS (keep your existing includes) -->
   <script type="module" src="js/smooth-ui.js"></script>
 
   <style>
-    /* Small, self-contained styles to support badges & chips */
+    /* badges & chips (your same look) */
     .match-card{background:#111;border-radius:12px;padding:12px;margin:14px 0;border:1px solid #222}
     .match-head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px}
     .badge{font-size:.7rem;padding:4px 8px;border-radius:999px;border:1px solid #333;letter-spacing:.02em}
@@ -48,5 +47,117 @@
 
   <!-- Bottom nav (smooth-ui.js will fill) -->
   <div id="bottom-nav"></div>
+
+  <!-- Inline logic (uses RPC + realtime) -->
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    const $ = (id) => document.getElementById(id);
+    const fmtWhen = (ts) => ts ? new Date(ts).toLocaleString() : '';
+
+    const badge = (kind) =>
+      `<span class="badge ${kind==='league'?'badge-league':'badge-friendly'}">${kind==='league'?'League':'Friendly'}</span>`;
+
+    const statusChip = (s) =>
+      `<span class="chip ${
+        s==='running' ? 'chip-live' :
+        s==='completed'? 'chip-done' : 'chip-upcoming'
+      }">${s==='running'?'LIVE':s==='completed'?'Completed':'Scheduled'}</span>`;
+
+    function card(m){
+      const homeLogo = m.home_logo || 'images/logo.png';
+      const awayLogo = m.away_logo || 'images/logo.png';
+      const when = fmtWhen(m.kickoff_at);
+
+      const div = document.createElement('div');
+      div.className = 'match-card';
+      div.innerHTML = `
+        <div class="match-head">
+          ${badge(m.kind)}
+          <div class="start">${when}</div>
+          ${statusChip(m.status)}
+        </div>
+
+        <div class="match-body">
+          <div class="team">
+            <img src="${homeLogo}" alt="${m.home_team_name||'Home'}"/>
+            <div class="name">${m.home_team_name||'Home'}</div>
+            <div class="score ${m.status==='completed'?'':'hidden-score'}">
+              ${m.status==='completed' ? (m.result?.home?.runs ?? '-') : '—'}
+            </div>
+          </div>
+
+          <div class="vs">vs</div>
+
+          <div class="team">
+            <img src="${awayLogo}" alt="${m.away_team_name||'Away'}"/>
+            <div class="name">${m.away_team_name||'Away'}</div>
+            <div class="score ${m.status==='completed'?'':'hidden-score'}">
+              ${m.status==='completed' ? (m.result?.away?.runs ?? '-') : '—'}
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Click behavior
+      if (m.status === 'running') {
+        div.onclick = () => location.href = `friendly-match.html?id=${m.id}`;
+      } else if (m.status === 'completed') {
+        // both league & friendly use the same replay route (ball_by_ball is public for completed)
+        div.onclick = () => location.href = `friendly-replay.html?id=${m.id}`;
+      }
+
+      return div;
+    }
+
+    async function load(){
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { location.href = "login.html"; return; }
+
+      // Feed with names/logos (RLS-safe via RPC)
+      const { data, error } = await supabase.rpc('get_matches_feed_for_user');
+      if (error) { console.error(error); return; }
+
+      // Split & sort by kickoff time desc/asc as you prefer
+      const upcoming = (data ?? [])
+        .filter(m => m.status === 'scheduled')
+        .sort((a,b)=> new Date(a.kickoff_at) - new Date(b.kickoff_at));
+
+      const completed = (data ?? [])
+        .filter(m => m.status === 'completed')
+        .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
+
+      $('upcoming-matches').innerHTML = upcoming.length
+        ? '' : '<div class="empty">No upcoming matches</div>';
+      upcoming.forEach(m => $('upcoming-matches').appendChild(card(m)));
+
+      $('completed-matches').innerHTML = completed.length
+        ? '' : '<div class="empty">No completed matches yet</div>';
+      completed.forEach(m => $('completed-matches').appendChild(card(m)));
+
+      // Realtime: refresh when any of my team’s matches update
+      const { data: myTeam } = await supabase
+        .from('teams').select('id').eq('owner_id', user.id).maybeSingle();
+      if (!myTeam) return;
+
+      supabase.channel('matches-feed')
+        .on('postgres_changes', {
+          event:'UPDATE', schema:'public', table:'matches',
+          filter:`home_team_id=eq.${myTeam.id}`
+        }, () => location.reload())
+        .on('postgres_changes', {
+          event:'UPDATE', schema:'public', table:'matches',
+          filter:`away_team_id=eq.${myTeam.id}`
+        }, () => location.reload())
+        .subscribe();
+    }
+
+    load();
+  </script>
 </body>
 </html>
