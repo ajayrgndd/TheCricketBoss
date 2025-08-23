@@ -3,52 +3,74 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Friendly Live – TheCricketBoss</title>
+  <title>Live Match – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css"/>
   <style>
     body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
-    .wrap{max-width:900px;margin:0 auto;padding:16px}
-    .card{background:#111827;border:1px solid #1f2937;border-radius:14px;padding:14px;margin:14px 0}
-    .match-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-    .badge{font-size:.75rem;padding:6px 10px;border-radius:999px;border:1px solid #1f2937}
-    .badge-friendly{background:#1b4332;color:#d1fae5}
+    .wrap{max-width:960px;margin:0 auto;padding:16px}
+    .card{background:#0f1522;border:1px solid #1d263a;border-radius:14px;padding:14px;margin:14px 0}
+    .match-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .badge{font-size:.75rem;padding:6px 10px;border-radius:999px;border:1px solid #2a3a5a;background:#133126;color:#d1fae5}
     .chip-live{background:#b91c1c;color:#fff;padding:6px 10px;border-radius:8px;font-size:.75rem}
-    .start{opacity:.9;font-size:.9rem}
-    .teams{display:flex;align-items:center;justify-content:space-between;padding:10px 6px}
-    .team{display:flex;align-items:center;gap:10px}
-    .team img{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#0b0b0b;border:1px solid #1f2937}
-    .vs{opacity:.7;font-weight:600}
-    .feed{height:55vh;overflow:auto;border:1px solid #1f2937;border-radius:10px;padding:10px;background:#0d1422}
-    .line{padding:6px 4px;border-bottom:1px dashed #1f2937;font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
+    .teams{display:flex;align-items:center;gap:14px;margin-top:10px}
+    .team-side{display:flex;align-items:center;gap:10px}
+    .team-side img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:#0b0b0b;border:1px solid #1f2937}
+    .vs{opacity:.8;font-weight:700}
+    .scoreline{display:flex;align-items:end;gap:12px;margin-top:8px}
+    .runswk{font-size:28px;font-weight:800}
+    .ov{opacity:.85}
+    .sub{opacity:.8;font-size:.9rem}
+    .strip{display:flex;justify-content:space-between;align-items:center;background:#0b1120;border:1px solid #1d263a;border-radius:10px;padding:10px 12px;margin-top:10px}
+    .label{opacity:.75;font-size:.9rem}
+    .feed{border:1px solid #1d263a;border-radius:12px;overflow:auto;max-height:55vh;background:#0b1120}
+    .feed .row{padding:12px;border-bottom:1px dashed #1f2937;display:flex;gap:10px}
+    .balltag{min-width:60px;font-weight:700}
+    .wkt{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#e11d48;color:#fff;font-size:.8rem;margin-right:6px}
     .muted{opacity:.75}
   </style>
 </head>
 <body>
 
-  <!-- Top & Bottom Nav placeholders -->
+  <!-- Smooth UI nav slots -->
   <div id="top-bar"></div>
 
   <div class="wrap">
-    <div class="card" id="header">
+    <!-- Header -->
+    <div class="card">
       <div class="match-head">
-        <span class="badge badge-friendly">Friendly</span>
-        <div class="start" id="when">—</div>
+        <span class="badge" id="kind">Friendly</span>
+        <div class="sub" id="when">—</div>
         <span class="chip-live">LIVE</span>
       </div>
+
       <div class="teams">
-        <div class="team">
-          <img id="homeLogo" src="images/logo.png" alt="Home"/>
+        <div class="team-side">
+          <img id="homeLogo" src="/assets/logo.png" alt="Home">
           <div id="homeName" style="font-weight:700">Home</div>
         </div>
         <div class="vs">vs</div>
-        <div class="team">
-          <img id="awayLogo" src="images/logo.png" alt="Away"/>
+        <div class="team-side">
+          <img id="awayLogo" src="/assets/logo.png" alt="Away">
           <div id="awayName" style="font-weight:700">Away</div>
         </div>
       </div>
-      <div class="muted" id="note">If you joined late, you'll see only the remaining live balls.</div>
+
+      <div class="scoreline">
+        <div class="runswk" id="score">0-0</div>
+        <div class="ov" id="overStr">(0.0)</div>
+      </div>
+      <div class="sub" id="crr">CRR 0.00</div>
+      <div class="muted" style="margin-top:6px;">If you joined late, you’ll see only the remaining live balls.</div>
     </div>
 
+    <!-- Batter / Bowler strips -->
+    <div class="strip">
+      <div><span class="label">Batter</span><div id="batter">—</div></div>
+      <div><span class="label">Non-Striker</span><div id="nonstriker">—</div></div>
+      <div><span class="label">Bowler</span><div id="bowler">—</div></div>
+    </div>
+
+    <!-- Feed -->
     <div class="card">
       <div class="feed" id="feed"></div>
     </div>
@@ -56,7 +78,7 @@
 
   <div id="bottom-nav"></div>
 
-  <!-- Load smooth UI into containers -->
+  <!-- Load top/bottom nav -->
   <script type="module">
     import { loadSmoothUI } from "./js/smooth-ui.js";
     if (document.readyState === 'loading') {
@@ -74,94 +96,164 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    const params = new URLSearchParams(location.search);
-    const matchId = params.get('id');
+    const qs = new URLSearchParams(location.search);
+    const matchId = qs.get('id');
 
+    // helpers
     function fmt(ts){
-      if(!ts) return '';
-      const d = new Date(ts);
+      const d = ts ? new Date(ts) : new Date();
       const dd = String(d.getDate()).padStart(2,'0');
       const mm = String(d.getMonth()+1).padStart(2,'0');
       const yyyy = d.getFullYear();
-      const h24 = d.getHours();
-      const hh = String(h24 % 12 || 12).padStart(2,'0');
+      const h24 = d.getHours(), hh = String(h24 % 12 || 12).padStart(2,'0');
       const m  = String(d.getMinutes()).padStart(2,'0');
-      const am = h24 >= 12 ? 'PM' : 'AM';
-      return `${dd}-${mm}-${yyyy}, ${hh}:${m} ${am}`;
+      const ap = h24 >= 12 ? 'PM' : 'AM';
+      return `${dd}-${mm}-${yyyy}, ${hh}:${m} ${ap}`;
     }
-
+    function safeLogo(el, url){ el.onerror=()=>{el.onerror=null;el.src='/assets/logo.png'}; el.src = url || '/assets/logo.png'; }
     const feed = document.getElementById('feed');
-    const seenKeys = new Set(); // prevent duplicates
-    const key = b => `${b.innings}-${b.over_number}-${b.ball_in_over}`;
 
-    function append(b) {
-      const k = key(b);
-      if (seenKeys.has(k)) return;
-      seenKeys.add(k);
-      const d = document.createElement('div');
-      d.className='line';
-      d.textContent = `I${b.innings} ${b.over_number}.${b.ball_in_over}: ${b.commentary ?? `Runs ${b.runs_scored}${b.wicket?' + W':''}`}`;
-      feed.append(d);
-      feed.scrollTop = feed.scrollHeight;
+    // state
+    let totals = { runs:0, wickets:0, balls:0 };
+    const latestByKey = new Map(); // '1-17-3' -> ball row
+    const nameCache = new Map();
+
+    async function getPlayerName(id){
+      if(!id) return '—';
+      if(nameCache.has(id)) return nameCache.get(id);
+      const { data } = await supabase.from('players').select('name').eq('id', id).maybeSingle();
+      const n = data?.name || '—';
+      nameCache.set(id, n);
+      return n;
     }
 
-    async function loadHeader() {
+    function overString(balls){
+      const completed = Math.floor(balls/6);
+      const rem = balls % 6;
+      return `(${completed}.${rem})`;
+    }
+    function crr(runs, balls){
+      if(!balls) return 'CRR 0.00';
+      const overs = balls/6;
+      return `CRR ${(runs/overs).toFixed(2)}`;
+    }
+
+    function keyOf(b){ return `${b.innings}-${b.over_number}-${b.ball_in_over}`; }
+
+    function renderHeader(){
+      document.getElementById('score').textContent = `${totals.runs}-${totals.wickets}`;
+      document.getElementById('overStr').textContent = overString(totals.balls);
+      document.getElementById('crr').textContent = crr(totals.runs, totals.balls);
+    }
+
+    function rowHtml(b){
+      const tag = `I${b.innings} ${b.over_number}.${b.ball_in_over}`;
+      const w = b.wicket ? `<span class="wkt">W</span>` : '';
+      const text = b.commentary ?? (b.wicket ? 'Wicket!' : `Runs: ${b.runs_scored}`);
+      return `
+        <div class="row">
+          <div class="balltag">${tag}</div>
+          <div>${w}${text}</div>
+        </div>
+      `;
+    }
+
+    async function applyBall(b){
+      // score update (very basic: runs_scored increases; wicket increments)
+      totals.runs += (b.runs_scored ?? 0) + (b.extras ?? 0);
+      if (b.wicket) totals.wickets += 1;
+      totals.balls += 1;
+
+      // top of feed (newest first like Cricbuzz)
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = rowHtml(b);
+      feed.prepend(wrapper.firstElementChild);
+
+      renderHeader();
+
+      // update strips if we have IDs
+      if (b.striker_id || b.non_striker_id || b.bowler_id) {
+        document.getElementById('batter').textContent = await getPlayerName(b.striker_id);
+        document.getElementById('nonstriker').textContent = await getPlayerName(b.non_striker_id);
+        document.getElementById('bowler').textContent = await getPlayerName(b.bowler_id);
+      }
+    }
+
+    async function loadMeta(){
       const { data: m } = await supabase
         .from('matches')
-        .select('id,status,kickoff_at,home_team_id,away_team_id,is_friendly')
+        .select('id, is_friendly, kickoff_at, home_team_id, away_team_id, status')
         .eq('id', matchId).single();
 
-      if (!m?.is_friendly) {
-        // in case a league match URL accidentally hits this page
-        location.href = `league-replay.html?id=${matchId}`;
-        return;
-      }
+      document.getElementById('kind').textContent = m?.is_friendly ? 'Friendly' : 'League';
+      document.getElementById('when').textContent = fmt(m?.kickoff_at);
 
       const [home, away] = await Promise.all([
         supabase.from('teams').select('team_name,logo_url').eq('id', m.home_team_id).maybeSingle(),
-        supabase.from('teams').select('team_name,logo_url').eq('id', m.away_team_id).maybeSingle()
+        supabase.from('teams').select('team_name,logo_url').eq('id', m.away_team_id).maybeSingle(),
       ]);
 
       document.getElementById('homeName').textContent = home.data?.team_name ?? m.home_team_id;
       document.getElementById('awayName').textContent = away.data?.team_name ?? m.away_team_id;
-      document.getElementById('homeLogo').src = home.data?.logo_url || 'images/logo.png';
-      document.getElementById('awayLogo').src = away.data?.logo_url || 'images/logo.png';
-      document.getElementById('when').textContent = fmt(m.kickoff_at);
+      safeLogo(document.getElementById('homeLogo'), home.data?.logo_url);
+      safeLogo(document.getElementById('awayLogo'), away.data?.logo_url);
     }
 
-    async function loadExisting() {
+    async function loadExisting(){
       const { data } = await supabase
         .from('ball_by_ball')
-        .select('innings,over_number,ball_in_over,runs_scored,wicket,commentary')
+        .select('innings,over_number,ball_in_over,runs_scored,extras,wicket,commentary,striker_id,non_striker_id,bowler_id')
         .eq('match_id', matchId)
         .order('innings').order('over_number').order('ball_in_over');
 
-      (data||[]).forEach(append);
+      // compute totals and render into feed newest-first
+      (data||[]).forEach(b=>{
+        latestByKey.set(keyOf(b), b);
+        totals.runs += (b.runs_scored ?? 0) + (b.extras ?? 0);
+        if (b.wicket) totals.wickets += 1;
+        totals.balls += 1;
+      });
+
+      // render newest first
+      const frag = document.createDocumentFragment();
+      [...latestByKey.values()].sort((a,b)=>{
+        if (a.innings!==b.innings) return b.innings-a.innings;
+        if (a.over_number!==b.over_number) return b.over_number-a.over_number;
+        return b.ball_in_over-a.ball_in_over;
+      }).forEach(b=>{
+        const div = document.createElement('div');
+        div.innerHTML = rowHtml(b);
+        frag.append(div.firstElementChild);
+      });
+      feed.append(frag);
+      renderHeader();
+
+      // last known names if present
+      const last = data?.[data.length-1];
+      if (last){
+        document.getElementById('batter').textContent = await getPlayerName(last.striker_id);
+        document.getElementById('nonstriker').textContent = await getPlayerName(last.non_striker_id);
+        document.getElementById('bowler').textContent = await getPlayerName(last.bowler_id);
+      }
     }
 
-    function subscribe() {
-      supabase.channel('live-bbb-' + matchId)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ball_by_ball',
-          filter: `match_id=eq.${matchId}`
-        }, (payload) => append(payload.new))
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'matches',
-          filter: `id=eq.${matchId}`
-        }, (payload) => {
-          if (payload.new?.status === 'completed') {
-            // redirect to replay when done
-            location.href = `friendly-replay.html?id=${matchId}`;
-          }
-        })
+    function subscribe(){
+      supabase.channel('live-bbb-'+matchId)
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:'ball_by_ball', filter:`match_id=eq.${matchId}` },
+          async ({ new: b })=>{
+            const k = keyOf(b);
+            if (latestByKey.has(k)) return;
+            latestByKey.set(k,b);
+            await applyBall(b);
+          })
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'matches', filter:`id=eq.${matchId}` },
+          ({ new: m })=>{
+            if (m?.status === 'completed') location.href = (m.is_friendly ? 'friendly-replay.html' : 'league-replay.html') + `?id=${matchId}`;
+          })
         .subscribe();
     }
 
-    await loadHeader();
+    await loadMeta();
     await loadExisting();
     subscribe();
   </script>
