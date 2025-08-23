@@ -16,6 +16,10 @@
     table{width:100%;border-collapse:collapse;margin:8px 0;}
     th,td{border:1px solid #333;padding:6px;text-align:center;font-size:.9rem;}
     .ball{padding:6px;border-bottom:1px solid #222;}
+    .mini-score{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin-bottom:10px;}
+    .mini-score h3{margin:0 0 8px 0;}
+    .mini-score .row{display:flex;justify-content:space-between;font-size:.9rem;}
+    .mini-score .label{opacity:.8;margin-right:4px;}
   </style>
 </head>
 <body>
@@ -31,7 +35,15 @@
     </div>
 
     <!-- Live Feed -->
-    <div id="feed-panel" class="tab-panel"></div>
+    <div id="feed-panel" class="tab-panel">
+      <div id="mini-score" class="mini-score">
+        <h3>Current</h3>
+        <div class="row"><span class="label">Striker:</span> <span id="striker"></span></div>
+        <div class="row"><span class="label">Non-Striker:</span> <span id="nonstriker"></span></div>
+        <div class="row"><span class="label">Bowler:</span> <span id="bowler"></span></div>
+      </div>
+      <div id="ball-feed"></div>
+    </div>
 
     <!-- Scoreboard -->
     <div id="score-panel" class="tab-panel" style="display:none;">
@@ -91,7 +103,7 @@
     };
 
     function renderBallFeed(balls){
-      const box=document.getElementById("feed-panel");
+      const box=document.getElementById("ball-feed");
       box.innerHTML="";
       balls.forEach(b=>{
         const d=document.createElement("div");
@@ -101,10 +113,20 @@
       });
     }
 
+    function updateMiniScore(balls, players){
+      const last = balls[balls.length-1];
+      if(!last) return;
+      const striker = players[last.striker_id]?.name || "—";
+      const non = players[last.non_striker_id]?.name || "—";
+      const bowler = players[last.bowler_id]?.name || "—";
+      document.getElementById("striker").textContent = striker;
+      document.getElementById("nonstriker").textContent = non;
+      document.getElementById("bowler").textContent = bowler;
+    }
+
     function updateScoreboard(balls, players){
       const bats={}, bowls={};
       for(const b of balls){
-        // batting
         if(b.striker_id){
           if(!bats[b.striker_id]) bats[b.striker_id]={runs:0,balls:0,fours:0,sixes:0};
           bats[b.striker_id].runs+=b.runs_scored;
@@ -112,15 +134,13 @@
           if(b.runs_scored===4) bats[b.striker_id].fours++;
           if(b.runs_scored===6) bats[b.striker_id].sixes++;
         }
-        // bowling
         if(b.bowler_id){
           if(!bowls[b.bowler_id]) bowls[b.bowler_id]={runs:0,balls:0,wkts:0};
-          bowls[b.bowler_id].runs+= (b.runs_scored||0)+(b.extras||0);
+          bowls[b.bowler_id].runs+=(b.runs_scored||0)+(b.extras||0);
           bowls[b.bowler_id].balls++;
           if(b.wicket) bowls[b.bowler_id].wkts++;
         }
       }
-      // batting table
       const batT=document.querySelector("#batting-card tbody");
       batT.innerHTML="";
       Object.entries(bats).forEach(([pid,st])=>{
@@ -128,7 +148,6 @@
         const sr=st.balls?((st.runs/st.balls)*100).toFixed(1):"0.0";
         batT.innerHTML+=`<tr><td>${p.name}</td><td>${st.runs}</td><td>${st.balls}</td><td>${st.fours}</td><td>${st.sixes}</td><td>${sr}</td></tr>`;
       });
-      // bowling table
       const bowlT=document.querySelector("#bowling-card tbody");
       bowlT.innerHTML="";
       Object.entries(bowls).forEach(([pid,st])=>{
@@ -141,16 +160,10 @@
 
     async function init(){
       if(!matchId){ alert("Missing match id"); return; }
-      const { data: balls } = await supabase.from("ball_by_ball")
-        .select("*").eq("match_id", matchId).order("innings, over_number, ball_in_over");
-      allBalls.push(...(balls||[]));
 
-      renderBallFeed(allBalls);
-      updateScoreboard(allBalls, players);
-
-      // load lineup to map players
+      // preload lineup players
       const { data: lns } = await supabase.from("lineups")
-        .select("playing_xi,team_id,teams!inner(manager_name,team_name,players(id,name))")
+        .select("playing_xi, team_id, teams!inner(players(id,name))")
         .eq("match_id", matchId);
       if(lns){
         const ps = {};
@@ -160,12 +173,21 @@
         players=ps;
       }
 
+      const { data: balls } = await supabase.from("ball_by_ball")
+        .select("*").eq("match_id", matchId).order("innings, over_number, ball_in_over");
+      allBalls.push(...(balls||[]));
+
+      renderBallFeed(allBalls);
+      updateMiniScore(allBalls, players);
+      updateScoreboard(allBalls, players);
+
       // realtime sub
       supabase.channel("bb-stream")
         .on("postgres_changes",{event:"INSERT",schema:"public",table:"ball_by_ball",filter:`match_id=eq.${matchId}`},
           (payload)=>{
             allBalls.push(payload.new);
             renderBallFeed(allBalls);
+            updateMiniScore(allBalls, players);
             updateScoreboard(allBalls, players);
           }
         ).subscribe();
