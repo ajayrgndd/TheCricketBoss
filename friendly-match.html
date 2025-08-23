@@ -22,17 +22,35 @@
     .teambar{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 12px 2px;font-size:1.1rem}
     .teambar .t{font-weight:700}
 
-    /* Cards */
+    /* Cards / tables */
     .card{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin:10px 0}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #2a344a;padding:8px;text-align:center}
     th{background:#1a2236}
-    .ball{padding:8px;border-bottom:1px dashed #1f2a44}
     .muted{opacity:.75}
+    .pill{display:inline-block;font-size:.72rem;border-radius:999px;padding:2px 8px;margin-right:6px;border:1px solid #333}
+    .pill-w{background:#991b1b;color:#fff;border-color:#7f1d1d}   /* wicket */
+    .pill-6{background:#14532d;color:#d1fae5;border-color:#064e3b}/* six   */
+    .pill-4{background:#0f172a;color:#93c5fd;border-color:#1e293b}/* four  */
+    .pill-nb{background:#3b0764;color:#e9d5ff;border-color:#4c1d95}
+    .pill-wd{background:#1e293b;color:#e5e7eb;border-color:#334155}
+    .pill-lb{background:#1b3a2f;color:#c8ffe0;border-color:#1f4b3d}
+    .pill-b{background:#312e81;color:#c7d2fe;border-color:#3730a3}
+
+    /* Commentary line */
+    .com-line{padding:10px;border-bottom:1px dashed #1f2a44}
+    .com-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .ball-tag{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:2px 6px;font-size:.75rem;color:#cbd5e1}
+    .com-text{line-height:1.45}
 
     /* Panels */
     .panel{display:none}
     .panel.show{display:block}
+
+    /* Summary */
+    .summary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .summary .box{background:#0f1522;border:1px solid #1d263a;border-radius:10px;padding:10px}
+    .big-win{font-size:1.1rem;font-weight:800;margin-bottom:4px}
   </style>
 </head>
 <body>
@@ -56,8 +74,8 @@
       </div>
 
       <div class="teambar">
-        <div class="t" id="team-a-name">Team A</div>
-        <div class="t" id="team-b-name">Team B</div>
+        <div class="t" id="team-a-name">Home</div>
+        <div class="t" id="team-b-name">Away</div>
       </div>
 
       <div class="card">
@@ -80,6 +98,8 @@
         </table>
       </div>
 
+      <div class="card" id="live-summary" style="display:none"></div>
+
       <div class="card">
         <div style="font-weight:800;margin-bottom:8px">Commentary</div>
         <div id="live-feed"></div>
@@ -88,19 +108,43 @@
 
     <!-- ===== SCORECARD ===== -->
     <section id="score-panel" class="panel">
-      <div class="card">
-        <div style="font-weight:800;margin-bottom:8px">Batting</div>
+      <div id="score-i1" class="card">
+        <div style="font-weight:800;margin-bottom:8px" id="i1-title">Innings 1</div>
+        <div class="summary">
+          <div class="box">
+            <div><strong>Total</strong>: <span id="i1-total">--/--</span></div>
+            <div><strong>Overs</strong>: <span id="i1-overs">--.-</span> • RR <span id="i1-rr">-.-</span></div>
+          </div>
+        </div>
+        <h4 style="margin-top:12px">Batting</h4>
         <table>
           <thead><tr><th>Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
-          <tbody id="batting-card"></tbody>
+          <tbody id="i1-batting"></tbody>
+        </table>
+        <h4 style="margin-top:12px">Bowling</h4>
+        <table>
+          <thead><tr><th>Bowler</th><th>O</th><th>R</th><th>W</th><th>Eco</th></tr></thead>
+          <tbody id="i1-bowling"></tbody>
         </table>
       </div>
 
-      <div class="card">
-        <div style="font-weight:800;margin-bottom:8px">Bowling</div>
+      <div id="score-i2" class="card" style="display:none">
+        <div style="font-weight:800;margin-bottom:8px" id="i2-title">Innings 2</div>
+        <div class="summary">
+          <div class="box">
+            <div><strong>Total</strong>: <span id="i2-total">--/--</span></div>
+            <div><strong>Overs</strong>: <span id="i2-overs">--.-</span> • RR <span id="i2-rr">-.-</span></div>
+          </div>
+        </div>
+        <h4 style="margin-top:12px">Batting</h4>
+        <table>
+          <thead><tr><th>Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+          <tbody id="i2-batting"></tbody>
+        </table>
+        <h4 style="margin-top:12px">Bowling</h4>
         <table>
           <thead><tr><th>Bowler</th><th>O</th><th>R</th><th>W</th><th>Eco</th></tr></thead>
-          <tbody id="bowling-card"></tbody>
+          <tbody id="i2-bowling"></tbody>
         </table>
       </div>
     </section>
@@ -130,7 +174,7 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    // ===== Tabs =====
+    /* ---------- Tabs ---------- */
     const tabs = {
       live: document.getElementById('tab-live'),
       score: document.getElementById('tab-score'),
@@ -151,198 +195,341 @@
     tabs.score.onclick = ()=>activate('score');
     tabs.comm.onclick = ()=>activate('comm');
 
-    // ===== Helpers =====
+    /* ---------- DOM refs ---------- */
     const qs = new URLSearchParams(location.search);
     const matchId = qs.get('id');
-    const feedBox = document.getElementById('live-feed');
-    const commBox = document.getElementById('comm-feed');
+
+    const liveFeed = document.getElementById('live-feed');
+    const commFeed = document.getElementById('comm-feed');
     const liveBats = document.getElementById('live-bats-tbody');
     const liveBowls = document.getElementById('live-bowl-tbody');
-
-    const battingCard = document.getElementById('batting-card');
-    const bowlingCard = document.getElementById('bowling-card');
-
     const scoreA = document.getElementById('live-score-a');
     const scoreB = document.getElementById('live-score-b');
     const teamAName = document.getElementById('team-a-name');
     const teamBName = document.getElementById('team-b-name');
     const battingHeading = document.getElementById('batting-heading');
+    const liveSummary = document.getElementById('live-summary');
 
-    let all = [];              // all balls for this match
-    let players = {};          // id -> {name}
-    let homeTeam, awayTeam;    // ids
-    let names = {};            // team id -> team_name
+    // Scorecard (two inns)
+    const i1 = {
+      title: document.getElementById('i1-title'),
+      total: document.getElementById('i1-total'),
+      overs: document.getElementById('i1-overs'),
+      rr: document.getElementById('i1-rr'),
+      bat: document.getElementById('i1-batting'),
+      bowl: document.getElementById('i1-bowling'),
+      card: document.getElementById('score-i1'),
+    };
+    const i2 = {
+      title: document.getElementById('i2-title'),
+      total: document.getElementById('i2-total'),
+      overs: document.getElementById('i2-overs'),
+      rr: document.getElementById('i2-rr'),
+      bat: document.getElementById('i2-batting'),
+      bowl: document.getElementById('i2-bowling'),
+      card: document.getElementById('score-i2'),
+    };
 
-    function oversText(legalBalls) {
-      const o = Math.floor(legalBalls/6);
-      const b = legalBalls%6;
-      return `${o}.${b}`;
-    }
+    /* ---------- State ---------- */
+    let all = [];                    // all balls
+    let players = {};                // id -> {name}
+    let homeTeam, awayTeam;          // ids
+    let names = {};                  // team id -> team_name
+    let matchRow = null;             // matches row
 
-    function computeTotals(balls, inningsNo) {
-      const arr = balls.filter(x => x.innings === inningsNo);
+    // queue for delayed commentary
+    const queue = [];
+    let queueTimer = null;
+    const QUEUE_DELAY_MS = 1200;
+
+    /* ---------- Helpers ---------- */
+    const oversText = (balls)=> `${Math.floor(balls/6)}.${balls%6}`;
+
+    function totals(balls, inn) {
+      const arr = balls.filter(b=>b.innings===inn);
       const runs = arr.reduce((s,b)=> s + (b.runs_scored||0) + (b.extras||0), 0);
       const wkts = arr.reduce((s,b)=> s + (b.wicket?1:0), 0);
-      const legal = arr.length; // assuming each row is a legal ball
-      return { runs, wkts, legal };
+      return { runs, wkts, legal: arr.length };
     }
 
-    function aggBatting(balls, inningsNo) {
-      const map = {};
-      balls.filter(b=>b.innings===inningsNo).forEach(b=>{
-        if(!b.striker_id) return;
-        const m = map[b.striker_id] ||= {runs:0,balls:0,fours:0,sixes:0};
+    function aggBat(balls, inn) {
+      const map={};
+      balls.filter(b=>b.innings===inn).forEach(b=>{
+        const id=b.striker_id; if(!id) return;
+        const m = map[id] ||= {runs:0,balls:0,fours:0,sixes:0};
         m.runs += b.runs_scored||0;
-        m.balls += 1;
-        if (b.runs_scored===4) m.fours++;
-        if (b.runs_scored===6) m.sixes++;
+        m.balls++; if(b.runs_scored===4) m.fours++; if(b.runs_scored===6) m.sixes++;
+      });
+      return map;
+    }
+    function aggBowl(balls, inn) {
+      const map={};
+      balls.filter(b=>b.innings===inn).forEach(b=>{
+        const id=b.bowler_id; if(!id) return;
+        const m = map[id] ||= {runs:0,balls:0,wkts:0};
+        m.runs += (b.runs_scored||0)+(b.extras||0);
+        m.balls++; if(b.wicket) m.wkts++;
       });
       return map;
     }
 
-    function aggBowling(balls, inningsNo) {
-      const map = {};
-      balls.filter(b=>b.innings===inningsNo).forEach(b=>{
-        if(!b.bowler_id) return;
-        const m = map[b.bowler_id] ||= {runs:0,balls:0,wkts:0};
-        m.runs += (b.runs_scored||0) + (b.extras||0);
-        m.balls += 1;
-        if (b.wicket) m.wkts++;
-      });
-      return map;
+    // === Commentary formatting ===
+    function eventPills(b) {
+      const pills=[];
+      if (b.wicket) pills.push(`<span class="pill pill-w">WICKET</span>`);
+      if (b.runs_scored===6) pills.push(`<span class="pill pill-6">SIX</span>`);
+      if (b.runs_scored===4) pills.push(`<span class="pill pill-4">FOUR</span>`);
+      if ((b.extras||0)>0) {
+        // try rough extra types from commentary text if present
+        const t = (b.commentary||'').toLowerCase();
+        if (t.includes('wide')) pills.push(`<span class="pill pill-wd">WD</span>`);
+        else if (t.includes('no ball') || t.includes('no-ball')) pills.push(`<span class="pill pill-nb">NB</span>`);
+        else if (t.includes('leg bye')||t.includes('leg-bye')) pills.push(`<span class="pill pill-lb">LB</span>`);
+        else if (t.includes('bye')) pills.push(`<span class="pill pill-b">BYE</span>`);
+      }
+      return pills.join('');
+    }
+    const VARIANTS = {
+      0: [
+        "Dot ball. Tight line!",
+        "Beaten! Nothing off it.",
+        "Good length — no run."
+      ],
+      1: [
+        "Just a single.",
+        "Nudged for one.",
+        "Soft hands, one run."
+      ],
+      2: [
+        "Pushed into the gap for two.",
+        "They come back for a brace.",
+        "Comfortable two."
+      ],
+      3: [
+        "All hustle — three runs!",
+        "Long chase, they take three.",
+        "Good running, three taken."
+      ],
+      4: [
+        "FOUR! Crunched through the gap.",
+        "Pierces the field — boundary!",
+        "Stroked away for four."
+      ],
+      6: [
+        "SIX! Launched into the stands.",
+        "Into orbit — maximum!",
+        "Clean strike — six!"
+      ],
+      W: [
+        "Gone! Big breakthrough.",
+        "Edges… taken! Wicket.",
+        "Bowled him! The timber rattles."
+      ]
+    };
+    function augmentText(b) {
+      if (b.commentary && b.commentary.trim().length>0) return b.commentary;
+      if (b.wicket) return VARIANTS.W[Math.floor(Math.random()*VARIANTS.W.length)];
+      const r = Math.min(6, Math.max(0, b.runs_scored||0));
+      const pool = VARIANTS[r] || ["Runs added."];
+      return pool[Math.floor(Math.random()*pool.length)];
     }
 
-    function renderFeed(list, into) {
-      into.innerHTML = "";
-      list.forEach(b=>{
-        const d = document.createElement('div');
-        d.className = 'ball';
-        d.textContent = `I${b.innings} ${b.over_number}.${b.ball_in_over} — ${b.commentary}`;
-        into.appendChild(d);
-      });
+    function comLine(b) {
+      const pills = eventPills(b);
+      const txt = augmentText(b);
+      return `
+        <div class="com-line">
+          <div class="com-top">
+            <span class="ball-tag">I${b.innings} ${b.over_number}.${b.ball_in_over}</span>
+            ${pills}
+          </div>
+          <div class="com-text">${txt}</div>
+        </div>
+      `;
     }
 
-    function liveMiniCards() {
-      if (all.length === 0) return;
+    function renderCommentary(list, into) {
+      into.innerHTML = list.map(comLine).join('');
+    }
 
+    // delayed rendering queue
+    function pushToQueue(ball) {
+      queue.push(ball);
+      if (!queueTimer) {
+        queueTimer = setInterval(() => {
+          if (queue.length === 0) { clearInterval(queueTimer); queueTimer=null; return; }
+          const b = queue.shift();
+          all.push(b);
+          // append only the one line to end (avoid full rerender each tick)
+          liveFeed.insertAdjacentHTML('beforeend', comLine(b));
+          commFeed.insertAdjacentHTML('beforeend', comLine(b));
+          updateLiveBlocks();
+          updateScorecardBlocks();
+          maybeShowSummary();
+        }, QUEUE_DELAY_MS);
+      }
+    }
+
+    function rowBat(pid, stat, star=false) {
+      const nm = players[pid]?.name || '—';
+      const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
+      return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
+                <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
+    }
+    function rowBowl(pid, stat, star=false) {
+      const nm = players[pid]?.name || '—';
+      const ov = (stat.balls/6).toFixed(1);
+      const eco = stat.balls ? (stat.runs/(stat.balls/6)).toFixed(1) : "0.0";
+      return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
+                <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
+    }
+
+    function updateLiveBlocks() {
+      if (!all.length) return;
       const latest = all[all.length-1];
       const curInn = latest.innings;
 
-      // Score strip
-      const t1 = computeTotals(all, 1);
+      const t1 = totals(all, 1);
       scoreA.textContent = `${t1.runs}/${t1.wkts} - ${oversText(t1.legal)} ov`;
       if (all.some(b=>b.innings===2)) {
-        const t2 = computeTotals(all, 2);
+        const t2 = totals(all, 2);
         scoreB.textContent = `${t2.runs}/${t2.wkts} - ${oversText(t2.legal)} ov`;
-      } else {
-        scoreB.textContent = `--/-- - --.- ov`;
-      }
+      } else scoreB.textContent = `--/-- - --.- ov`;
 
-      // Team names
-      teamAName.textContent = names[homeTeam] || "Home";
-      teamBName.textContent = names[awayTeam] || "Away";
-
-      // Which side is batting now
-      battingHeading.textContent = `Batting – ${curInn === 1 ? (names[homeTeam]||'Home') : (names[awayTeam]||'Away')}`;
-
-      // Current pair
-      const batAgg = aggBatting(all, curInn);
-      const strikerId = latest.striker_id;
-      const nonId = latest.non_striker_id;
-
-      function rowFor(pid) {
-        const s = batAgg[pid] || {runs:0,balls:0,fours:0,sixes:0};
-        const nm = players[pid]?.name || '—';
-        const sr = s.balls ? ((s.runs/s.balls)*100).toFixed(1) : "0.0";
-        return `<tr><td style="text-align:left">${nm}${pid===strikerId?' ★':''}</td>
-                  <td>${s.runs}</td><td>${s.balls}</td><td>${s.fours}</td><td>${s.sixes}</td><td>${sr}</td></tr>`;
-      }
-
-      liveBats.innerHTML = rowFor(strikerId) + rowFor(nonId);
-
-      // Current + previous bowler
-      const bowlAgg = aggBowling(all, curInn);
-      const currentBowler = latest.bowler_id;
-      let lastBowler = null;
-      for (let i=all.length-2; i>=0; i--) {
-        const b = all[i];
-        if (b.innings !== curInn) break;
-        if (b.bowler_id !== currentBowler) { lastBowler = b.bowler_id; break; }
-      }
-
-      function bowlRow(pid) {
-        const s = bowlAgg[pid] || {runs:0,balls:0,wkts:0};
-        const nm = players[pid]?.name || '—';
-        const ov = (s.balls/6).toFixed(1);
-        const eco = s.balls ? (s.runs/(s.balls/6)).toFixed(1) : "0.0";
-        return `<tr><td style="text-align:left">${nm}${pid===currentBowler?' ★':''}</td>
-                  <td>${ov}</td><td>${s.runs}</td><td>${s.wkts}</td><td>${eco}</td></tr>`;
-      }
-
-      let html = bowlRow(currentBowler);
-      if (lastBowler) html += bowlRow(lastBowler);
-      liveBowls.innerHTML = html;
-    }
-
-    function fullScorecard() {
-      const latestInn = all.length ? all[all.length-1].innings : 1;
-      const bats = aggBatting(all, latestInn);
-      const bowls = aggBowling(all, latestInn);
-
-      battingCard.innerHTML = "";
-      Object.entries(bats).forEach(([pid,st])=>{
-        const nm = players[pid]?.name || '—';
-        const sr = st.balls ? ((st.runs/st.balls)*100).toFixed(1) : "0.0";
-        battingCard.innerHTML += `<tr><td style="text-align:left">${nm}</td>
-          <td>${st.runs}</td><td>${st.balls}</td><td>${st.fours}</td><td>${st.sixes}</td><td>${sr}</td></tr>`;
-      });
-
-      bowlingCard.innerHTML = "";
-      Object.entries(bowls).forEach(([pid,st])=>{
-        const nm = players[pid]?.name || '—';
-        const ov = (st.balls/6).toFixed(1);
-        const eco = st.balls ? (st.runs/(st.balls/6)).toFixed(1) : "0.0";
-        bowlingCard.innerHTML += `<tr><td style="text-align:left">${nm}</td>
-          <td>${ov}</td><td>${st.runs}</td><td>${st.wkts}</td><td>${eco}</td></tr>`;
-      });
-    }
-
-    /* ---------- UPDATED: no joins; two simple queries ---------- */
-    async function loadMeta() {
-      // 1) Get team ids for this match
-      const { data: m, error: mErr } = await supabase
-        .from('matches')
-        .select('home_team_id, away_team_id')
-        .eq('id', matchId)
-        .single();
-
-      if (mErr || !m) {
-        console.error('match fetch failed', mErr?.message || mErr);
-        return;
-      }
-
-      homeTeam = m.home_team_id;
-      awayTeam = m.away_team_id;
-
-      // 2) Fetch team names separately
-      const { data: t, error: tErr } = await supabase
-        .from('teams')
-        .select('id, team_name')
-        .in('id', [homeTeam, awayTeam]);
-
-      if (!tErr) (t || []).forEach(x => { names[x.id] = x.team_name; });
+      battingHeading.textContent = `Batting – ${curInn===1 ? (names[homeTeam]||'Home') : (names[awayTeam]||'Away')}`;
       teamAName.textContent = names[homeTeam] || 'Home';
       teamBName.textContent = names[awayTeam] || 'Away';
 
-      // 3) Preload players for both teams for scorecards
-      const { data: ps, error: pErr } = await supabase
+      // Batsmen
+      const batAgg = aggBat(all, curInn);
+      const strikerId = latest.striker_id;
+      const nonId = latest.non_striker_id;
+      const s1 = batAgg[strikerId] || {runs:0,balls:0,fours:0,sixes:0};
+      const s2 = batAgg[nonId] || {runs:0,balls:0,fours:0,sixes:0};
+      liveBats.innerHTML = rowBat(strikerId, s1, true) + rowBat(nonId, s2, false);
+
+      // Bowlers (current + last)
+      const bowlAgg = aggBowl(all, curInn);
+      const curBowler = latest.bowler_id;
+      let lastBowler = null;
+      for (let i=all.length-2;i>=0;i--) {
+        const b=all[i]; if (b.innings!==curInn) break;
+        if (b.bowler_id!==curBowler) { lastBowler=b.bowler_id; break; }
+      }
+      const sb = bowlAgg[curBowler] || {runs:0,balls:0,wkts:0};
+      let html = rowBowl(curBowler, sb, true);
+      if (lastBowler) html += rowBowl(lastBowler, bowlAgg[lastBowler] || {runs:0,balls:0,wkts:0});
+      liveBowls.innerHTML = html;
+    }
+
+    function fillScorecardFor(inn, ui) {
+      const tt = totals(all, inn);
+      ui.total.textContent = `${tt.runs}/${tt.wkts}`;
+      ui.overs.textContent = oversText(tt.legal);
+      ui.rr.textContent = tt.legal ? ( (tt.runs / (tt.legal/6)).toFixed(2) ) : "0.00";
+
+      const bats = aggBat(all, inn);
+      ui.bat.innerHTML = "";
+      Object.entries(bats).forEach(([pid,st])=> ui.bat.insertAdjacentHTML('beforeend', rowBat(pid, st)));
+
+      const bowls = aggBowl(all, inn);
+      ui.bowl.innerHTML = "";
+      Object.entries(bowls).forEach(([pid,st])=> ui.bowl.insertAdjacentHTML('beforeend', rowBowl(pid, st)));
+    }
+
+    function updateScorecardBlocks() {
+      if (!all.length) return;
+      const played2 = all.some(b=>b.innings===2);
+      i1.card.style.display = 'block';
+      fillScorecardFor(1, i1);
+
+      if (played2) {
+        i2.card.style.display = 'block';
+        fillScorecardFor(2, i2);
+      } else {
+        i2.card.style.display = 'none';
+      }
+
+      // Titles with team names
+      i1.title.textContent = `Innings 1 – ${(names[homeTeam]||'Home')}`;
+      i2.title.textContent = `Innings 2 – ${(names[awayTeam]||'Away')}`;
+    }
+
+    function maybeShowSummary() {
+      // show only when match row says completed
+      if (!matchRow || matchRow.status!=='completed') { liveSummary.style.display='none'; return; }
+
+      const t1 = totals(all,1);
+      const t2 = totals(all,2);
+      const winnerId = matchRow.winner_team_id;
+      const winName = names[winnerId] || 'Winner';
+
+      // MOTM guess: best (runs + 20*wickets) across both inns
+      const scoreByPlayer = {};
+      [1,2].forEach(inn=>{
+        const bats=aggBat(all,inn);
+        Object.entries(bats).forEach(([pid,st])=>{
+          scoreByPlayer[pid]=(scoreByPlayer[pid]||0)+st.runs;
+        });
+        const bowls=aggBowl(all,inn);
+        Object.entries(bowls).forEach(([pid,st])=>{
+          scoreByPlayer[pid]=(scoreByPlayer[pid]||0)+st.wkts*20;
+        });
+      });
+      let motmId=null, motmVal=-1;
+      Object.entries(scoreByPlayer).forEach(([pid,val])=>{
+        if (val>motmVal) { motmVal=val; motmId=pid; }
+      });
+      const motm = players[motmId]?.name || '—';
+
+      liveSummary.style.display='block';
+      liveSummary.innerHTML = `
+        <div class="big-win">${winName} won the match</div>
+        <div class="summary">
+          <div class="box">
+            <div><strong>${names[homeTeam]||'Home'}</strong></div>
+            <div>${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+          </div>
+          <div class="box">
+            <div><strong>${names[awayTeam]||'Away'}</strong></div>
+            <div>${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+          </div>
+          <div class="box" style="grid-column:1 / span 2">
+            <div><strong>Player of the Match</strong></div>
+            <div>${motm}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ---------- Data load ---------- */
+    async function loadMeta() {
+      // matches row
+      const { data: m } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('id', matchId)
+        .single();
+      matchRow = m || null;
+
+      homeTeam = m?.home_team_id;
+      awayTeam = m?.away_team_id;
+
+      const { data: t } = await supabase
+        .from('teams')
+        .select('id, team_name')
+        .in('id', [homeTeam, awayTeam]);
+      (t||[]).forEach(x=> names[x.id]=x.team_name);
+
+      teamAName.textContent = names[homeTeam] || 'Home';
+      teamBName.textContent = names[awayTeam] || 'Away';
+
+      const { data: ps } = await supabase
         .from('players')
         .select('id, name, team_id')
         .in('team_id', [homeTeam, awayTeam]);
-
-      if (!pErr) (ps || []).forEach(p => { players[p.id] = { name: p.name }; });
+      (ps||[]).forEach(p=> players[p.id] = { name: p.name });
     }
-    /* ----------------------------------------------------------- */
 
     async function initialLoad() {
       if (!matchId) { alert('Missing match id'); return; }
@@ -354,24 +541,24 @@
         .select('*')
         .eq('match_id', matchId)
         .order('innings, over_number, ball_in_over');
+
       all = balls || [];
+      renderCommentary(all, liveFeed);
+      renderCommentary(all, commFeed);
+      updateLiveBlocks();
+      updateScorecardBlocks();
+      maybeShowSummary();
 
-      renderFeed(all, feedBox);
-      renderFeed(all, commBox);
-      liveMiniCards();
-      fullScorecard();
-
-      // realtime
+      // realtime w/ delayed queue
       supabase.channel('bb-live')
         .on('postgres_changes',
           { event:'INSERT', schema:'public', table:'ball_by_ball', filter:`match_id=eq.${matchId}` },
-          (payload)=>{
-            all.push(payload.new);
-            renderFeed(all, feedBox);
-            renderFeed(all, commBox);
-            liveMiniCards();
-            fullScorecard();
-          })
+          (payload)=> pushToQueue(payload.new)
+        )
+        .on('postgres_changes',
+          { event:'UPDATE', schema:'public', table:'matches', filter:`id=eq.${matchId}` },
+          (payload)=> { matchRow = payload.new; maybeShowSummary(); }
+        )
         .subscribe();
     }
 
