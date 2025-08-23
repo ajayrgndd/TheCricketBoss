@@ -20,8 +20,14 @@
     .runswk{font-size:28px;font-weight:800}
     .ov{opacity:.85}
     .sub{opacity:.8;font-size:.9rem}
-    .strip{display:flex;justify-content:space-between;align-items:center;background:#0b1120;border:1px solid #1d263a;border-radius:10px;padding:10px 12px;margin-top:10px}
-    .label{opacity:.75;font-size:.9rem}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .table{width:100%;border-collapse:collapse;font-size:.95rem;background:#0b1120;border:1px solid #1d263a;border-radius:10px;overflow:hidden}
+    .table th,.table td{padding:8px 10px;border-bottom:1px solid #162036}
+    .table th{background:#0a1020;text-align:left;opacity:.85}
+    .table tr:last-child td{border-bottom:none}
+    .right{text-align:right}
+
     .feed{border:1px solid #1d263a;border-radius:12px;overflow:auto;max-height:55vh;background:#0b1120}
     .feed .row{padding:12px;border-bottom:1px dashed #1f2937;display:flex;gap:10px}
     .balltag{min-width:60px;font-weight:700}
@@ -63,11 +69,34 @@
       <div class="muted" style="margin-top:6px;">If you joined late, you’ll see only the remaining live balls.</div>
     </div>
 
-    <!-- Batter / Bowler strips -->
-    <div class="strip">
-      <div><span class="label">Batter</span><div id="batter">—</div></div>
-      <div><span class="label">Non-Striker</span><div id="nonstriker">—</div></div>
-      <div><span class="label">Bowler</span><div id="bowler">—</div></div>
+    <!-- Mini Scoreboard -->
+    <div class="grid">
+      <div class="card">
+        <table class="table" id="batTable">
+          <thead>
+            <tr>
+              <th>Batter</th><th class="right">R</th><th class="right">B</th><th class="right">4s</th><th class="right">6s</th><th class="right">SR</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>—</td><td class="right">0</td><td class="right">0</td><td class="right">0</td><td class="right">0</td><td class="right">0.00</td></tr>
+            <tr><td>—</td><td class="right">0</td><td class="right">0</td><td class="right">0</td><td class="right">0</td><td class="right">0.00</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <table class="table" id="bowlTable">
+          <thead>
+            <tr>
+              <th>Bowler</th><th class="right">O</th><th class="right">R</th><th class="right">W</th><th class="right">ECO</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>—</td><td class="right">0.0</td><td class="right">0</td><td class="right">0</td><td class="right">0.00</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Feed -->
@@ -99,7 +128,7 @@
     const qs = new URLSearchParams(location.search);
     const matchId = qs.get('id');
 
-    // helpers
+    // ===== helpers
     function fmt(ts){
       const d = ts ? new Date(ts) : new Date();
       const dd = String(d.getDate()).padStart(2,'0');
@@ -111,74 +140,133 @@
       return `${dd}-${mm}-${yyyy}, ${hh}:${m} ${ap}`;
     }
     function safeLogo(el, url){ el.onerror=()=>{el.onerror=null;el.src='/assets/logo.png'}; el.src = url || '/assets/logo.png'; }
-    const feed = document.getElementById('feed');
+    function oversStr(balls){ return `${Math.floor(balls/6)}.${balls%6}`; }
+    function eco(runs, balls){ const ov=balls/6; return ov? (runs/ov).toFixed(2):'0.00'; }
+    function sr(runs, balls){ return balls? ((runs*100)/balls).toFixed(2):'0.00'; }
 
-    // state
+    async function nameFor(table, id, fallback='—'){
+      if(!id) return fallback;
+      const { data } = await supabase.from(table).select('name,team_name').eq('id', id).maybeSingle();
+      return data?.name || data?.team_name || fallback;
+    }
+
+    const feedEl = document.getElementById('feed');
+
+    // ===== global state
     let totals = { runs:0, wickets:0, balls:0 };
-    const latestByKey = new Map(); // '1-17-3' -> ball row
-    const nameCache = new Map();
+    const latestByKey = new Map(); // 'I-O-B' -> row
+    const batStats = new Map();    // playerId -> {r,b,4s,6s}
+    const bowlStats = new Map();   // playerId -> {balls,runs,wkts}
 
-    async function getPlayerName(id){
-      if(!id) return '—';
-      if(nameCache.has(id)) return nameCache.get(id);
-      const { data } = await supabase.from('players').select('name').eq('id', id).maybeSingle();
-      const n = data?.name || '—';
-      nameCache.set(id, n);
-      return n;
-    }
-
-    function overString(balls){
-      const completed = Math.floor(balls/6);
-      const rem = balls % 6;
-      return `(${completed}.${rem})`;
-    }
-    function crr(runs, balls){
-      if(!balls) return 'CRR 0.00';
-      const overs = balls/6;
-      return `CRR ${(runs/overs).toFixed(2)}`;
-    }
+    let currentStriker=null, currentNonStriker=null, currentBowler=null;
 
     function keyOf(b){ return `${b.innings}-${b.over_number}-${b.ball_in_over}`; }
 
+    // ===== renderers
     function renderHeader(){
       document.getElementById('score').textContent = `${totals.runs}-${totals.wickets}`;
-      document.getElementById('overStr').textContent = overString(totals.balls);
-      document.getElementById('crr').textContent = crr(totals.runs, totals.balls);
+      document.getElementById('overStr').textContent = `(${oversStr(totals.balls)})`;
+      const ov = totals.balls/6; document.getElementById('crr').textContent = `CRR ${ov? (totals.runs/ov).toFixed(2):'0.00'}`;
     }
 
     function rowHtml(b){
       const tag = `I${b.innings} ${b.over_number}.${b.ball_in_over}`;
       const w = b.wicket ? `<span class="wkt">W</span>` : '';
       const text = b.commentary ?? (b.wicket ? 'Wicket!' : `Runs: ${b.runs_scored}`);
-      return `
-        <div class="row">
-          <div class="balltag">${tag}</div>
-          <div>${w}${text}</div>
-        </div>
-      `;
+      return `<div class="row"><div class="balltag">${tag}</div><div>${w}${text}</div></div>`;
+    }
+
+    function applyToBatter(id, runs, isBoundary4, isBoundary6){
+      if(!id) return;
+      const st = batStats.get(id) || { r:0,b:0,f4:0,f6:0 };
+      st.r += runs;
+      st.b += 1;
+      if(isBoundary4) st.f4 += 1;
+      if(isBoundary6) st.f6 += 1;
+      batStats.set(id, st);
+    }
+
+    function applyToBowler(id, runsConceded, wicket){
+      if(!id) return;
+      const st = bowlStats.get(id) || { balls:0, runs:0, wkts:0 };
+      st.balls += 1;
+      st.runs  += runsConceded;
+      if (wicket) st.wkts += 1;
+      bowlStats.set(id, st);
+    }
+
+    function renderBatTable(){
+      const body = document.querySelector('#batTable tbody');
+      body.innerHTML = '';
+      const rows = [currentStriker, currentNonStriker].filter(Boolean).map(id=>{
+        const s = batStats.get(id) || { r:0,b:0,f4:0,f6:0 };
+        return { id, ...s };
+      });
+      // keep two rows
+      while(rows.length < 2) rows.push({ id:null, r:0,b:0,f4:0,f6:0 });
+
+      rows.forEach(async (r)=>{
+        const tr = document.createElement('tr');
+        const name = r.id ? await nameFor('players', r.id, '—') : '—';
+        tr.innerHTML = `
+          <td>${name}</td>
+          <td class="right">${r.r}</td>
+          <td class="right">${r.b}</td>
+          <td class="right">${r.f4}</td>
+          <td class="right">${r.f6}</td>
+          <td class="right">${sr(r.r, r.b)}</td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    function renderBowlTable(){
+      const body = document.querySelector('#bowlTable tbody');
+      body.innerHTML = '';
+      const s = currentBowler ? (bowlStats.get(currentBowler) || { balls:0, runs:0, wkts:0 }) : { balls:0, runs:0, wkts:0 };
+      const tr = document.createElement('tr');
+      const nameP = currentBowler ? nameFor('players', currentBowler, '—') : Promise.resolve('—');
+      nameP.then(name=>{
+        tr.innerHTML = `
+          <td>${name}</td>
+          <td class="right">${oversStr(s.balls)}</td>
+          <td class="right">${s.runs}</td>
+          <td class="right">${s.wkts}</td>
+          <td class="right">${eco(s.runs, s.balls)}</td>`;
+        body.appendChild(tr);
+      });
     }
 
     async function applyBall(b){
-      // score update (very basic: runs_scored increases; wicket increments)
-      totals.runs += (b.runs_scored ?? 0) + (b.extras ?? 0);
+      // totals
+      const batRuns = b.runs_scored || 0;
+      const extras = b.extras || 0;
+      totals.runs += batRuns + extras;
       if (b.wicket) totals.wickets += 1;
       totals.balls += 1;
 
-      // top of feed (newest first like Cricbuzz)
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = rowHtml(b);
-      feed.prepend(wrapper.firstElementChild);
+      // current actors
+      if (b.striker_id)     currentStriker    = b.striker_id;
+      if (b.non_striker_id) currentNonStriker = b.non_striker_id;
+      if (b.bowler_id)      currentBowler     = b.bowler_id;
 
+      // update batter/bowler stats
+      const is4 = batRuns === 4 && extras === 0;
+      const is6 = batRuns === 6 && extras === 0;
+      applyToBatter(currentStriker, batRuns, is4, is6);
+      applyToBowler(currentBowler, batRuns + extras, !!b.wicket);
+
+      // feed newest first
+      const div = document.createElement('div');
+      div.innerHTML = rowHtml(b);
+      feedEl.prepend(div.firstElementChild);
+
+      // re-render
       renderHeader();
-
-      // update strips if we have IDs
-      if (b.striker_id || b.non_striker_id || b.bowler_id) {
-        document.getElementById('batter').textContent = await getPlayerName(b.striker_id);
-        document.getElementById('nonstriker').textContent = await getPlayerName(b.non_striker_id);
-        document.getElementById('bowler').textContent = await getPlayerName(b.bowler_id);
-      }
+      renderBatTable();
+      renderBowlTable();
     }
 
+    // ===== meta + existing
     async function loadMeta(){
       const { data: m } = await supabase
         .from('matches')
@@ -206,15 +294,25 @@
         .eq('match_id', matchId)
         .order('innings').order('over_number').order('ball_in_over');
 
-      // compute totals and render into feed newest-first
       (data||[]).forEach(b=>{
         latestByKey.set(keyOf(b), b);
-        totals.runs += (b.runs_scored ?? 0) + (b.extras ?? 0);
+
+        // update totals & stats
+        totals.runs += (b.runs_scored||0) + (b.extras||0);
         if (b.wicket) totals.wickets += 1;
         totals.balls += 1;
+
+        if (b.striker_id)     currentStriker    = b.striker_id;
+        if (b.non_striker_id) currentNonStriker = b.non_striker_id;
+        if (b.bowler_id)      currentBowler     = b.bowler_id;
+
+        const is4 = (b.runs_scored||0) === 4 && (b.extras||0) === 0;
+        const is6 = (b.runs_scored||0) === 6 && (b.extras||0) === 0;
+        applyToBatter(b.striker_id, (b.runs_scored||0), is4, is6);
+        applyToBowler(b.bowler_id, (b.runs_scored||0)+(b.extras||0), !!b.wicket);
       });
 
-      // render newest first
+      // render feed (newest first)
       const frag = document.createDocumentFragment();
       [...latestByKey.values()].sort((a,b)=>{
         if (a.innings!==b.innings) return b.innings-a.innings;
@@ -225,24 +323,19 @@
         div.innerHTML = rowHtml(b);
         frag.append(div.firstElementChild);
       });
-      feed.append(frag);
-      renderHeader();
+      feedEl.append(frag);
 
-      // last known names if present
-      const last = data?.[data.length-1];
-      if (last){
-        document.getElementById('batter').textContent = await getPlayerName(last.striker_id);
-        document.getElementById('nonstriker').textContent = await getPlayerName(last.non_striker_id);
-        document.getElementById('bowler').textContent = await getPlayerName(last.bowler_id);
-      }
+      renderHeader();
+      renderBatTable();
+      renderBowlTable();
     }
 
+    // ===== realtime
     function subscribe(){
       supabase.channel('live-bbb-'+matchId)
         .on('postgres_changes', { event:'INSERT', schema:'public', table:'ball_by_ball', filter:`match_id=eq.${matchId}` },
           async ({ new: b })=>{
-            const k = keyOf(b);
-            if (latestByKey.has(k)) return;
+            const k = keyOf(b); if (latestByKey.has(k)) return;
             latestByKey.set(k,b);
             await applyBall(b);
           })
