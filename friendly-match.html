@@ -8,18 +8,31 @@
 
   <style>
     body { background:#0b0f16; color:#e7ecf3; font-family:system-ui; margin:0; }
-    .wrap{max-width:800px;margin:0 auto;padding:16px;}
-    .tabs{display:flex;gap:8px;margin:10px 0;}
-    .tabs button{flex:1;padding:10px;background:#111;color:#fff;border:none;border-radius:6px;cursor:pointer;}
-    .tabs button.active{background:#00e676;color:#000;}
-    .tab-panel{margin-top:10px;}
-    table{width:100%;border-collapse:collapse;margin:8px 0;}
-    th,td{border:1px solid #333;padding:6px;text-align:center;font-size:.9rem;}
-    .ball{padding:6px;border-bottom:1px solid #222;}
-    .mini-score{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin-bottom:10px;}
-    .mini-score h3{margin:0 0 8px 0;}
-    .mini-score .row{display:flex;justify-content:space-between;font-size:.9rem;}
-    .mini-score .label{opacity:.8;margin-right:4px;}
+    .wrap{max-width:900px;margin:0 auto;padding:16px;}
+
+    /* Tabs */
+    .tabs{display:flex;gap:6px;border-bottom:2px solid #222;position:sticky;top:48px;background:#0b0f16;z-index:5}
+    .tabs button{flex:1;padding:10px 8px;background:#10151f;color:#cfe7dc;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:700;letter-spacing:.02em}
+    .tabs button.active{background:#00e676;color:#000}
+
+    /* Score strip */
+    .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00; /* orange like screenshot */
+      color:#000;font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
+    .score-strip .big {font-size:1.2rem}
+    .teambar{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 12px 2px;font-size:1.1rem}
+    .teambar .t{font-weight:700}
+
+    /* Mini cards (LIVE) */
+    .card{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin:10px 0}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #2a344a;padding:8px;text-align:center}
+    th{background:#1a2236}
+    .ball{padding:8px;border-bottom:1px dashed #1f2a44}
+    .muted{opacity:.75}
+
+    /* Panels */
+    .panel{display:none}
+    .panel.show{display:block}
   </style>
 </head>
 <body>
@@ -30,44 +43,87 @@
     <h2>Friendly Match</h2>
 
     <div class="tabs">
-      <button id="tab-feed" class="active">📜 Live Feed</button>
-      <button id="tab-score">📊 Scoreboard</button>
+      <button id="tab-live" class="active">LIVE</button>
+      <button id="tab-score">SCORECARD</button>
+      <button id="tab-comm">COMMENTARY</button>
     </div>
 
-    <!-- Live Feed -->
-    <div id="feed-panel" class="tab-panel">
-      <div id="mini-score" class="mini-score">
-        <h3>Current</h3>
-        <div class="row"><span class="label">Striker:</span> <span id="striker"></span></div>
-        <div class="row"><span class="label">Non-Striker:</span> <span id="nonstriker"></span></div>
-        <div class="row"><span class="label">Bowler:</span> <span id="bowler"></span></div>
+    <!-- ===== LIVE ===== -->
+    <section id="live-panel" class="panel show">
+      <!-- Top score strip like screenshot -->
+      <div class="score-strip">
+        <div class="big" id="live-score-a">--/-- - --.- ov</div>
+        <div class="big" id="live-score-b" class="muted">--/-- - --.- ov</div>
       </div>
-      <div id="ball-feed"></div>
-    </div>
 
-    <!-- Scoreboard -->
-    <div id="score-panel" class="tab-panel" style="display:none;">
-      <h3>Batting</h3>
-      <table id="batting-card">
-        <thead>
-          <tr><th>Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+      <div class="teambar">
+        <div class="t" id="team-a-name">Team A</div>
+        <div class="t" id="team-b-name">Team B</div>
+      </div>
 
-      <h3>Bowling</h3>
-      <table id="bowling-card">
-        <thead>
-          <tr><th>Bowler</th><th>O</th><th>R</th><th>W</th><th>Eco</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+      <!-- Batsmen card -->
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px" id="batting-heading">Batting</div>
+        <table>
+          <thead>
+            <tr><th>Batsman</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>SR</th></tr>
+          </thead>
+          <tbody id="live-bats-tbody">
+            <!-- two rows (striker / non-striker) will fill -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Bowlers card -->
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Bowler</div>
+        <table>
+          <thead>
+            <tr><th>Bowler</th><th>Ov.</th><th>Runs</th><th>Wk.</th><th>Econ.</th></tr>
+          </thead>
+          <tbody id="live-bowl-tbody">
+            <!-- current bowler + last bowler -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Commentary under it -->
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Commentary</div>
+        <div id="live-feed"></div>
+      </div>
+    </section>
+
+    <!-- ===== SCORECARD ===== -->
+    <section id="score-panel" class="panel">
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Batting</div>
+        <table>
+          <thead><tr><th>Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+          <tbody id="batting-card"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Bowling</div>
+        <table>
+          <thead><tr><th>Bowler</th><th>O</th><th>R</th><th>W</th><th>Eco</th></tr></thead>
+          <tbody id="bowling-card"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== COMMENTARY ===== -->
+    <section id="comm-panel" class="panel">
+      <div class="card">
+        <div id="comm-feed"></div>
+      </div>
+    </section>
   </div>
 
   <div id="bottom-nav"></div>
 
-  <!-- Smooth UI loader -->
+  <!-- Smooth UI -->
   <script type="module">
     import { loadSmoothUI } from './js/smooth-ui.js';
     loadSmoothUI('top-bar','bottom-nav');
@@ -82,118 +138,238 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const matchId = urlParams.get("id");
-
-    const allBalls = [];
-    let players = {};
-
-    // Tabs
-    document.getElementById("tab-feed").onclick = () => {
-      document.getElementById("tab-feed").classList.add("active");
-      document.getElementById("tab-score").classList.remove("active");
-      document.getElementById("feed-panel").style.display = "block";
-      document.getElementById("score-panel").style.display = "none";
+    // ===== Tabs =====
+    const tabs = {
+      live: document.getElementById('tab-live'),
+      score: document.getElementById('tab-score'),
+      comm: document.getElementById('tab-comm'),
     };
-    document.getElementById("tab-score").onclick = () => {
-      document.getElementById("tab-score").classList.add("active");
-      document.getElementById("tab-feed").classList.remove("active");
-      document.getElementById("feed-panel").style.display = "none";
-      document.getElementById("score-panel").style.display = "block";
+    const panels = {
+      live: document.getElementById('live-panel'),
+      score: document.getElementById('score-panel'),
+      comm: document.getElementById('comm-panel'),
     };
+    const activate = (key) => {
+      ['live','score','comm'].forEach(k=>{
+        tabs[k].classList.toggle('active', k===key);
+        panels[k].classList.toggle('show', k===key);
+      });
+    };
+    tabs.live.onclick = ()=>activate('live');
+    tabs.score.onclick = ()=>activate('score');
+    tabs.comm.onclick = ()=>activate('comm');
 
-    function renderBallFeed(balls){
-      const box=document.getElementById("ball-feed");
-      box.innerHTML="";
-      balls.forEach(b=>{
-        const d=document.createElement("div");
-        d.className="ball";
-        d.textContent=`Innings ${b.innings}, Over ${b.over_number}.${b.ball_in_over}: ${b.commentary}`;
-        box.appendChild(d);
+    // ===== Helpers =====
+    const qs = new URLSearchParams(location.search);
+    const matchId = qs.get('id');
+    const feedBox = document.getElementById('live-feed');
+    const commBox = document.getElementById('comm-feed');
+    const liveBats = document.getElementById('live-bats-tbody');
+    const liveBowls = document.getElementById('live-bowl-tbody');
+
+    const battingCard = document.getElementById('batting-card');
+    const bowlingCard = document.getElementById('bowling-card');
+
+    const scoreA = document.getElementById('live-score-a');
+    const scoreB = document.getElementById('live-score-b');
+    const teamAName = document.getElementById('team-a-name');
+    const teamBName = document.getElementById('team-b-name');
+    const battingHeading = document.getElementById('batting-heading');
+
+    let all = [];              // all balls for this match
+    let players = {};          // id -> {name}
+    let homeTeam, awayTeam;    // ids
+    let names = {};            // team id -> team_name
+
+    function oversText(legalBalls) {
+      const o = Math.floor(legalBalls/6);
+      const b = legalBalls%6;
+      return `${o}.${b}`;
+    }
+
+    function computeTotals(balls, inningsNo) {
+      const arr = balls.filter(x => x.innings === inningsNo);
+      const runs = arr.reduce((s,b)=> s + (b.runs_scored||0) + (b.extras||0), 0);
+      const wkts = arr.reduce((s,b)=> s + (b.wicket?1:0), 0);
+      const legal = arr.length; // assuming every row is legal ball
+      return { runs, wkts, legal };
+    }
+
+    function aggBatting(balls, inningsNo) {
+      const map = {};
+      balls.filter(b=>b.innings===inningsNo).forEach(b=>{
+        if(!b.striker_id) return;
+        const m = map[b.striker_id] ||= {runs:0,balls:0,fours:0,sixes:0};
+        m.runs += b.runs_scored||0;
+        m.balls += 1;
+        if (b.runs_scored===4) m.fours++;
+        if (b.runs_scored===6) m.sixes++;
+      });
+      return map;
+    }
+
+    function aggBowling(balls, inningsNo) {
+      const map = {};
+      balls.filter(b=>b.innings===inningsNo).forEach(b=>{
+        if(!b.bowler_id) return;
+        const m = map[b.bowler_id] ||= {runs:0,balls:0,wkts:0};
+        m.runs += (b.runs_scored||0) + (b.extras||0);
+        m.balls += 1;
+        if (b.wicket) m.wkts++;
+      });
+      return map;
+    }
+
+    function renderFeed(list, into) {
+      into.innerHTML = "";
+      list.forEach(b=>{
+        const d = document.createElement('div');
+        d.className = 'ball';
+        d.textContent = `I${b.innings} ${b.over_number}.${b.ball_in_over} — ${b.commentary}`;
+        into.appendChild(d);
       });
     }
 
-    function updateMiniScore(balls, players){
-      const last = balls[balls.length-1];
-      if(!last) return;
-      const striker = players[last.striker_id]?.name || "—";
-      const non = players[last.non_striker_id]?.name || "—";
-      const bowler = players[last.bowler_id]?.name || "—";
-      document.getElementById("striker").textContent = striker;
-      document.getElementById("nonstriker").textContent = non;
-      document.getElementById("bowler").textContent = bowler;
+    function liveMiniCards() {
+      if (all.length === 0) return;
+
+      const latest = all[all.length-1];
+      const curInn = latest.innings;
+
+      // Score strip
+      const t1 = computeTotals(all, 1);
+      scoreA.textContent = `${t1.runs}/${t1.wkts} - ${oversText(t1.legal)} ov`;
+      if (all.some(b=>b.innings===2)) {
+        const t2 = computeTotals(all, 2);
+        scoreB.textContent = `${t2.runs}/${t2.wkts} - ${oversText(t2.legal)} ov`;
+      } else {
+        scoreB.textContent = `--/-- - --.- ov`;
+      }
+
+      // Team names
+      teamAName.textContent = names[homeTeam] || "Home";
+      teamBName.textContent = names[awayTeam] || "Away";
+
+      // Which side is batting now (for heading)
+      battingHeading.textContent = `Batting – ${curInn === 1 ? (names[homeTeam]||'Home') : (names[awayTeam]||'Away')}`;
+
+      // ===== Batsmen (current pair) =====
+      const batAgg = aggBatting(all, curInn);
+      const strikerId = latest.striker_id;
+      const nonId = latest.non_striker_id;
+
+      function rowFor(pid) {
+        const s = batAgg[pid] || {runs:0,balls:0,fours:0,sixes:0};
+        const nm = players[pid]?.name || '—';
+        const sr = s.balls ? ((s.runs/s.balls)*100).toFixed(1) : "0.0";
+        return `<tr><td style="text-align:left">${nm}${pid===strikerId?' ★':''}</td>
+                  <td>${s.runs}</td><td>${s.balls}</td><td>${s.fours}</td><td>${s.sixes}</td><td>${sr}</td></tr>`;
+      }
+
+      liveBats.innerHTML = rowFor(strikerId) + rowFor(nonId);
+
+      // ===== Bowlers (current + previous) =====
+      const bowlAgg = aggBowling(all, curInn);
+      const currentBowler = latest.bowler_id;
+      let lastBowler = null;
+      for (let i=all.length-2; i>=0; i--) {
+        const b = all[i];
+        if (b.innings !== curInn) break;
+        if (b.bowler_id !== currentBowler) { lastBowler = b.bowler_id; break; }
+      }
+
+      function bowlRow(pid) {
+        const s = bowlAgg[pid] || {runs:0,balls:0,wkts:0};
+        const nm = players[pid]?.name || '—';
+        const ov = (s.balls/6).toFixed(1);
+        const eco = s.balls ? (s.runs/(s.balls/6)).toFixed(1) : "0.0";
+        return `<tr><td style="text-align:left">${nm}${pid===currentBowler?' ★':''}</td>
+                  <td>${ov}</td><td>${s.runs}</td><td>${s.wkts}</td><td>${eco}</td></tr>`;
+      }
+
+      let html = bowlRow(currentBowler);
+      if (lastBowler) html += bowlRow(lastBowler);
+      liveBowls.innerHTML = html;
     }
 
-    function updateScoreboard(balls, players){
-      const bats={}, bowls={};
-      for(const b of balls){
-        if(b.striker_id){
-          if(!bats[b.striker_id]) bats[b.striker_id]={runs:0,balls:0,fours:0,sixes:0};
-          bats[b.striker_id].runs+=b.runs_scored;
-          bats[b.striker_id].balls++;
-          if(b.runs_scored===4) bats[b.striker_id].fours++;
-          if(b.runs_scored===6) bats[b.striker_id].sixes++;
-        }
-        if(b.bowler_id){
-          if(!bowls[b.bowler_id]) bowls[b.bowler_id]={runs:0,balls:0,wkts:0};
-          bowls[b.bowler_id].runs+=(b.runs_scored||0)+(b.extras||0);
-          bowls[b.bowler_id].balls++;
-          if(b.wicket) bowls[b.bowler_id].wkts++;
-        }
-      }
-      const batT=document.querySelector("#batting-card tbody");
-      batT.innerHTML="";
+    function fullScorecard() {
+      // Choose current innings for batting card display (use latest)
+      const latestInn = all.length ? all[all.length-1].innings : 1;
+      const bats = aggBatting(all, latestInn);
+      const bowls = aggBowling(all, latestInn);
+
+      battingCard.innerHTML = "";
       Object.entries(bats).forEach(([pid,st])=>{
-        const p=players[pid]||{name:"??"};
-        const sr=st.balls?((st.runs/st.balls)*100).toFixed(1):"0.0";
-        batT.innerHTML+=`<tr><td>${p.name}</td><td>${st.runs}</td><td>${st.balls}</td><td>${st.fours}</td><td>${st.sixes}</td><td>${sr}</td></tr>`;
+        const nm = players[pid]?.name || '—';
+        const sr = st.balls ? ((st.runs/st.balls)*100).toFixed(1) : "0.0";
+        battingCard.innerHTML += `<tr><td style="text-align:left">${nm}</td>
+          <td>${st.runs}</td><td>${st.balls}</td><td>${st.fours}</td><td>${st.sixes}</td><td>${sr}</td></tr>`;
       });
-      const bowlT=document.querySelector("#bowling-card tbody");
-      bowlT.innerHTML="";
+
+      bowlingCard.innerHTML = "";
       Object.entries(bowls).forEach(([pid,st])=>{
-        const p=players[pid]||{name:"??"};
-        const overs=(st.balls/6).toFixed(1);
-        const eco=st.balls?(st.runs/(st.balls/6)).toFixed(1):"0.0";
-        bowlT.innerHTML+=`<tr><td>${p.name}</td><td>${overs}</td><td>${st.runs}</td><td>${st.wkts}</td><td>${eco}</td></tr>`;
+        const nm = players[pid]?.name || '—';
+        const ov = (st.balls/6).toFixed(1);
+        const eco = st.balls ? (st.runs/(st.balls/6)).toFixed(1) : "0.0";
+        bowlingCard.innerHTML += `<tr><td style="text-align:left">${nm}</td>
+          <td>${ov}</td><td>${st.runs}</td><td>${st.wkts}</td><td>${eco}</td></tr>`;
       });
     }
 
-    async function init(){
-      if(!matchId){ alert("Missing match id"); return; }
-
-      // preload lineup players
-      const { data: lns } = await supabase.from("lineups")
-        .select("playing_xi, team_id, teams!inner(players(id,name))")
-        .eq("match_id", matchId);
-      if(lns){
-        const ps = {};
-        lns.forEach(l=>{
-          (l.teams?.players||[]).forEach(p=>{ ps[p.id]={name:p.name}; });
-        });
-        players=ps;
+    async function loadMeta() {
+      // match -> team ids + names
+      const { data: m } = await supabase.from('matches')
+        .select('home_team_id,away_team_id,teams!matches_home_team_id_fkey(team_name),teams!matches_away_team_id_fkey(team_name)')
+        .eq('id', matchId).maybeSingle();
+      if (m) {
+        homeTeam = m.home_team_id;
+        awayTeam = m.away_team_id;
+        // safer fetch names
+        const { data: t } = await supabase.from('teams').select('id,team_name')
+          .in('id', [homeTeam, awayTeam]);
+        (t||[]).forEach(x=> names[x.id]=x.team_name);
+        teamAName.textContent = names[homeTeam] || 'Home';
+        teamBName.textContent = names[awayTeam] || 'Away';
       }
 
-      const { data: balls } = await supabase.from("ball_by_ball")
-        .select("*").eq("match_id", matchId).order("innings, over_number, ball_in_over");
-      allBalls.push(...(balls||[]));
-
-      renderBallFeed(allBalls);
-      updateMiniScore(allBalls, players);
-      updateScoreboard(allBalls, players);
-
-      // realtime sub
-      supabase.channel("bb-stream")
-        .on("postgres_changes",{event:"INSERT",schema:"public",table:"ball_by_ball",filter:`match_id=eq.${matchId}`},
-          (payload)=>{
-            allBalls.push(payload.new);
-            renderBallFeed(allBalls);
-            updateMiniScore(allBalls, players);
-            updateScoreboard(allBalls, players);
-          }
-        ).subscribe();
+      // load players for both teams
+      const { data: ps } = await supabase.from('players').select('id,name,team_id')
+        .in('team_id', [homeTeam, awayTeam]);
+      (ps||[]).forEach(p=> players[p.id] = { name: p.name });
     }
 
-    init();
+    async function initialLoad() {
+      if (!matchId) { alert('Missing match id'); return; }
+
+      await loadMeta();
+
+      const { data: balls } = await supabase
+        .from('ball_by_ball')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('innings, over_number, ball_in_over');
+      all = balls || [];
+
+      renderFeed(all, feedBox);
+      renderFeed(all, commBox);
+      liveMiniCards();
+      fullScorecard();
+
+      // realtime
+      supabase.channel('bb-live')
+        .on('postgres_changes',
+          { event:'INSERT', schema:'public', table:'ball_by_ball', filter:`match_id=eq.${matchId}` },
+          (payload)=>{
+            all.push(payload.new);
+            renderFeed(all, feedBox);
+            renderFeed(all, commBox);
+            liveMiniCards();
+            fullScorecard();
+          })
+        .subscribe();
+    }
+
+    initialLoad();
   </script>
 </body>
 </html>
