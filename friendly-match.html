@@ -16,13 +16,13 @@
     .tabs button.active{background:#00e676;color:#000}
 
     /* Score strip */
-    .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00; /* orange like screenshot */
+    .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;
       color:#000;font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
     .score-strip .big {font-size:1.2rem}
     .teambar{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 12px 2px;font-size:1.1rem}
     .teambar .t{font-weight:700}
 
-    /* Mini cards (LIVE) */
+    /* Cards */
     .card{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin:10px 0}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #2a344a;padding:8px;text-align:center}
@@ -50,7 +50,6 @@
 
     <!-- ===== LIVE ===== -->
     <section id="live-panel" class="panel show">
-      <!-- Top score strip like screenshot -->
       <div class="score-strip">
         <div class="big" id="live-score-a">--/-- - --.- ov</div>
         <div class="big" id="live-score-b" class="muted">--/-- - --.- ov</div>
@@ -61,33 +60,26 @@
         <div class="t" id="team-b-name">Team B</div>
       </div>
 
-      <!-- Batsmen card -->
       <div class="card">
         <div style="font-weight:800;margin-bottom:8px" id="batting-heading">Batting</div>
         <table>
           <thead>
             <tr><th>Batsman</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>SR</th></tr>
           </thead>
-          <tbody id="live-bats-tbody">
-            <!-- two rows (striker / non-striker) will fill -->
-          </tbody>
+          <tbody id="live-bats-tbody"></tbody>
         </table>
       </div>
 
-      <!-- Bowlers card -->
       <div class="card">
         <div style="font-weight:800;margin-bottom:8px">Bowler</div>
         <table>
           <thead>
             <tr><th>Bowler</th><th>Ov.</th><th>Runs</th><th>Wk.</th><th>Econ.</th></tr>
           </thead>
-          <tbody id="live-bowl-tbody">
-            <!-- current bowler + last bowler -->
-          </tbody>
+          <tbody id="live-bowl-tbody"></tbody>
         </table>
       </div>
 
-      <!-- Commentary under it -->
       <div class="card">
         <div style="font-weight:800;margin-bottom:8px">Commentary</div>
         <div id="live-feed"></div>
@@ -191,7 +183,7 @@
       const arr = balls.filter(x => x.innings === inningsNo);
       const runs = arr.reduce((s,b)=> s + (b.runs_scored||0) + (b.extras||0), 0);
       const wkts = arr.reduce((s,b)=> s + (b.wicket?1:0), 0);
-      const legal = arr.length; // assuming every row is legal ball
+      const legal = arr.length; // assuming each row is a legal ball
       return { runs, wkts, legal };
     }
 
@@ -250,10 +242,10 @@
       teamAName.textContent = names[homeTeam] || "Home";
       teamBName.textContent = names[awayTeam] || "Away";
 
-      // Which side is batting now (for heading)
+      // Which side is batting now
       battingHeading.textContent = `Batting – ${curInn === 1 ? (names[homeTeam]||'Home') : (names[awayTeam]||'Away')}`;
 
-      // ===== Batsmen (current pair) =====
+      // Current pair
       const batAgg = aggBatting(all, curInn);
       const strikerId = latest.striker_id;
       const nonId = latest.non_striker_id;
@@ -268,7 +260,7 @@
 
       liveBats.innerHTML = rowFor(strikerId) + rowFor(nonId);
 
-      // ===== Bowlers (current + previous) =====
+      // Current + previous bowler
       const bowlAgg = aggBowling(all, curInn);
       const currentBowler = latest.bowler_id;
       let lastBowler = null;
@@ -293,7 +285,6 @@
     }
 
     function fullScorecard() {
-      // Choose current innings for batting card display (use latest)
       const latestInn = all.length ? all[all.length-1].innings : 1;
       const bats = aggBatting(all, latestInn);
       const bowls = aggBowling(all, latestInn);
@@ -316,27 +307,42 @@
       });
     }
 
+    /* ---------- UPDATED: no joins; two simple queries ---------- */
     async function loadMeta() {
-      // match -> team ids + names
-      const { data: m } = await supabase.from('matches')
-        .select('home_team_id,away_team_id,teams!matches_home_team_id_fkey(team_name),teams!matches_away_team_id_fkey(team_name)')
-        .eq('id', matchId).maybeSingle();
-      if (m) {
-        homeTeam = m.home_team_id;
-        awayTeam = m.away_team_id;
-        // safer fetch names
-        const { data: t } = await supabase.from('teams').select('id,team_name')
-          .in('id', [homeTeam, awayTeam]);
-        (t||[]).forEach(x=> names[x.id]=x.team_name);
-        teamAName.textContent = names[homeTeam] || 'Home';
-        teamBName.textContent = names[awayTeam] || 'Away';
+      // 1) Get team ids for this match
+      const { data: m, error: mErr } = await supabase
+        .from('matches')
+        .select('home_team_id, away_team_id')
+        .eq('id', matchId)
+        .single();
+
+      if (mErr || !m) {
+        console.error('match fetch failed', mErr?.message || mErr);
+        return;
       }
 
-      // load players for both teams
-      const { data: ps } = await supabase.from('players').select('id,name,team_id')
+      homeTeam = m.home_team_id;
+      awayTeam = m.away_team_id;
+
+      // 2) Fetch team names separately
+      const { data: t, error: tErr } = await supabase
+        .from('teams')
+        .select('id, team_name')
+        .in('id', [homeTeam, awayTeam]);
+
+      if (!tErr) (t || []).forEach(x => { names[x.id] = x.team_name; });
+      teamAName.textContent = names[homeTeam] || 'Home';
+      teamBName.textContent = names[awayTeam] || 'Away';
+
+      // 3) Preload players for both teams for scorecards
+      const { data: ps, error: pErr } = await supabase
+        .from('players')
+        .select('id, name, team_id')
         .in('team_id', [homeTeam, awayTeam]);
-      (ps||[]).forEach(p=> players[p.id] = { name: p.name });
+
+      if (!pErr) (ps || []).forEach(p => { players[p.id] = { name: p.name }; });
     }
+    /* ----------------------------------------------------------- */
 
     async function initialLoad() {
       if (!matchId) { alert('Missing match id'); return; }
