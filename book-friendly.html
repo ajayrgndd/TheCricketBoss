@@ -25,7 +25,7 @@
         <input id="opponent" placeholder="Search team name…"/>
         <div id="results"></div>
         <div id="suggestions"></div>
-        <label>Kickoff (IST, must be ≥ 2 hours):</label>
+        <label>Kickoff (IST, must be ≥ 5 minutes):</label>
         <input id="kickoff" type="datetime-local"/>
         <button id="book">Book Friendly</button>
       </div>
@@ -38,7 +38,6 @@
   <!-- Load smooth top+bottom nav into the containers above -->
   <script type="module">
     import { loadSmoothUI } from "./js/smooth-ui.js";
-    // Defer until DOM is ready so containers exist
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => loadSmoothUI('top-bar','bottom-nav'), { once:true });
     } else {
@@ -68,7 +67,7 @@
 
     async function init(){
       try {
-        // 1) Ensure user session BEFORE doing anything (prevents nav redirect races)
+        // 1) Ensure user session
         const { data:{ user } } = await supabase.auth.getUser();
         if(!user){ location.href='login.html'; return; }
 
@@ -82,11 +81,10 @@
         if (teamErr || !team) { alert('Team not found'); return; }
         meTeamId = team.id;
 
-        // 3) Default kickoff ≥ 2h (+5 min buffer)
+        // 3) Default kickoff ≥ 5 minutes (and enforce via min)
         const kickoffEl = document.getElementById('kickoff');
-        kickoffEl.value = defaultKickoffLocalPlus(125);
-        // also set min on the input to prevent too-soon picks in UI
-        kickoffEl.min = defaultKickoffLocalPlus(120);
+        kickoffEl.value = defaultKickoffLocalPlus(5);
+        kickoffEl.min   = kickoffEl.value;
 
         // 4) Bot suggestions
         const { data: sugg } = await supabase.rpc('suggest_bot_opponents');
@@ -140,7 +138,7 @@
       }
       if(verdict !== 'ok'){
         const msg = {
-          too_soon: 'Kickoff must be at least 2 hours from now (IST).',
+          too_soon: 'Kickoff must be at least 5 minutes from now (IST).',
           invalid_day: 'No friendlies on Mondays or Thursdays (league days).',
           home_quota_exceeded: 'You reached today’s friendly limit (testing cap = 100).',
           away_quota_exceeded: 'Opponent has reached today’s friendly limit.',
