@@ -32,7 +32,12 @@
     th{background:#192238}
     td.left{text-align:left}
 
-    /* commentary list */
+    /* mini score strip */
+    .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;
+      font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
+    .score-strip .big{font-size:1.05rem}
+
+    /* commentary list (top = latest) */
     .feed{display:flex;flex-direction:column;gap:8px}
     .ball{padding:10px;border:1px dashed #26314b;border-radius:10px;background:#0f1522}
     .ball .head{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px}
@@ -40,7 +45,6 @@
     .wkt{background:#3a0e14;border-color:#521b24;color:#ffd6d6}
     .b4{background:#123d27;border-color:#1c593a;color:#b8ffd6}
     .b6{background:#0e2e57;border-color:#1a4886;color:#cfe8ff}
-    .ovmark{font-weight:800;margin:12px 0 4px 2px;opacity:.9}
 
     /* controls */
     .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -78,7 +82,7 @@
       <button id="tab-summary">SUMMARY</button>
     </div>
 
-    <!-- COMMENTARY -->
+    <!-- COMMENTARY (with mini score) -->
     <section id="comm-panel" class="panel show">
       <div class="card">
         <div class="controls">
@@ -96,6 +100,11 @@
             </select>
           </label>
         </div>
+      </div>
+
+      <div class="score-strip">
+        <div class="big" id="mini-a">--/-- - --.- ov</div>
+        <div class="big" id="mini-b">--/-- - --.- ov</div>
       </div>
 
       <div class="card">
@@ -210,6 +219,9 @@
     const in2Name = document.getElementById("in2-name");
     const in1Tot  = document.getElementById("in1-total");
     const in2Tot  = document.getElementById("in2-total");
+
+    const miniA = document.getElementById("mini-a");
+    const miniB = document.getElementById("mini-b");
 
     const bat1 = document.getElementById("bat1");
     const bat2 = document.getElementById("bat2");
@@ -359,14 +371,14 @@
       pause();
       shown = 0;
       commFeed.innerHTML = "";
-      renderUpTo(shown);
+      renderUpTo(0);
       setButtons();
     }
     function stepOne(){
       if (shown >= allBalls.length) return false;
       const b = allBalls[shown++];
-      // append one line
-      commFeed.insertAdjacentHTML("beforeend", commentaryLine(b, players));
+      // prepend latest at top
+      commFeed.insertAdjacentHTML("afterbegin", commentaryLine(b, players));
       renderUpTo(shown);
       if (shown >= allBalls.length) return false;
       return true;
@@ -384,9 +396,19 @@
       }
     }
 
+    function updateMiniStrip(part){
+      const t1 = innTotals(part,1);
+      const t2 = innTotals(part,2);
+      miniA.textContent = `${t1.runs}/${t1.wkts} - ${oversTxt(t1.balls)} ov`;
+      miniB.textContent = `${t2.runs}/${t2.wkts} - ${oversTxt(t2.balls)} ov`;
+    }
+
     function renderUpTo(n){
       // update scorecards progressively using first n balls
       const part = allBalls.slice(0,n);
+
+      // mini score strip
+      updateMiniStrip(part);
 
       // Innings names (assume home=I1, away=I2 like sim)
       in1Name.textContent = `${names[match.home_team_id]||"Home"} — Innings 1`;
@@ -455,7 +477,7 @@
       players = {};
       (ps||[]).forEach(p=> players[p.id] = { name: p.name });
 
-      // Balls (ordered)
+      // Balls (ordered oldest->newest; we will reveal from start but render newest on top)
       const { data: balls } = await supabase
         .from("ball_by_ball")
         .select("*")
@@ -471,6 +493,10 @@
       setButtons();
     }
 
+    // Kickoff
+    let players = {};
+    let names = {};
+    let match = null;
     loadReplay();
   </script>
 </body>
