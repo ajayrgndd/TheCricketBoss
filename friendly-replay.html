@@ -4,17 +4,21 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Friendly Replay – TheCricketBoss</title>
+
   <link rel="stylesheet" href="styles/global.css"/>
+
   <style>
     body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
     .wrap{max-width:980px;margin:0 auto;padding:16px}
 
+    /* header */
     .head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
     .badge{font-size:.75rem;padding:4px 10px;border-radius:999px;border:1px solid #26314b;background:#0f1522}
     .badge-friendly{background:#1b4332;color:#d1fae5;border-color:#24543f}
     .chip-done{background:#334155;color:#e2e8f0;border:1px solid #3b475f;border-radius:6px;padding:4px 10px;font-size:.75rem}
     .muted{opacity:.75}
 
+    /* tabs */
     .tabs{display:flex;gap:6px;border-bottom:2px solid #1d263a;position:sticky;top:48px;background:#0b0f16;z-index:5}
     .tabs button{flex:1;padding:10px 8px;background:#10151f;color:#cfe7dc;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:700;letter-spacing:.02em}
     .tabs button.active{background:#00e676;color:#000}
@@ -28,10 +32,12 @@
     th{background:#192238}
     td.left{text-align:left}
 
+    /* score strip */
     .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;
       font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
     .score-strip .big{font-size:1.05rem}
 
+    /* commentary */
     .feed{display:flex;flex-direction:column;gap:8px}
     .ball{padding:10px;border:1px dashed #26314b;border-radius:10px;background:#0f1522}
     .ball .head{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px}
@@ -42,6 +48,7 @@
   </style>
 </head>
 <body>
+  <!-- Top / Bottom nav containers -->
   <div id="top-bar"></div>
 
   <div class="wrap">
@@ -56,7 +63,7 @@
     <h2 id="match-title">Home vs Away</h2>
     <div class="muted" id="match-sub">Kickoff — --</div>
 
-    <!-- Default SCORECARD -->
+    <!-- Tabs (default SCORECARD active) -->
     <div class="tabs" style="margin-top:12px">
       <button id="tab-replay">REPLAY</button>
       <button id="tab-score" class="active">SCORECARD</button>
@@ -66,7 +73,7 @@
     <!-- REPLAY -->
     <section id="replay-panel" class="panel">
       <div class="card">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="controls" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button id="btn-play">▶ Play</button>
           <button id="btn-pause" disabled>⏸ Pause</button>
           <button id="btn-next">⏩ Next ball</button>
@@ -83,7 +90,7 @@
         </div>
       </div>
 
-      <!-- Mini score strip (always visible on REPLAY tab) -->
+      <!-- Mini score strip -->
       <div class="score-strip">
         <div class="big" id="mini-a">0/0 - 0.0 ov</div>
         <div class="big" id="mini-b">0/0 - 0.0 ov</div>
@@ -94,8 +101,9 @@
       </div>
     </section>
 
-    <!-- SCORECARD (final) -->
+    <!-- SCORECARD (final, static) -->
     <section id="score-panel" class="panel show">
+      <!-- Headline lines -->
       <div class="card">
         <div id="headline-a" style="font-weight:800;font-size:1.05rem;">—</div>
         <div id="headline-b" style="font-weight:800;font-size:1.05rem;margin-top:6px;">—</div>
@@ -141,6 +149,7 @@
       <div class="card">
         <h3>Match Summary</h3>
         <div id="result-line" style="margin:6px 0 12px 0;font-weight:700"></div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div style="background:#10151f;border:1px solid #22304b;border-radius:10px;padding:10px">
             <div id="sum-home-name" class="muted">Home</div>
@@ -175,18 +184,12 @@
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    /* ====== bootstrap ====== */
-    const qs = new URLSearchParams(location.search);
-    const matchId = qs.get("id");
-
-    // IMPORTANT: scope reads to this specific match via header (used by RLS policies below)
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE",
-      { global: { headers: { "x-match-id": matchId ?? "" } } }
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    /* tabs */
+    /* Tabs (default score) */
     const tabs = {
       replay: document.getElementById("tab-replay"),
       score: document.getElementById("tab-score"),
@@ -197,32 +200,41 @@
       score: document.getElementById("score-panel"),
       summary: document.getElementById("summary-panel"),
     };
-    const activate = (k)=>["replay","score","summary"].forEach(t=>{
-      tabs[t].classList.toggle("active", t===k);
-      panels[t].classList.toggle("show", t===k);
-    });
+    const activate = (key) => {
+      ["replay","score","summary"].forEach(k=>{
+        tabs[k].classList.toggle("active", k===key);
+        panels[k].classList.toggle("show", k===key);
+      });
+    };
+    tabs.replay.onclick = ()=>activate("replay");
+    tabs.score.onclick = ()=>activate("score");
+    tabs.summary.onclick = ()=>activate("summary");
     activate("score");
-    tabs.replay.onclick=()=>activate("replay");
-    tabs.score.onclick =()=>activate("score");
-    tabs.summary.onclick=()=>activate("summary");
 
-    /* els */
+    /* Elements */
+    const qs = new URLSearchParams(location.search);
+    const matchId = qs.get("id");
+
     const titleEl = document.getElementById("match-title");
     const subEl   = document.getElementById("match-sub");
     const replayDate = document.getElementById("replay-date");
+    const commFeed = document.getElementById("comm-feed");
+
     const headlineA = document.getElementById("headline-a");
     const headlineB = document.getElementById("headline-b");
+
     const in1Name = document.getElementById("in1-name");
     const in2Name = document.getElementById("in2-name");
     const in1Tot  = document.getElementById("in1-total");
     const in2Tot  = document.getElementById("in2-total");
+
+    const miniA = document.getElementById("mini-a");
+    const miniB = document.getElementById("mini-b");
+
     const bat1 = document.getElementById("bat1");
     const bat2 = document.getElementById("bat2");
     const bowl1 = document.getElementById("bowl1");
     const bowl2 = document.getElementById("bowl2");
-    const miniA = document.getElementById("mini-a");
-    const miniB = document.getElementById("mini-b");
-    const commFeed = document.getElementById("comm-feed");
 
     const resLine = document.getElementById("result-line");
     const sumHomeName = document.getElementById("sum-home-name");
@@ -234,7 +246,7 @@
     const sumAwayTopBat = document.getElementById("sum-away-topbat");
     const sumAwayTopBowl = document.getElementById("sum-away-topbowl");
 
-    /* controls */
+    /* Replay controls */
     const btnPlay = document.getElementById("btn-play");
     const btnPause = document.getElementById("btn-pause");
     const btnNext = document.getElementById("btn-next");
@@ -242,15 +254,19 @@
     const btnRestart = document.getElementById("btn-restart");
     const speedSel = document.getElementById("speed");
 
-    /* state */
-    const roles = {}; // teamId -> {captain, keeper}
-    let players = {}; // id -> {name, team_id}
-    let names = {};   // teamId -> name
+    /* State */
+    const roles = {}; // { teamId: {captain, keeper} }
+    let players = {}; // { id: {name, team_id} }
+    let names = {};   // { teamId: team_name }
     let match = null;
-    let allBalls = []; let shown = 0; let timer = null; let delay = 700;
 
-    /* utils */
-    const oversTxt = (b)=>`${Math.floor(b/6)}.${b%6}`;
+    let allBalls = []; // ordered oldest->newest
+    let shown = 0;
+    let timer = null;
+    let delay = 700;
+
+    /* Utils */
+    const oversTxt = (balls)=> `${Math.floor(balls/6)}.${balls%6}`;
     function fmtDateTime(ts){
       if(!ts) return "";
       const d = new Date(ts);
@@ -260,119 +276,104 @@
       const h24 = d.getHours();
       const hh = String(h24 % 12 || 12).padStart(2,"0");
       const mi = String(d.getMinutes()).padStart(2,"0");
-      const ampm = h24>=12?"PM":"AM";
+      const ampm = h24 >= 12 ? "PM" : "AM";
       return `${dd}-${mm}-${yyyy}, ${hh}:${mi} ${ampm}`;
     }
-    const short = (id)=> id ? String(id).slice(0,8) : "—";
+
     function nameWithBadges(pid){
-      if (!pid) return "—";
-      const p = players[pid];
-      if (!p) return `Player ${short(pid)}`; // RLS fallback
+      const p = players[pid]; if(!p) return "—";
       const r = roles[p.team_id] || {};
-      const tags=[];
-      if (r.captain===pid) tags.push("C");
-      if (r.keeper===pid)  tags.push("WK");
+      const tags = [];
+      if (r.captain && r.captain===pid) tags.push("C");
+      if (r.keeper && r.keeper===pid) tags.push("WK");
       return `${p.name}${tags.length?` (${tags.join(", ")})`:''}`;
     }
 
-    function totals(list, inn){
-      const arr=list.filter(b=>b.innings===inn);
-      return {
-        runs: arr.reduce((s,b)=>s+(b.runs_scored||0)+(b.extras||0),0),
-        wkts: arr.reduce((s,b)=>s+(b.wicket?1:0),0),
-        balls: arr.length
-      };
-    }
-    function aggBat(list, inn){
-      const map={};
-      list.filter(b=>b.innings===inn).forEach(b=>{
-        const id=b.striker_id; if(!id) return;
-        const m=map[id] ||= {r:0,b:0,f:0,s:0};
-        m.r += b.runs_scored||0; m.b += 1;
+    function aggBatting(balls, inn){
+      const map = {};
+      balls.filter(b=>b.innings===inn).forEach(b=>{
+        if(!b.striker_id) return;
+        const m = map[b.striker_id] ||= {r:0,b:0,f:0,s:0};
+        m.r += b.runs_scored||0;
+        m.b += 1;
         if (b.runs_scored===4) m.f++;
         if (b.runs_scored===6) m.s++;
-      }); return map;
+      });
+      return map;
     }
-    function aggBowl(list, inn){
-      const map={};
-      list.filter(b=>b.innings===inn).forEach(b=>{
-        const id=b.bowler_id; if(!id) return;
-        const m=map[id] ||= {r:0,b:0,w:0};
-        m.r += (b.runs_scored||0)+(b.extras||0); m.b += 1;
-        const bowlerGetsWicket = b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout';
-        if (bowlerGetsWicket) m.w++;
-      }); return map;
+    function aggBowling(balls, inn){
+      const map = {};
+      balls.filter(b=>b.innings===inn).forEach(b=>{
+        if(!b.bowler_id) return;
+        const isBowlerWicket = b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout';
+        const m = map[b.bowler_id] ||= {r:0,b:0,w:0};
+        m.r += (b.runs_scored||0) + (b.extras||0);
+        m.b += 1;
+        if (isBowlerWicket) m.w += 1;
+      });
+      return map;
     }
-    function dismissalMap(list, inn){
-      const map={};
-      list.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id).forEach(b=>{
-        map[b.dismissed_batsman_id] = {
-          type:(b.dismissal_type||'').toLowerCase(),
-          bowler:b.bowler_id||null,
-          fielder:b.fielder_id||null
-        };
-      }); return map;
+    function totals(balls, inn){
+      const list = balls.filter(b=>b.innings===inn);
+      const runs = list.reduce((s,b)=>s+(b.runs_scored||0)+(b.extras||0),0);
+      const wkts = list.reduce((s,b)=>s+(b.wicket?1:0),0);
+      return {runs,wkts,balls:list.length};
+    }
+
+    function dismissalMap(balls, inn){
+      const map={}; // pid -> {type, bowler, fielder}
+      balls.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id)
+        .forEach(b=>{
+          map[b.dismissed_batsman_id] = {
+            type:(b.dismissal_type||'').toLowerCase(),
+            bowler:b.bowler_id||null,
+            fielder:b.fielder_id||null
+          };
+        });
+      return map;
     }
     function dismissText(pid, dm){
-      const d=dm[pid]; if(!d) return "not out";
-      const bow=nameWithBadges(d.bowler); const fld=nameWithBadges(d.fielder);
-      if (d.type==="bowled") return `b ${bow}`;
-      if (d.type==="lbw") return `lbw b ${bow}`;
-      if (d.type==="caught"){
-        if (d.fielder && d.bowler && d.fielder===d.bowler) return `c & b ${bow}`;
-        if (d.fielder) return `c ${fld} b ${bow}`;
-        return `c b ${bow}`;
+      const d = dm[pid];
+      if(!d) return "not out";
+      const bowTxt = d.bowler ? nameWithBadges(d.bowler) : "";
+      const fldTxt = d.fielder ? nameWithBadges(d.fielder) : "";
+      if (d.type === "bowled") return `b ${bowTxt}`;
+      if (d.type === "lbw") return `lbw b ${bowTxt}`;
+      if (d.type === "caught") {
+        if (d.fielder && d.bowler && d.fielder === d.bowler) return `c & b ${bowTxt}`;
+        if (d.fielder) return `c ${fldTxt} b ${bowTxt}`;
+        return `c b ${bowTxt}`;
       }
-      if (d.type==="runout"||d.type==="run-out") return d.fielder?`run out (${fld})`:`run out`;
-      return bow?`b ${bow}`:"out";
+      if (d.type === "runout" || d.type === "run-out") return d.fielder ? `run out (${fldTxt})` : `run out`;
+      return bowTxt ? `b ${bowTxt}` : "out";
     }
 
-    function rowBat(tbody, map, dm){
-      tbody.innerHTML="";
-      Object.entries(map).forEach(([pid,st])=>{
-        const nm = nameWithBadges(pid);
-        const sr = st.b ? ((st.r/st.b)*100).toFixed(1) : "0.0";
-        const dis = dismissText(pid, dm);
-        tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${nm}</td><td class="left">${dis} ${st.b?` ${st.r}(${st.b})`:''}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
-      });
-    }
-    function rowBowl(tbody, map){
-      tbody.innerHTML="";
-      Object.entries(map).forEach(([pid,st])=>{
-        const nm=nameWithBadges(pid);
-        const ov=(st.b/6).toFixed(1);
-        const eco=st.b?(st.r/(st.b/6)).toFixed(1):"0.0";
-        tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${nm}</td><td>${ov}</td><td>${st.r}</td><td>${st.w}</td><td>${eco}</td></tr>`);
-      });
-    }
-
+    /* Commentary */
     function pills(b){
-      const a=[];
-      if (b.wicket) a.push('<span class="tag wkt">WICKET</span>');
-      if (b.runs_scored===4) a.push('<span class="tag b4">FOUR</span>');
-      if (b.runs_scored===6) a.push('<span class="tag b6">SIX</span>');
-      return a.join(" ");
+      const arr=[];
+      if (b.wicket) arr.push('<span class="tag wkt">WICKET</span>');
+      if (b.runs_scored===4) arr.push('<span class="tag b4">FOUR</span>');
+      if (b.runs_scored===6) arr.push('<span class="tag b6">SIX</span>');
+      return arr.join(" ");
     }
-    const VARIANTS={
-      0:["Dot ball.","Beaten!","Good length — no run."],
-      1:["Just a single.","Nudged for one.","Soft hands, one run."],
-      2:["They come back for two.","Comfortable two.","Pushed for a brace."],
-      3:["All hustle — three!","Good running — three.","Long chase, three taken."],
-      4:["FOUR! Crunched.","Pierces the gap — four.","Stroked away for four."],
-      6:["SIX! Launched.","Into the stands — six!","Clean strike — maximum!"],
-      W:["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
+    const VARIANTS = {
+      0: ["Dot ball.","Beaten!","Good length — no run."],
+      1: ["Just a single.","Nudged for one.","Soft hands, one run."],
+      2: ["They come back for two.","Comfortable two.","Pushed for a brace."],
+      3: ["All hustle — three!","Good running — three.","Long chase, three taken."],
+      4: ["FOUR! Crunched.","Pierces the gap — four.","Stroked away for four."],
+      6: ["SIX! Launched.","Into the stands — six!","Clean strike — maximum!"],
+      W: ["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
     };
     function lineText(b){
       if (b.commentary && b.commentary.trim()) return b.commentary;
       if (b.wicket) return VARIANTS.W[Math.floor(Math.random()*VARIANTS.W.length)];
-      const pool = VARIANTS[Math.min(6, Math.max(0, b.runs_scored||0))]||["Runs added."];
+      const pool = VARIANTS[Math.min(6, Math.max(0, b.runs_scored||0))] || ["Runs added."];
       return pool[Math.floor(Math.random()*pool.length)];
     }
-    function comLine(b){
-      const bow=nameWithBadges(b.bowler_id);
-      const bat=nameWithBadges(b.striker_id);
+    function commentaryLine(b){
+      const bow = nameWithBadges(b.bowler_id);
+      const bat = nameWithBadges(b.striker_id);
       return `
         <div class="ball">
           <div class="head">
@@ -380,84 +381,139 @@
             <div>${pills(b)}</div>
           </div>
           <div><strong>${bow}</strong> to <strong>${bat}</strong> — ${lineText(b)}</div>
-        </div>`;
+        </div>
+      `;
     }
 
+    /* Replay progression (mini-strip updates with progress) */
     function updateMini(part){
-      const t1=totals(part,1), t2=totals(part,2);
+      const t1 = totals(part,1);
+      const t2 = totals(part,2);
       miniA.textContent = `${t1.runs}/${t1.wkts} - ${oversTxt(t1.balls)} ov`;
       miniB.textContent = `${t2.runs}/${t2.wkts} - ${oversTxt(t2.balls)} ov`;
     }
 
     function setButtons(){
-      const done=shown>=allBalls.length;
-      btnPlay.disabled = timer!==null || done;
-      btnPause.disabled= timer===null;
+      const done = shown >= allBalls.length;
+      btnPlay.disabled = timer !== null || done;
+      btnPause.disabled = timer === null;
       btnNext.disabled = done;
       btnOver.disabled = done;
-      btnRestart.disabled = shown===0 && !done;
+      btnRestart.disabled = shown === 0 && !done;
     }
-    function play(){ if(timer||shown>=allBalls.length) return;
-      timer=setInterval(()=>{ if(!stepOne()) pause(); },delay); setButtons(); }
-    function pause(){ if(timer) clearInterval(timer); timer=null; setButtons(); }
-    function restart(){ pause(); shown=0; commFeed.innerHTML=""; updateMini([]); setButtons(); }
+    function play(){
+      if (timer || shown >= allBalls.length) return;
+      timer = setInterval(()=>{
+        if (!stepOne()) pause();
+      }, delay);
+      setButtons();
+    }
+    function pause(){ if (timer) clearInterval(timer); timer=null; setButtons(); }
+    function restart(){
+      pause(); shown = 0; commFeed.innerHTML = ""; updateMini([]); setButtons();
+    }
     function stepOne(){
-      if (shown>=allBalls.length) return false;
-      const b=allBalls[shown++]; commFeed.insertAdjacentHTML("afterbegin", comLine(b));
-      updateMini(allBalls.slice(0,shown));
-      return shown<allBalls.length;
+      if (shown >= allBalls.length) return false;
+      const b = allBalls[shown++];
+      commFeed.insertAdjacentHTML("afterbegin", commentaryLine(b));
+      updateMini(allBalls.slice(0, shown));
+      return shown < allBalls.length;
     }
     function stepOver(){
-      if (shown>=allBalls.length) return;
-      const curr=allBalls[shown]; if(!curr) return;
-      const tgtInn=curr.innings, tgtOver=curr.over_number+1;
-      while(shown<allBalls.length){ const b=allBalls[shown]; stepOne(); if(b.innings===tgtInn&&b.over_number===tgtOver) break; }
+      if (shown >= allBalls.length) return;
+      const curr = allBalls[shown] ?? null;
+      if (!curr) return;
+      const tgtInn = curr.innings;
+      const tgtOver = curr.over_number + 1;
+      while (shown < allBalls.length) {
+        const b = allBalls[shown];
+        stepOne();
+        if (b.innings === tgtInn && b.over_number === tgtOver) break;
+      }
     }
-    speedSel.onchange=()=>{ delay=parseInt(speedSel.value,10)||700; if(timer){ pause(); play(); } };
-    btnPlay.onclick=()=>play(); btnPause.onclick=()=>pause();
-    btnNext.onclick=()=>{ stepOne(); setButtons(); };
-    btnOver.onclick=()=>{ stepOver(); setButtons(); };
-    btnRestart.onclick=()=>{ restart(); };
 
+    speedSel.onchange = ()=>{ delay = parseInt(speedSel.value,10) || 700; if (timer){ pause(); play(); } };
+    btnPlay.onclick = ()=>{ play(); };
+    btnPause.onclick = ()=>{ pause(); };
+    btnNext.onclick = ()=>{ stepOne(); setButtons(); };
+    btnOver.onclick = ()=>{ stepOver(); setButtons(); };
+    btnRestart.onclick = ()=>{ restart(); };
+
+    /* Helper: top performers */
+    function topBattersFor(teamId, batsMap){
+      const rows = Object.entries(batsMap)
+        .filter(([pid])=> players[pid]?.team_id === teamId)
+        .map(([pid,st])=> ({ pid, r:st.r, b:st.b, sr: st.b? (st.r/st.b)*100 : 0 }))
+        .sort((a,b)=> b.r - a.r || b.sr - a.sr)
+        .slice(0,3);
+      return rows.map(x=> `${nameWithBadges(x.pid)} — ${x.r} (${x.b}), SR ${x.sr.toFixed(1)}`);
+    }
+    function topBowlersFor(teamId, bowlMap){
+      const rows = Object.entries(bowlMap)
+        .filter(([pid])=> players[pid]?.team_id === teamId)
+        .map(([pid,st])=> ({ pid, w:st.w, r:st.r, b:st.b, eco: st.b? st.r/(st.b/6) : 0 }))
+        .sort((a,b)=> b.w - a.w || a.eco - b.eco)
+        .slice(0,3);
+      return rows.map(x=> `${nameWithBadges(x.pid)} — ${x.w} wkts, ${x.eco.toFixed(1)} econ`);
+    }
+    function fillList(ul, items){
+      ul.innerHTML = "";
+      items.forEach(t=> ul.insertAdjacentHTML("beforeend", `<li>${t}</li>`));
+    }
+
+    /* Load all data, then render FINAL scorecard + summary immediately */
     async function loadReplay(){
-      if(!matchId){ alert("Missing match id"); return; }
+      if (!matchId){ alert("Missing match id"); return; }
 
-      // matches
-      const { data:m } = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
-      if(!m){ alert("Match not found"); return; }
-      match=m;
+      // Match meta
+      const { data: m } = await supabase
+        .from("matches")
+        .select("*")
+        .eq("id", matchId).maybeSingle();
+      if (!m){ alert("Match not found"); return; }
+      match = m;
 
-      // teams
-      const { data:teams } = await supabase.from("teams").select("id,team_name").in("id",[m.home_team_id,m.away_team_id]);
-      (teams||[]).forEach(t=> names[t.id]=t.team_name);
+      // Teams
+      const { data: teams } = await supabase
+        .from("teams").select("id,team_name")
+        .in("id", [m.home_team_id, m.away_team_id]);
+      names = {};
+      (teams||[]).forEach(t=> names[t.id] = t.team_name);
 
-      // players (RLS-scoped by header)
-      const { data:ps } = await supabase.from("players").select("id,name,team_id").in("team_id",[m.home_team_id,m.away_team_id]);
-      (ps||[]).forEach(p=> players[p.id]={ name:p.name, team_id:p.team_id });
+      // Players (needs RLS to allow both teams — see note below)
+      const { data: ps } = await supabase
+        .from("players").select("id,name,team_id")
+        .in("team_id", [m.home_team_id, m.away_team_id]);
+      players = {};
+      (ps||[]).forEach(p=> players[p.id] = { name: p.name, team_id: p.team_id });
 
-      // captain/keeper
-      const { data:lus } = await supabase.from("lineups").select("team_id,captain,keeper").in("team_id",[m.home_team_id,m.away_team_id]);
-      (lus||[]).forEach(l=> roles[l.team_id]={ captain:l.captain, keeper:l.keeper });
+      // Captain / Keeper from lineups
+      const { data: lus } = await supabase
+        .from("lineups")
+        .select("team_id,captain,keeper")
+        .in("team_id", [m.home_team_id, m.away_team_id]);
+      (lus||[]).forEach(l => { roles[l.team_id] = { captain:l.captain, keeper:l.keeper }; });
 
-      // balls (oldest->newest)
-      const { data:balls } = await supabase
+      // Balls (oldest -> newest)
+      const { data: balls } = await supabase
         .from("ball_by_ball")
         .select("*")
         .eq("match_id", matchId)
-        .order("innings",{ascending:true})
-        .order("over_number",{ascending:true})
-        .order("ball_in_over",{ascending:true});
-      allBalls = balls||[];
-      shown=0; commFeed.innerHTML=""; updateMini([]); setButtons();
+        .order("innings", { ascending: true })
+        .order("over_number", { ascending: true })
+        .order("ball_in_over", { ascending: true });
+      allBalls = balls || [];
+      shown = 0; commFeed.innerHTML = ""; setButtons(); updateMini([]);
 
-      // titles / when
+      // Titles / when
       titleEl.textContent = `${names[m.home_team_id]||"Home"} vs ${names[m.away_team_id]||"Away"}`;
       const when = m.kickoff_at || (m.date && m.start_time ? `${m.date}T${m.start_time}` : null);
-      replayDate.textContent = when ? fmtDateTime(when) : "--";
-      subEl.textContent = `Kickoff — ${when?fmtDateTime(when):"--"}`;
+      replayDate.textContent = fmtDateTime(when);
+      subEl.textContent = `Kickoff — ${fmtDateTime(when)}`;
 
-      // final scorecard & summary
-      const t1=totals(allBalls,1), t2=totals(allBalls,2);
+      // -------- Final SCORECARD + SUMMARY (static) --------
+      const t1 = totals(allBalls,1);
+      const t2 = totals(allBalls,2);
       headlineA.textContent = `${names[m.home_team_id]||"Home"} ${t1.runs}/${t1.wkts} (${oversTxt(t1.balls)} ov)`;
       headlineB.textContent = `${names[m.away_team_id]||"Away"} ${t2.runs}/${t2.wkts} (${oversTxt(t2.balls)} ov)`;
 
@@ -466,52 +522,52 @@
       in1Tot.textContent = `${t1.runs}/${t1.wkts} in ${oversTxt(t1.balls)} ov`;
       in2Tot.textContent = `${t2.runs}/${t2.wkts} in ${oversTxt(t2.balls)} ov`;
 
-      const batAgg1=aggBat(allBalls,1), batAgg2=aggBat(allBalls,2);
-      const dm1=dismissalMap(allBalls,1), dm2=dismissalMap(allBalls,2);
-      rowBat(bat1, batAgg1, dm1); rowBat(bat2, batAgg2, dm2);
+      const batAgg1 = aggBatting(allBalls,1);
+      const batAgg2 = aggBatting(allBalls,2);
+      const dm1 = dismissalMap(allBalls,1);
+      const dm2 = dismissalMap(allBalls,2);
+      renderBatTable(bat1, batAgg1, dm1);
+      renderBatTable(bat2, batAgg2, dm2);
 
-      const bowlAgg1=aggBowl(allBalls,1), bowlAgg2=aggBowl(allBalls,2);
-      rowBowl(bowl1, bowlAgg1); rowBowl(bowl2, bowlAgg2);
+      const bowlAgg1 = aggBowling(allBalls,1);
+      const bowlAgg2 = aggBowling(allBalls,2);
+      renderBowlTable(bowl1, bowlAgg1);
+      renderBowlTable(bowl2, bowlAgg2);
 
-      const homeName=names[m.home_team_id]||"Home";
-      const awayName=names[m.away_team_id]||"Away";
-      const homeRuns=m.result?.home?.runs ?? t1.runs;
-      const awayRuns=m.result?.away?.runs ?? t2.runs;
-      const winner=m.result?.winner ?? (homeRuns>awayRuns?"home":awayRuns>homeRuns?"away":"tie");
-      resLine.textContent = winner==="tie" ? `Match tied — ${homeName} ${homeRuns}, ${awayName} ${awayRuns}` : `${winner==="home"?homeName:awayName} won the match`;
-      sumHomeName.textContent=homeName; sumAwayName.textContent=awayName;
-      sumHomeScore.textContent=`${homeRuns} (${oversTxt(t1.balls)} ov)`;
-      sumAwayScore.textContent=`${awayRuns} (${oversTxt(t2.balls)} ov)`;
+      const homeRuns = m.result?.home?.runs ?? t1.runs;
+      const awayRuns = m.result?.away?.runs ?? t2.runs;
+      const winner = m.result?.winner ?? (homeRuns>awayRuns ? "home" : awayRuns>homeRuns ? "away" : "tie");
+      const homeName = names[m.home_team_id] || "Home";
+      const awayName = names[m.away_team_id] || "Away";
+      const winnerName = winner==="home" ? homeName : winner==="away" ? awayName : "Tie";
 
-      // top performers (both inns)
-      function topBattersFor(teamId, maps){
-        const comb={}; for(const map of maps){ for(const [pid,st] of Object.entries(map)){ const c=comb[pid] ||= {r:0,b:0}; c.r+=st.r; c.b+=st.b; } }
-        return Object.entries(comb)
-          .filter(([pid])=>players[pid]?.team_id===teamId)
-          .map(([pid,st])=>({pid, r:st.r, b:st.b, sr:st.b?st.r/st.b*100:0}))
-          .sort((a,b)=> b.r - a.r || b.sr - a.sr).slice(0,3)
-          .map(x=> `${nameWithBadges(x.pid)} — ${x.r} (${x.b}), SR ${x.sr.toFixed(1)}`);
-      }
-      function topBowlersFor(teamId, maps){
-        const comb={}; for(const map of maps){ for(const [pid,st] of Object.entries(map)){ const c=comb[pid] ||= {r:0,b:0,w:0}; c.r+=st.r; c.b+=st.b; c.w+=st.w; } }
-        return Object.entries(comb)
-          .filter(([pid])=>players[pid]?.team_id===teamId)
-          .map(([pid,st])=>({pid, w:st.w, eco: st.b? st.r/(st.b/6):0}))
-          .sort((a,b)=> b.w - a.w || a.eco - b.eco).slice(0,3)
-          .map(x=> `${nameWithBadges(x.pid)} — ${x.w} wkts, ${x.eco.toFixed(1)} econ`);
-      }
-      const tbHome = topBattersFor(m.home_team_id,[batAgg1,batAgg2]);
-      const tbAway = topBattersFor(m.away_team_id,[batAgg1,batAgg2]);
-      const bwHome = topBowlersFor(m.home_team_id,[bowlAgg1,bowlAgg2]);
-      const bwAway = topBowlersFor(m.away_team_id,[bowlAgg1,bowlAgg2]);
+      resLine.textContent = winner==="tie"
+        ? `Match tied — ${homeName} ${homeRuns}, ${awayName} ${awayRuns}`
+        : `${winnerName} won the match`;
+      sumHomeName.textContent = homeName;
+      sumAwayName.textContent = awayName;
+      sumHomeScore.textContent = `${homeRuns} (${oversTxt(t1.balls)} ov)`;
+      sumAwayScore.textContent = `${awayRuns} (${oversTxt(t2.balls)} ov)`;
 
-      const fill=(ul,items)=>{ ul.innerHTML=""; items.forEach(t=>ul.insertAdjacentHTML("beforeend",`<li>${t}</li>`)); };
-      fill(document.getElementById("sum-home-topbat"), tbHome);
-      fill(document.getElementById("sum-home-topbowl"), bwHome);
-      fill(document.getElementById("sum-away-topbat"), tbAway);
-      fill(document.getElementById("sum-away-topbowl"), bwAway);
+      // --- Top performers (both innings combined, per team) ---
+      const batsBoth = Object.assign({}, batAgg1);
+      Object.entries(aggBatting(allBalls,2)).forEach(([pid,st])=>{
+        const cur = batsBoth[pid] ||= {r:0,b:0,f:0,s:0};
+        cur.r += st.r; cur.b += st.b; cur.f += st.f; cur.s += st.s;
+      });
+      const bowlBoth = Object.assign({}, bowlAgg1);
+      Object.entries(aggBowling(allBalls,2)).forEach(([pid,st])=>{
+        const cur = bowlBoth[pid] ||= {r:0,b:0,w:0};
+        cur.r += st.r; cur.b += st.b; cur.w += st.w;
+      });
+
+      fillList(sumHomeTopBat, topBattersFor(m.home_team_id, batsBoth));
+      fillList(sumHomeTopBowl, topBowlersFor(m.home_team_id, bowlBoth));
+      fillList(sumAwayTopBat, topBattersFor(m.away_team_id, batsBoth));
+      fillList(sumAwayTopBowl, topBowlersFor(m.away_team_id, bowlBoth));
     }
 
+    // go
     loadReplay();
   </script>
 </body>
