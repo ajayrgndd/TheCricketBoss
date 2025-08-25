@@ -28,10 +28,12 @@
     th{background:#192238}
     td.left{text-align:left}
 
+    /* mini score strip */
     .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;
       font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
     .score-strip .big{font-size:1.05rem}
 
+    /* commentary list */
     .feed{display:flex;flex-direction:column;gap:8px}
     .ball{padding:10px;border:1px dashed #26314b;border-radius:10px;background:#0f1522}
     .ball .head{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px}
@@ -83,7 +85,7 @@
         </div>
       </div>
 
-      <!-- Mini score strip (always visible on REPLAY tab) -->
+      <!-- Mini score strip -->
       <div class="score-strip">
         <div class="big" id="mini-a">0/0 - 0.0 ov</div>
         <div class="big" id="mini-b">0/0 - 0.0 ov</div>
@@ -179,7 +181,6 @@
     const qs = new URLSearchParams(location.search);
     const matchId = qs.get("id");
 
-    // Scope reads to this match via header (aligns with RLS you installed)
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE",
@@ -348,13 +349,7 @@
       });
     }
 
-    function pills(b){
-      const a=[];
-      if (b.wicket) a.push('<span class="tag wkt">WICKET</span>');
-      if (b.runs_scored===4) a.push('<span class="tag b4">FOUR</span>');
-      if (b.runs_scored===6) a.push('<span class="tag b6">SIX</span>');
-      return a.join(" ");
-    }
+    /* Commentary variants — always use these, never the raw DB "Runs:N"/"OUT!" */
     const VARIANTS={
       0:["Dot ball.","Beaten!","Good length — no run."],
       1:["Just a single.","Nudged for one.","Soft hands, one run."],
@@ -364,23 +359,25 @@
       6:["SIX! Launched.","Into the stands — six!","Clean strike — maximum!"],
       W:["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
     };
-    function lineText(b){
-      if (b.commentary && b.commentary.trim()) return b.commentary;
-      if (b.wicket) return VARIANTS.W[Math.floor(Math.random()*VARIANTS.W.length)];
-      const pool = VARIANTS[Math.min(6, Math.max(0, b.runs_scored||0))]||["Runs added."];
-      return pool[Math.floor(Math.random()*pool.length)];
-    }
+    function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-    // NEW: build the outcome line as requested
+    /* Build the outcome line in the required format */
     function outcomeText(b){
-      if (b.wicket){
-        return `WICKET, ${lineText(b)}`;
-      }
-      const r = typeof b.runs_scored === "number" ? b.runs_scored : 0;
-      return `Runs: ${r}, ${lineText(b)}`;
+      if (b.wicket) return `WICKET, ${pick(VARIANTS.W)}`;
+      const r = Number.isFinite(b.runs_scored) ? b.runs_scored : 0;
+      const pool = VARIANTS[Math.min(6, Math.max(0, r))] || ["Runs added."];
+      return `Runs: ${r}, ${pick(pool)}`;
     }
 
-    // UPDATED: three-line layout
+    function pills(b){
+      const a=[];
+      if (b.wicket) a.push('<span class="tag wkt">WICKET</span>');
+      if (b.runs_scored===4) a.push('<span class="tag b4">FOUR</span>');
+      if (b.runs_scored===6) a.push('<span class="tag b6">SIX</span>');
+      return a.join(" ");
+    }
+
+    /* Three-line commentary block */
     function comLine(b){
       const bow=nameWithBadges(b.bowler_id);
       const bat=nameWithBadges(b.striker_id);
@@ -434,24 +431,19 @@
     async function loadReplay(){
       if(!matchId){ alert("Missing match id"); return; }
 
-      // matches
       const { data:m } = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
       if(!m){ alert("Match not found"); return; }
       match=m;
 
-      // teams
       const { data:teams } = await supabase.from("teams").select("id,team_name").in("id",[m.home_team_id,m.away_team_id]);
       (teams||[]).forEach(t=> names[t.id]=t.team_name);
 
-      // players
       const { data:ps } = await supabase.from("players").select("id,name,team_id").in("team_id",[m.home_team_id,m.away_team_id]);
       (ps||[]).forEach(p=> players[p.id]={ name:p.name, team_id:p.team_id });
 
-      // captain/keeper
       const { data:lus } = await supabase.from("lineups").select("team_id,captain,keeper").in("team_id",[m.home_team_id,m.away_team_id]);
       (lus||[]).forEach(l=> roles[l.team_id]={ captain:l.captain, keeper:l.keeper });
 
-      // balls (oldest->newest)
       const { data:balls } = await supabase
         .from("ball_by_ball")
         .select("*")
@@ -462,13 +454,11 @@
       allBalls = balls||[];
       shown=0; commFeed.innerHTML=""; updateMini([]); setButtons();
 
-      // titles / when
       titleEl.textContent = `${names[m.home_team_id]||"Home"} vs ${names[m.away_team_id]||"Away"}`;
       const when = m.kickoff_at || (m.date && m.start_time ? `${m.date}T${m.start_time}` : null);
       replayDate.textContent = when ? fmtDateTime(when) : "--";
       subEl.textContent = `Kickoff — ${when?fmtDateTime(when):"--"}`;
 
-      // final scorecard & summary
       const t1=totals(allBalls,1), t2=totals(allBalls,2);
       headlineA.textContent = `${names[m.home_team_id]||"Home"} ${t1.runs}/${t1.wkts} (${oversTxt(t1.balls)} ov)`;
       headlineB.textContent = `${names[m.away_team_id]||"Away"} ${t2.runs}/${t2.wkts} (${oversTxt(t2.balls)} ov)`;
@@ -491,11 +481,12 @@
       const awayRuns=m.result?.away?.runs ?? t2.runs;
       const winner=m.result?.winner ?? (homeRuns>awayRuns?"home":awayRuns>homeRuns?"away":"tie");
       resLine.textContent = winner==="tie" ? `Match tied — ${homeName} ${homeRuns}, ${awayName} ${awayRuns}` : `${winner==="home"?homeName:awayName} won the match`;
+
       sumHomeName.textContent=homeName; sumAwayName.textContent=awayName;
       sumHomeScore.textContent=`${homeRuns} (${oversTxt(t1.balls)} ov)`;
       sumAwayScore.textContent=`${awayRuns} (${oversTxt(t2.balls)} ov)`;
 
-      // top performers (both inns)
+      /* Top performers */
       function topBattersFor(teamId, maps){
         const comb={}; for(const map of maps){ for(const [pid,st] of Object.entries(map)){ const c=comb[pid] ||= {r:0,b:0}; c.r+=st.r; c.b+=st.b; } }
         return Object.entries(comb)
