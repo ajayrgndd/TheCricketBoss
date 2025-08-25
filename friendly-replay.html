@@ -85,8 +85,8 @@
         </div>
       </div>
 
-      <!-- Mini score strip -->
-      <div class="score-strip">
+      <!-- Mini score strip (always visible / refreshed) -->
+      <div id="replay-strip" class="score-strip" style="display:flex">
         <div class="big" id="mini-a">0/0 - 0.0 ov</div>
         <div class="big" id="mini-b">0/0 - 0.0 ov</div>
       </div>
@@ -177,7 +177,6 @@
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    /* ====== bootstrap ====== */
     const qs = new URLSearchParams(location.search);
     const matchId = qs.get("id");
 
@@ -203,7 +202,7 @@
       panels[t].classList.toggle("show", t===k);
     });
     activate("score");
-    tabs.replay.onclick=()=>activate("replay");
+    tabs.replay.onclick=()=>{ activate("replay"); updateMini(allBalls.slice(0, shown)); };
     tabs.score.onclick =()=>activate("score");
     tabs.summary.onclick=()=>activate("summary");
 
@@ -335,7 +334,7 @@
         const sr = st.b ? ((st.r/st.b)*100).toFixed(1) : "0.0";
         const dis = dismissText(pid, dm);
         tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${nm}</td><td class="left">${dis} ${st.b?` ${st.r}(${st.b})`:''}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
+          `<tr><td class="left">${nm}</td><td class="left">${dis}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
       });
     }
     function rowBowl(tbody, map){
@@ -376,7 +375,7 @@
       return a.join(" ");
     }
 
-    /* Use 0-based over display: first ball -> 0.1 */
+    /* 0-based over display: first ball -> 0.1 */
     function overTag(b){
       const o = Math.max(0, (b.over_number ?? 1) - 1);
       const ball = b.ball_in_over ?? 1;
@@ -401,6 +400,9 @@
       const t1=totals(part,1), t2=totals(part,2);
       miniA.textContent = `${t1.runs}/${t1.wkts} - ${oversTxt(t1.balls)} ov`;
       miniB.textContent = `${t2.runs}/${t2.wkts} - ${oversTxt(t2.balls)} ov`;
+      // ensure visible
+      const strip = document.getElementById("replay-strip");
+      if (strip && strip.style.display === "none") strip.style.display = "flex";
     }
 
     function setButtons(){
@@ -457,7 +459,9 @@
         .order("over_number",{ascending:true})
         .order("ball_in_over",{ascending:true});
       allBalls = balls||[];
-      shown=0; commFeed.innerHTML=""; updateMini([]); setButtons();
+      shown=0; commFeed.innerHTML="";
+      updateMini(allBalls.slice(0,shown));  // refresh strip immediately
+      setButtons();
 
       titleEl.textContent = `${names[m.home_team_id]||"Home"} vs ${names[m.away_team_id]||"Away"}`;
       const when = m.kickoff_at || (m.date && m.start_time ? `${m.date}T${m.start_time}` : null);
@@ -475,10 +479,12 @@
 
       const batAgg1=aggBat(allBalls,1), batAgg2=aggBat(allBalls,2);
       const dm1=dismissalMap(allBalls,1), dm2=dismissalMap(allBalls,2);
-      rowBat(bat1, batAgg1, dm1); rowBat(bat2, batAgg2, dm2);
+      rowBat(bat1, batAgg1, dm1);
+      rowBat(bat2, batAgg2, dm2);
 
       const bowlAgg1=aggBowl(allBalls,1), bowlAgg2=aggBowl(allBalls,2);
-      rowBowl(bowl1, bowlAgg1); rowBowl(bowl2, bowlAgg2);
+      rowBowl(bowl1, bowlAgg1);
+      rowBowl(bowl2, bowlAgg2);
 
       const homeName=names[m.home_team_id]||"Home";
       const awayName=names[m.away_team_id]||"Away";
