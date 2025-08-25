@@ -615,11 +615,9 @@
     }
 
     // controls wiring
-   
     loadReplay();
 
     // speed
-    let timer=null, delay=700, shown=0, allBalls=[];
     speedSel.onchange=()=>{ delay=parseInt(speedSel.value,10)||700; if(timer){ pause(); play(); } };
     function pause(){ if(timer) clearInterval(timer); timer=null; }
   </script>
