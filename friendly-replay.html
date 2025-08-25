@@ -246,7 +246,7 @@
 
     /* utils */
     const oversTxt = (b)=>`${Math.floor(b/6)}.${b%6}`;
-    const overLabel = (ball)=> `${ball.over_number - 1}.${ball.ball_in_over}`; // start at 0.1
+    const overLabel = (ball)=> `${ball.over_number - 1}.${ball.ball_in_over}`; // start at 0.1 visually
     function fmtDateTime(ts){
       if(!ts) return "";
       const d = new Date(ts);
@@ -357,7 +357,6 @@
       });
     }
 
-    /* Commentary variants */
     const VARIANTS={
       0:["Dot ball.","Beaten!","Good length — no run."],
       1:["Just a single.","Nudged for one.","Soft hands, one run."],
@@ -367,41 +366,32 @@
       6:["SIX! Launched.","Into the stands — six!","Clean strike — maximum!"],
       W:["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
     };
-    const pick=(a)=>a[Math.floor(Math.random()*a.length)];
-
-    function outcomeText(b){
-      if (b.wicket) return `WICKET, ${pick(VARIANTS.W)}`;
-      const r = Number.isFinite(b.runs_scored) ? b.runs_scored : 0;
-      const pool = VARIANTS[Math.min(6, Math.max(0, r))] || ["Runs added."];      
-      return `Runs: ${r}, ${pick(pool)}`;
+    function randomLine(b){
+      // Use DB commentary only if it's not an auto "Runs:" or bare "OUT!"
+      const c = (b.commentary||"").trim();
+      if (c && !/^runs?\s*:/i.test(c) && !/^out!?$/i.test(c)) return c;
+      if (b.wicket) return VARIANTS.W[Math.floor(Math.random()*VARIANTS.W.length)];
+      const pool = VARIANTS[Math.min(6, Math.max(0, b.runs_scored||0))]||["Runs added."];
+      return pool[Math.floor(Math.random()*pool.length)];
     }
 
-    function pills(b){
-      const a=[];
-      if (b.wicket) a.push('<span class="tag wkt">WICKET</span>');
-      if (b.runs_scored===4) a.push('<span class="tag b4">FOUR</span>');
-      if (b.runs_scored===6) a.push('<span class="tag b6">SIX</span>');
-      return a.join(" ");
-    }
-
-    /* 0-based over display: first ball -> 0.1 */
-    function overTag(b){
-      const o = Math.max(0, (b.over_number ?? 1) - 1);
-      const ball = b.ball_in_over ?? 1;
-      return `I${b.innings} • ${o}.${ball}`;
-    }
-
-    function comLine(b){
-      const bow=nameWithBadges(b.bowler_id);
-      const bat=nameWithBadges(b.striker_id);
+    // Commentary HTML (with extras)
+    function ballHtml(b, extraLines=[]){
+      const head = `Innings ${b.innings} • Over ${overLabel(b)}`;
+      const bow = nameWithBadges(b.bowler_id);
+      const bat = nameWithBadges(b.striker_id);
+      const tags=[];
+      if (b.wicket) tags.push('<span class="tag wkt">WICKET</span>');
+      if (b.runs_scored===4) tags.push('<span class="tag b4">FOUR</span>');
+      if (b.runs_scored===6) tags.push('<span class="tag b6">SIX</span>');
+      const line = `Runs: ${b.runs_scored||0}, ${randomLine(b)}`;
+      const extras = extraLines.length ? `<div class="sub">${extraLines.join("<br/>")}</div>` : "";
       return `
         <div class="ball">
-          <div class="head">
-            <div>${overTag(b)}</div>
-            <div>${pills(b)}</div>
-          </div>
+          <div class="head">${head}${tags.join("")}</div>
           <div><strong>${bow}</strong> to <strong>${bat}</strong></div>
-          <div>${outcomeText(b)}</div>
+          <div>${line}</div>
+          ${extras}
         </div>`;
     }
 
@@ -471,15 +461,16 @@
       // wicket extras (dismissal line + new batter)
       if (b.wicket) {
         const disTxt = dismissTextFromBall(b);
-        const outName = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
-        // balls faced + runs till now for dismissed batter
-        const faced = allBalls.slice(0, shown).filter(x=>x.striker_id=== (b.dismissed_batsman_id||b.striker_id)).length;
-        const runs  = liveBatRuns.get(b.dismissed_batsman_id||b.striker_id) || 0;
+        const outPid = b.dismissed_batsman_id || b.striker_id;
+        const outName = nameWithBadges(outPid);
+        // balls faced + runs till now for dismissed batter (in same innings)
+        const faced = allBalls.slice(0, shown).filter(x=>x.innings===b.innings && x.striker_id=== outPid).length;
+        const runs  = liveBatRuns.get(outPid) || 0;
         extras.push(`${outName} ${disTxt} ${runs}(${faced})`);
         // new batter announcement if we can infer
         const nextBall = allBalls[shown] || null;
         if (nextBall && nextBall.innings===b.innings) {
-          const newcomer = nextBall.striker_id !== b.striker_id && nextBall.striker_id !== (prev?.striker_id) ? nextBall.striker_id : nextBall.non_striker_id;
+          const newcomer = nextBall.striker_id !== outPid && nextBall.striker_id !== (prev?.striker_id) ? nextBall.striker_id : nextBall.non_striker_id;
           if (newcomer) extras.push(`${nameWithBadges(newcomer)} comes in to the Crease.`);
         }
       }
@@ -494,9 +485,8 @@
       if (!next || next.innings !== b.innings) {
         if (b.innings===1) {
           const t1 = totals(allBalls,1);
-          const t2 = {runs:0,wkts:0,balls:0};
-          const need = (t1.runs+1) - t2.runs;
-          const ballsLeft = 120 - t2.balls;
+          const need = (t1.runs+1);
+          const ballsLeft = 120;
           const teamB = names[match.away_team_id] || "Team B";
           commFeed.insertAdjacentHTML("afterbegin",
             `<div class="ball"><div class="head">End of Innings 1</div><div>${teamB} required ${need} runs from ${ballsLeft} balls to win</div></div>`);
