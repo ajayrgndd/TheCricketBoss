@@ -32,12 +32,12 @@
     th{background:#192238}
     td.left{text-align:left}
 
-    /* mini score strip */
+    /* score strip */
     .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;
       font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
     .score-strip .big{font-size:1.05rem}
 
-    /* commentary list (top = latest) */
+    /* commentary */
     .feed{display:flex;flex-direction:column;gap:8px}
     .ball{padding:10px;border:1px dashed #26314b;border-radius:10px;background:#0f1522}
     .ball .head{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px}
@@ -45,18 +45,6 @@
     .wkt{background:#3a0e14;border-color:#521b24;color:#ffd6d6}
     .b4{background:#123d27;border-color:#1c593a;color:#b8ffd6}
     .b6{background:#0e2e57;border-color:#1a4886;color:#cfe8ff}
-
-    /* controls */
-    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    .controls button,.controls select{
-      background:#10151f;color:#e7ecf3;border:1px solid #22304b;border-radius:8px;padding:8px 10px;cursor:pointer
-    }
-    .controls button:disabled{opacity:.6;cursor:not-allowed}
-    .spacer{flex:1}
-
-    /* summary */
-    .sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .sum-item{background:#10151f;border:1px solid #22304b;border-radius:10px;padding:10px}
   </style>
 </head>
 <body>
@@ -75,23 +63,23 @@
     <h2 id="match-title">Home vs Away</h2>
     <div class="muted" id="match-sub">Kickoff — --</div>
 
-    <!-- Tabs -->
+    <!-- Tabs (default SCORECARD active) -->
     <div class="tabs" style="margin-top:12px">
-      <button id="tab-comm" class="active">COMMENTARY</button>
-      <button id="tab-score">SCORECARD</button>
+      <button id="tab-replay">REPLAY</button>
+      <button id="tab-score" class="active">SCORECARD</button>
       <button id="tab-summary">SUMMARY</button>
     </div>
 
-    <!-- COMMENTARY (with mini score) -->
-    <section id="comm-panel" class="panel show">
+    <!-- REPLAY -->
+    <section id="replay-panel" class="panel">
       <div class="card">
-        <div class="controls">
+        <div class="controls" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button id="btn-play">▶ Play</button>
           <button id="btn-pause" disabled>⏸ Pause</button>
           <button id="btn-next">⏩ Next ball</button>
           <button id="btn-skip-over">⏭ Next over</button>
           <button id="btn-restart">🔁 Restart</button>
-          <div class="spacer"></div>
+          <div style="flex:1"></div>
           <label>Speed
             <select id="speed">
               <option value="1200">Slow</option>
@@ -112,15 +100,21 @@
       </div>
     </section>
 
-    <!-- SCORECARD -->
-    <section id="score-panel" class="panel">
+    <!-- SCORECARD (final, static) -->
+    <section id="score-panel" class="panel show">
+      <!-- Headline lines like Live -->
+      <div class="card">
+        <div id="headline-a" style="font-weight:800;font-size:1.05rem;">—</div>
+        <div id="headline-b" style="font-weight:800;font-size:1.05rem;margin-top:6px;">—</div>
+      </div>
+
       <div id="sc-in1" class="card">
         <h3 id="in1-name">Innings 1</h3>
         <div class="muted" id="in1-total">--</div>
         <div style="margin-top:10px"></div>
         <div><strong>Batting</strong></div>
         <table style="margin-top:6px">
-          <thead><tr><th class="left">Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+          <thead><tr><th class="left">Batsman</th><th class="left">Dismissal</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
           <tbody id="bat1"></tbody>
         </table>
         <div style="height:10px"></div>
@@ -137,7 +131,7 @@
         <div style="margin-top:10px"></div>
         <div><strong>Batting</strong></div>
         <table style="margin-top:6px">
-          <thead><tr><th class="left">Batsman</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+          <thead><tr><th class="left">Batsman</th><th class="left">Dismissal</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
           <tbody id="bat2"></tbody>
         </table>
         <div style="height:10px"></div>
@@ -154,12 +148,12 @@
       <div class="card">
         <h3>Match Summary</h3>
         <div id="result-line" style="margin:6px 0 12px 0;font-weight:700"></div>
-        <div class="sum-grid">
-          <div class="sum-item">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="background:#10151f;border:1px solid #22304b;border-radius:10px;padding:10px">
             <div id="sum-home-name" class="muted">Home</div>
             <div id="sum-home-score" style="font-size:1.1rem;font-weight:800">--/--</div>
           </div>
-          <div class="sum-item">
+          <div style="background:#10151f;border:1px solid #22304b;border-radius:10px;padding:10px">
             <div id="sum-away-name" class="muted">Away</div>
             <div id="sum-away-score" style="font-size:1.1rem;font-weight:800">--/--</div>
           </div>
@@ -185,26 +179,28 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    /* Tabs */
+    /* Tabs (default score) */
     const tabs = {
-      comm: document.getElementById("tab-comm"),
+      replay: document.getElementById("tab-replay"),
       score: document.getElementById("tab-score"),
       summary: document.getElementById("tab-summary"),
     };
     const panels = {
-      comm: document.getElementById("comm-panel"),
+      replay: document.getElementById("replay-panel"),
       score: document.getElementById("score-panel"),
       summary: document.getElementById("summary-panel"),
     };
     const activate = (key) => {
-      ["comm","score","summary"].forEach(k=>{
+      ["replay","score","summary"].forEach(k=>{
         tabs[k].classList.toggle("active", k===key);
         panels[k].classList.toggle("show", k===key);
       });
     };
-    tabs.comm.onclick = () => activate("comm");
-    tabs.score.onclick = () => activate("score");
-    tabs.summary.onclick = () => activate("summary");
+    tabs.replay.onclick = ()=>activate("replay");
+    tabs.score.onclick = ()=>activate("score");
+    tabs.summary.onclick = ()=>activate("summary");
+    // ensure initial state
+    activate("score");
 
     /* Elements */
     const qs = new URLSearchParams(location.search);
@@ -214,6 +210,9 @@
     const subEl   = document.getElementById("match-sub");
     const replayDate = document.getElementById("replay-date");
     const commFeed = document.getElementById("comm-feed");
+
+    const headlineA = document.getElementById("headline-a");
+    const headlineB = document.getElementById("headline-b");
 
     const in1Name = document.getElementById("in1-name");
     const in2Name = document.getElementById("in2-name");
@@ -234,7 +233,27 @@
     const sumAwayName = document.getElementById("sum-away-name");
     const sumAwayScore = document.getElementById("sum-away-score");
 
+    /* Replay controls */
+    const btnPlay = document.getElementById("btn-play");
+    const btnPause = document.getElementById("btn-pause");
+    const btnNext = document.getElementById("btn-next");
+    const btnOver = document.getElementById("btn-skip-over");
+    const btnRestart = document.getElementById("btn-restart");
+    const speedSel = document.getElementById("speed");
+
+    /* State */
+    const roles = {}; // { teamId: {captain, keeper} }
+    let players = {}; // { id: {name, team_id} }
+    let names = {};   // { teamId: team_name }
+    let match = null;
+
+    let allBalls = []; // ordered oldest->newest
+    let shown = 0;
+    let timer = null;
+    let delay = 700;
+
     /* Utils */
+    const oversTxt = (balls)=> `${Math.floor(balls/6)}.${balls%6}`;
     function fmtDateTime(ts){
       if(!ts) return "";
       const d = new Date(ts);
@@ -247,18 +266,25 @@
       const ampm = h24 >= 12 ? "PM" : "AM";
       return `${dd}-${mm}-${yyyy}, ${hh}:${mi} ${ampm}`;
     }
-    const oversTxt = (balls)=> `${Math.floor(balls/6)}.${balls%6}`;
+
+    function nameWithBadges(pid){
+      const p = players[pid]; if(!p) return "—";
+      const r = roles[p.team_id] || {};
+      const tags = [];
+      if (r.captain && r.captain===pid) tags.push("C");
+      if (r.keeper && r.keeper===pid) tags.push("WK");
+      return `${p.name}${tags.length?` (${tags.join(", ")})`:''}`;
+    }
 
     function aggBatting(balls, inn){
       const map = {};
       balls.filter(b=>b.innings===inn).forEach(b=>{
         if(!b.striker_id) return;
-        const m = map[b.striker_id] ||= {r:0,b:0,f:0,s:0,out:false};
+        const m = map[b.striker_id] ||= {r:0,b:0,f:0,s:0};
         m.r += b.runs_scored||0;
         m.b += 1;
         if (b.runs_scored===4) m.f++;
         if (b.runs_scored===6) m.s++;
-        if (b.wicket && b.dismissed_batsman_id === b.striker_id) m.out = true;
       });
       return map;
     }
@@ -269,84 +295,116 @@
         const m = map[b.bowler_id] ||= {r:0,b:0,w:0};
         m.r += (b.runs_scored||0) + (b.extras||0);
         m.b += 1;
-        if (b.wicket) m.w += 1;
+        if (b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout') m.w += 1;
       });
       return map;
     }
-    function innTotals(balls, inn){
+    function totals(balls, inn){
       const list = balls.filter(b=>b.innings===inn);
       const runs = list.reduce((s,b)=>s+(b.runs_scored||0)+(b.extras||0),0);
       const wkts = list.reduce((s,b)=>s+(b.wicket?1:0),0);
       return {runs,wkts,balls:list.length};
     }
 
-    function renderBatTable(tbody, map, players){
+    function dismissalMap(balls, inn){
+      const map={}; // pid -> {type, bowler, fielder}
+      balls.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id)
+        .forEach(b=>{
+          map[b.dismissed_batsman_id] = {
+            type:(b.dismissal_type||'').toLowerCase(),
+            bowler:b.bowler_id||null,
+            fielder:b.fielder_id||null
+          };
+        });
+      return map;
+    }
+    function dismissText(pid, dm){
+      const d = dm[pid];
+      if(!d) return "not out";
+      const bowTxt = d.bowler ? nameWithBadges(d.bowler) : "";
+      const fldTxt = d.fielder ? nameWithBadges(d.fielder) : "";
+      if (d.type === "bowled") return `b ${bowTxt}`;
+      if (d.type === "lbw") return `lbw b ${bowTxt}`;
+      if (d.type === "caught") {
+        if (d.fielder && d.bowler && d.fielder === d.bowler) return `c & b ${bowTxt}`;
+        if (d.fielder) return `c ${fldTxt} b ${bowTxt}`;
+        return `c b ${bowTxt}`;
+      }
+      if (d.type === "runout" || d.type === "run-out") return d.fielder ? `run out (${fldTxt})` : `run out`;
+      return bowTxt ? `b ${bowTxt}` : "out";
+    }
+
+    function renderBatTable(tbody, map, dm){
       tbody.innerHTML = "";
       Object.entries(map).forEach(([pid,st])=>{
-        const name = players[pid]?.name ?? "—";
+        const nm = nameWithBadges(pid);
         const sr = st.b ? ((st.r/st.b)*100).toFixed(1) : "0.0";
-        const star = st.out ? "" : " ★";
+        const dis = dismissText(pid, dm);
         tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${name}${star}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
+          `<tr>
+            <td class="left">${nm}</td>
+            <td class="left">${dis} ${st.b?` ${st.r}(${st.b})`:''}</td>
+            <td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td>
+          </tr>`);
       });
     }
-    function renderBowlTable(tbody, map, players){
+    function renderBowlTable(tbody, map){
       tbody.innerHTML = "";
       Object.entries(map).forEach(([pid,st])=>{
-        const name = players[pid]?.name ?? "—";
+        const nm = nameWithBadges(pid);
         const ov = (st.b/6).toFixed(1);
         const eco = st.b ? (st.r/(st.b/6)).toFixed(1) : "0.0";
         tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${name}</td><td>${ov}</td><td>${st.r}</td><td>${st.w}</td><td>${eco}</td></tr>`);
+          `<tr><td class="left">${nm}</td><td>${ov}</td><td>${st.r}</td><td>${st.w}</td><td>${eco}</td></tr>`);
       });
     }
 
-    function commentaryLine(b, players){
-      const tags = [];
-      if (b.wicket) tags.push('<span class="tag wkt">WICKET</span>');
-      if (b.runs_scored===4) tags.push('<span class="tag b4">FOUR</span>');
-      if (b.runs_scored===6) tags.push('<span class="tag b6">SIX</span>');
-
-      const line = b.commentary || (b.wicket
-        ? `OUT! ${(players[b.striker_id]?.name ?? "Batsman")}`
-        : `Runs: ${b.runs_scored||0}`);
-
+    /* Commentary */
+    function pills(b){
+      const arr=[];
+      if (b.wicket) arr.push('<span class="tag wkt">WICKET</span>');
+      if (b.runs_scored===4) arr.push('<span class="tag b4">FOUR</span>');
+      if (b.runs_scored===6) arr.push('<span class="tag b6">SIX</span>');
+      return arr.join(" ");
+    }
+    const VARIANTS = {
+      0: ["Dot ball.","Beaten!","Good length — no run."],
+      1: ["Just a single.","Nudged for one.","Soft hands, one run."],
+      2: ["They come back for two.","Comfortable two.","Pushed for a brace."],
+      3: ["All hustle — three!","Good running — three.","Long chase, three taken."],
+      4: ["FOUR! Crunched.","Pierces the gap — four.","Stroked away for four."],
+      6: ["SIX! Launched.","Into the stands — six!","Clean strike — maximum!"],
+      W: ["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
+    };
+    function lineText(b){
+      if (b.commentary && b.commentary.trim()) return b.commentary;
+      if (b.wicket) return VARIANTS.W[Math.floor(Math.random()*VARIANTS.W.length)];
+      const pool = VARIANTS[Math.min(6, Math.max(0, b.runs_scored||0))] || ["Runs added."];
+      return pool[Math.floor(Math.random()*pool.length)];
+    }
+    function commentaryLine(b){
+      const bow = nameWithBadges(b.bowler_id);
+      const bat = nameWithBadges(b.striker_id);
       return `
         <div class="ball">
           <div class="head">
-            <div> I${b.innings} • ${b.over_number}.${b.ball_in_over} </div>
-            <div>${tags.join(" ")}</div>
+            <div>I${b.innings} • ${b.over_number}.${b.ball_in_over}</div>
+            <div>${pills(b)}</div>
           </div>
-          <div>${line}</div>
+          <div><strong>${bow}</strong> to <strong>${bat}</strong> — ${lineText(b)}</div>
         </div>
       `;
     }
 
-    /* Replay state */
-    let allBalls = [];          // full list from DB
-    let shown = 0;              // how many balls are currently revealed
-    let timer = null;
-    let delay = 700;            // default speed
-    let players = {};
-    let names = {};
-    let match = null;
+    /* Replay progression (mini-strip updates with progress) */
+    function updateMini(part){
+      const t1 = totals(part,1);
+      const t2 = totals(part,2);
+      miniA.textContent = `${t1.runs}/${t1.wkts} - ${oversTxt(t1.balls)} ov`;
+      miniB.textContent = `${t2.runs}/${t2.wkts} - ${oversTxt(t2.balls)} ov`;
+    }
 
-    /* Controls */
-    const btnPlay = document.getElementById("btn-play");
-    const btnPause = document.getElementById("btn-pause");
-    const btnNext = document.getElementById("btn-next");
-    const btnOver = document.getElementById("btn-skip-over");
-    const btnRestart = document.getElementById("btn-restart");
-    const speedSel = document.getElementById("speed");
-
-    speedSel.onchange = () => { delay = parseInt(speedSel.value, 10) || 700; if (timer){ pause(); play(); } };
-    btnPlay.onclick = () => play();
-    btnPause.onclick = () => pause();
-    btnNext.onclick = () => { stepOne(); };
-    btnOver.onclick = () => { stepOver(); };
-    btnRestart.onclick = () => { restart(); };
-
-    function setButtons() {
+    function setButtons(){
       const done = shown >= allBalls.length;
       btnPlay.disabled = timer !== null || done;
       btnPause.disabled = timer === null;
@@ -354,130 +412,78 @@
       btnOver.disabled = done;
       btnRestart.disabled = shown === 0 && !done;
     }
-
     function play(){
       if (timer || shown >= allBalls.length) return;
-      timer = setInterval(() => {
+      timer = setInterval(()=>{
         if (!stepOne()) pause();
       }, delay);
       setButtons();
     }
-    function pause(){
-      if (timer) clearInterval(timer);
-      timer = null;
-      setButtons();
-    }
+    function pause(){ if (timer) clearInterval(timer); timer=null; setButtons(); }
     function restart(){
-      pause();
-      shown = 0;
-      commFeed.innerHTML = "";
-      renderUpTo(0);
-      setButtons();
+      pause(); shown = 0; commFeed.innerHTML = ""; updateMini([]); setButtons();
     }
     function stepOne(){
       if (shown >= allBalls.length) return false;
       const b = allBalls[shown++];
-      // prepend latest at top
-      commFeed.insertAdjacentHTML("afterbegin", commentaryLine(b, players));
-      renderUpTo(shown);
-      if (shown >= allBalls.length) return false;
-      return true;
+      commFeed.insertAdjacentHTML("afterbegin", commentaryLine(b));
+      updateMini(allBalls.slice(0, shown));
+      return shown < allBalls.length;
     }
     function stepOver(){
       if (shown >= allBalls.length) return;
       const curr = allBalls[shown] ?? null;
-      if (!curr){ return; }
-      const targetInn = curr.innings;
-      const targetOver = curr.over_number + 1;
+      if (!curr) return;
+      const tgtInn = curr.innings;
+      const tgtOver = curr.over_number + 1;
       while (shown < allBalls.length) {
         const b = allBalls[shown];
         stepOne();
-        if (b.innings === targetInn && b.over_number === targetOver) break;
+        if (b.innings === tgtInn && b.over_number === tgtOver) break;
       }
     }
 
-    function updateMiniStrip(part){
-      const t1 = innTotals(part,1);
-      const t2 = innTotals(part,2);
-      miniA.textContent = `${t1.runs}/${t1.wkts} - ${oversTxt(t1.balls)} ov`;
-      miniB.textContent = `${t2.runs}/${t2.wkts} - ${oversTxt(t2.balls)} ov`;
-    }
+    speedSel.onchange = ()=>{ delay = parseInt(speedSel.value,10) || 700; if (timer){ pause(); play(); } };
+    btnPlay.onclick = ()=>play();
+    btnPause.onclick = ()=>pause();
+    btnNext.onclick = ()=>{ stepOne(); setButtons(); };
+    btnOver.onclick = ()=>{ stepOver(); setButtons(); };
+    btnRestart.onclick = ()=>{ restart(); };
 
-    function renderUpTo(n){
-      // update scorecards progressively using first n balls
-      const part = allBalls.slice(0,n);
-
-      // mini score strip
-      updateMiniStrip(part);
-
-      // Innings names (assume home=I1, away=I2 like sim)
-      in1Name.textContent = `${names[match.home_team_id]||"Home"} — Innings 1`;
-      in2Name.textContent = `${names[match.away_team_id]||"Away"} — Innings 2`;
-
-      const t1 = innTotals(part,1);
-      const t2 = innTotals(part,2);
-      in1Tot.textContent = `${t1.runs}/${t1.wkts} in ${oversTxt(t1.balls)} ov`;
-      in2Tot.textContent = `${t2.runs}/${t2.wkts} in ${oversTxt(t2.balls)} ov`;
-
-      const batAgg1 = aggBatting(part,1);
-      const batAgg2 = aggBatting(part,2);
-      renderBatTable(bat1, batAgg1, players);
-      renderBatTable(bat2, batAgg2, players);
-
-      const bowlAgg1 = aggBowling(part,1);
-      const bowlAgg2 = aggBowling(part,2);
-      renderBowlTable(bowl1, bowlAgg1, players);
-      renderBowlTable(bowl2, bowlAgg2, players);
-
-      // Summary only once all balls revealed
-      if (n >= allBalls.length) {
-        const homeRuns = match.result?.home?.runs ?? t1.runs;
-        const awayRuns = match.result?.away?.runs ?? t2.runs;
-        const winner = match.result?.winner ?? (homeRuns>=awayRuns ? "home" : "away");
-        const in1Team = names[match.home_team_id] || "Home";
-        const in2Team = names[match.away_team_id] || "Away";
-        const winnerName = winner === "home" ? in1Team : in2Team;
-
-        document.getElementById("result-line").textContent =
-          `${winnerName} won — ${in1Team} ${homeRuns} / ${in2Team} ${awayRuns}`;
-        document.getElementById("sum-home-name").textContent = in1Team;
-        document.getElementById("sum-away-name").textContent = in2Team;
-        document.getElementById("sum-home-score").textContent = `${homeRuns} (${oversTxt(t1.balls)} ov)`;
-        document.getElementById("sum-away-score").textContent = `${awayRuns} (${oversTxt(t2.balls)} ov)`;
-      }
-    }
-
+    /* Load all data, then render FINAL scorecard + summary immediately */
     async function loadReplay(){
       if (!matchId){ alert("Missing match id"); return; }
 
       // Match meta
       const { data: m } = await supabase
         .from("matches")
-        .select("home_team_id,away_team_id,date,start_time,kickoff_at,status,result,is_friendly")
+        .select("*")
         .eq("id", matchId).maybeSingle();
       if (!m){ alert("Match not found"); return; }
       match = m;
 
+      // Teams
       const { data: teams } = await supabase
         .from("teams").select("id,team_name")
         .in("id", [m.home_team_id, m.away_team_id]);
-
       names = {};
       (teams||[]).forEach(t=> names[t.id] = t.team_name);
-      titleEl.textContent = `${names[m.home_team_id]||"Home"} vs ${names[m.away_team_id]||"Away"}`;
-
-      const when = m.kickoff_at || (m.date && m.start_time ? `${m.date}T${m.start_time}` : null);
-      replayDate.textContent = fmtDateTime(when);
-      subEl.textContent = `Kickoff — ${fmtDateTime(when)}`;
 
       // Players
       const { data: ps } = await supabase
         .from("players").select("id,name,team_id")
         .in("team_id", [m.home_team_id, m.away_team_id]);
       players = {};
-      (ps||[]).forEach(p=> players[p.id] = { name: p.name });
+      (ps||[]).forEach(p=> players[p.id] = { name: p.name, team_id: p.team_id });
 
-      // Balls (ordered oldest->newest; we will reveal from start but render newest on top)
+      // Captain / Keeper from lineups
+      const { data: lus } = await supabase
+        .from("lineups")
+        .select("team_id,captain,keeper")
+        .in("team_id", [m.home_team_id, m.away_team_id]);
+      (lus||[]).forEach(l => { roles[l.team_id] = { captain:l.captain, keeper:l.keeper }; });
+
+      // Balls (oldest -> newest)
       const { data: balls } = await supabase
         .from("ball_by_ball")
         .select("*")
@@ -485,18 +491,55 @@
         .order("innings", { ascending: true })
         .order("over_number", { ascending: true })
         .order("ball_in_over", { ascending: true });
-
       allBalls = balls || [];
-      shown = 0;
-      commFeed.innerHTML = "";
-      renderUpTo(0);
-      setButtons();
+      shown = 0; commFeed.innerHTML = ""; setButtons(); updateMini([]);
+
+      // Titles / when
+      titleEl.textContent = `${names[m.home_team_id]||"Home"} vs ${names[m.away_team_id]||"Away"}`;
+      const when = m.kickoff_at || (m.date && m.start_time ? `${m.date}T${m.start_time}` : null);
+      replayDate.textContent = fmtDateTime(when);
+      subEl.textContent = `Kickoff — ${fmtDateTime(when)}`;
+
+      // -------- Final SCORECARD + SUMMARY (static) --------
+      const t1 = totals(allBalls,1);
+      const t2 = totals(allBalls,2);
+      headlineA.textContent = `${names[m.home_team_id]||"Home"} ${t1.runs}/${t1.wkts} (${oversTxt(t1.balls)} ov)`;
+      headlineB.textContent = `${names[m.away_team_id]||"Away"} ${t2.runs}/${t2.wkts} (${oversTxt(t2.balls)} ov)`;
+
+      in1Name.textContent = `${names[m.home_team_id]||"Home"} — Innings 1`;
+      in2Name.textContent = `${names[m.away_team_id]||"Away"} — Innings 2`;
+      in1Tot.textContent = `${t1.runs}/${t1.wkts} in ${oversTxt(t1.balls)} ov`;
+      in2Tot.textContent = `${t2.runs}/${t2.wkts} in ${oversTxt(t2.balls)} ov`;
+
+      const batAgg1 = aggBatting(allBalls,1);
+      const batAgg2 = aggBatting(allBalls,2);
+      const dm1 = dismissalMap(allBalls,1);
+      const dm2 = dismissalMap(allBalls,2);
+      renderBatTable(bat1, batAgg1, dm1);
+      renderBatTable(bat2, batAgg2, dm2);
+
+      const bowlAgg1 = aggBowling(allBalls,1);
+      const bowlAgg2 = aggBowling(allBalls,2);
+      renderBowlTable(bowl1, bowlAgg1);
+      renderBowlTable(bowl2, bowlAgg2);
+
+      const homeRuns = m.result?.home?.runs ?? t1.runs;
+      const awayRuns = m.result?.away?.runs ?? t2.runs;
+      const winner = m.result?.winner ?? (homeRuns>awayRuns ? "home" : awayRuns>homeRuns ? "away" : "tie");
+      const homeName = names[m.home_team_id] || "Home";
+      const awayName = names[m.away_team_id] || "Away";
+      const winnerName = winner==="home" ? homeName : winner==="away" ? awayName : "Tie";
+
+      resLine.textContent = winner==="tie"
+        ? `Match tied — ${homeName} ${homeRuns}, ${awayName} ${awayRuns}`
+        : `${winnerName} won the match`;
+      sumHomeName.textContent = homeName;
+      sumAwayName.textContent = awayName;
+      sumHomeScore.textContent = `${homeRuns} (${oversTxt(t1.balls)} ov)`;
+      sumAwayScore.textContent = `${awayRuns} (${oversTxt(t2.balls)} ov)`;
     }
 
-    // Kickoff
-    let players = {};
-    let names = {};
-    let match = null;
+    // go
     loadReplay();
   </script>
 </body>
