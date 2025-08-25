@@ -127,7 +127,7 @@
         <div style="font-weight:800;margin-bottom:8px" id="i2-title">Innings 2</div>
         <table>
           <thead><tr><th>Batsman</th><th>Dismissal</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
-        <tbody id="i2-batting"></tbody>
+          <tbody id="i2-batting"></tbody>
         </table>
         <h4 style="margin-top:12px">Bowling</h4>
         <table>
@@ -221,10 +221,12 @@
 
     /* ---------- State ---------- */
     let all = [];                    // all balls
-    let players = {};                // id -> {name}
+    let players = {};                // id -> {name,team_id}
     let homeTeam, awayTeam;          // ids
     let names = {};                  // team id -> team_name
     let matchRow = null;             // matches row
+    // roles per team: { [teamId]: { captain, keeper } }
+    const roles = {};
 
     // queue for delayed commentary (we still prepend to top)
     const queue = [];
@@ -257,37 +259,59 @@
         const id=b.bowler_id; if(!id) return;
         const m = map[id] ||= {runs:0,balls:0,wkts:0};
         m.runs += (b.runs_scored||0)+(b.extras||0);
-        m.balls++; if(b.wicket) m.wkts++;
+        m.balls++; if(b.wicket && b.dismissal_type!=='runout') m.wkts++; // runout not to bowler
       });
       return map;
     }
 
+    // Name + badges
+    function nameWithBadges(pid){
+      const p = players[pid]; if(!p) return '—';
+      const r = roles[p.team_id] || {};
+      const tags = [];
+      if (r.captain && r.captain===pid) tags.push('C');
+      if (r.keeper && r.keeper===pid) tags.push('WK');
+      return `${p.name}${tags.length?` (${tags.join(', ')})`:''}`;
+    }
+
     // Dismissal lookup per batsman (by innings)
     function dismissalMap(balls, inn){
-      const map={}; // pid -> {type, bowler}
+      const map={}; // pid -> {type, bowler, fielder}
       balls.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id)
         .forEach(b=>{
-          map[b.dismissed_batsman_id] = {type:b.dismissal_type||'out', bowler:b.bowler_id};
+          map[b.dismissed_batsman_id] = {
+            type:b.dismissal_type||'out',
+            bowler:b.bowler_id||null,
+            fielder:b.fielder_id||null
+          };
         });
       return map;
     }
 
-    function dismissText(pid, dm){
+    function dismissText(pid, dm, inn){
       const d = dm[pid];
       if(!d) return "not out";
-      const bow = players[d.bowler]?.name || '';
-      switch((d.type||'').toLowerCase()){
-        case 'bowled': return `b ${bow}`;
-        case 'caught': return `c & b ${bow}`;
-        case 'lbw':    return `lbw b ${bow}`;
-        case 'runout':
-        case 'run-out':
-          return `run out`;
-        default:       return `b ${bow}`;
+      const battingTeam = (inn===1) ? homeTeam : awayTeam;
+      const fieldingTeam = (inn===1) ? awayTeam : homeTeam;
+
+      const bowTxt = d.bowler ? nameWithBadges(d.bowler) : '';
+      const fldTxt = d.fielder ? nameWithBadges(d.fielder) : '';
+
+      const t = (d.type||'').toLowerCase();
+      if (t === 'bowled') return `b ${bowTxt}`;
+      if (t === 'lbw')    return `lbw b ${bowTxt}`;
+      if (t === 'caught') {
+        if (d.fielder && d.bowler && d.fielder === d.bowler) return `c & b ${bowTxt}`;
+        if (d.fielder) return `c ${fldTxt} b ${bowTxt}`;
+        return `c b ${bowTxt}`;
       }
+      if (t === 'runout' || t==='run-out') {
+        return d.fielder ? `run out (${fldTxt})` : `run out`;
+      }
+      return bowTxt ? `b ${bowTxt}` : 'out';
     }
 
-    // === Commentary formatting ===
+    // Commentary formatting
     function pillsFor(b) {
       const pills=[];
       if (b.wicket) pills.push(`<span class="pill pill-w">WICKET</span>`);
@@ -311,13 +335,15 @@
       return pool[Math.floor(Math.random()*pool.length)];
     }
     function comLine(b) {
+      const bow = nameWithBadges(b.bowler_id);
+      const bat = nameWithBadges(b.striker_id);
       return `
         <div class="com-line">
           <div class="com-top">
             <span class="ball-tag">I${b.innings} ${b.over_number}.${b.ball_in_over}</span>
             ${pillsFor(b)}
           </div>
-          <div class="com-text">${lineText(b)}</div>
+          <div class="com-text"><strong>${bow}</strong> to <strong>${bat}</strong> — ${lineText(b)}</div>
         </div>
       `;
     }
@@ -335,7 +361,6 @@
           if (queue.length === 0) { clearInterval(queueTimer); queueTimer=null; return; }
           const b = queue.shift();
           all.push(b);
-          // prepend one item
           const html = comLine(b);
           liveFeed.insertAdjacentHTML('afterbegin', html);
           commFeed.insertAdjacentHTML('afterbegin', html);
@@ -347,24 +372,24 @@
     }
 
     function rowBatMini(pid, stat, star=false) {
-      const nm = players[pid]?.name || '—';
+      const nm = nameWithBadges(pid);
       const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
       return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
                 <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
     }
     function rowBowl(pid, stat, star=false) {
-      const nm = players[pid]?.name || '—';
+      const nm = nameWithBadges(pid);
       const ov = (stat.balls/6).toFixed(1);
       const eco = stat.balls ? (stat.runs/(stat.balls/6)).toFixed(1) : "0.0";
       return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
                 <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
     }
-    function rowBatFull(pid, stat, dm) {
-      const nm = players[pid]?.name || '—';
+    function rowBatFull(pid, stat, dm, inn) {
+      const nm = nameWithBadges(pid);
       const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
-      const dis = dismissText(pid, dm);
+      const dis = dismissText(pid, dm, inn);
       return `<tr><td style="text-align:left">${nm}</td>
-              <td style="text-align:left">${dis} ${stat.balls?` ${stat.runs}(${stat.balls})`:''}</td>
+              <td style="text-align:left">${dis}${stat.balls?` ${stat.runs}(${stat.balls})`:''}</td>
               <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
     }
 
@@ -394,7 +419,6 @@
       teamAName.textContent = names[homeTeam] || 'Home';
       teamBName.textContent = names[awayTeam] || 'Away';
 
-      // 2nd innings live target
       if (curInn===2) {
         liveTarget.style.display = 'block';
         liveTarget.textContent = targetString(t1.runs, t2);
@@ -441,7 +465,7 @@
 
       ui.bat.innerHTML = "";
       Object.entries(bats).forEach(([pid,st])=>{
-        ui.bat.insertAdjacentHTML('beforeend', rowBatFull(pid, st, dm));
+        ui.bat.insertAdjacentHTML('beforeend', rowBatFull(pid, st, dm, inn));
       });
       ui.bowl.innerHTML = "";
       Object.entries(bowls).forEach(([pid,st])=>{
@@ -506,7 +530,16 @@
         .from('players')
         .select('id, name, team_id')
         .in('team_id', [homeTeam, awayTeam]);
-      (ps||[]).forEach(p=> players[p.id] = { name: p.name });
+      (ps||[]).forEach(p=> players[p.id] = { name: p.name, team_id: p.team_id });
+
+      // pull captain/keeper per team from lineups
+      const { data: lus } = await supabase
+        .from('lineups')
+        .select('team_id,captain,keeper')
+        .in('team_id', [homeTeam, awayTeam]);
+      (lus||[]).forEach(l => {
+        roles[l.team_id] = { captain: l.captain, keeper: l.keeper };
+      });
     }
 
     async function initialLoad() {
