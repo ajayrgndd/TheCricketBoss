@@ -342,8 +342,9 @@
           } else if (d.type==="runout"||d.type==="run-out") dis=d.fielder?`run out (${fld})`:`run out`;
           else dis=bow?`b ${bow}`:"out";
         }
+        // IMPORTANT: no runs/balls appended to dismissal column
         tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${nm}</td><td class="left">${dis} ${st.b?` ${st.r}(${st.b})`:''}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
+          `<tr><td class="left">${nm}</td><td class="left">${dis}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
       });
     }
     function rowBowl(tbody, map){
@@ -515,7 +516,7 @@
       } else {
         msg = "Match tied";
       }
-      commFeed.insertAdjacentHTML("afterbegin", `<div class="ball"><div class="head">End of the Match</div><div>${msg}</div></div>`);
+      commFeed.insertAdjacentHTML("afterbegin", `<div class="ball"><div class="head">Full Time</div><div>${msg}</div></div>`);
       setButtons();
     }
 
