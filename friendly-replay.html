@@ -90,9 +90,10 @@
         </div>
       </div>
 
+      <!-- Mini score strip -->
       <div class="score-strip">
-        <div class="big" id="mini-a">--/-- - --.- ov</div>
-        <div class="big" id="mini-b">--/-- - --.- ov</div>
+        <div class="big" id="mini-a">0/0 - 0.0 ov</div>
+        <div class="big" id="mini-b">0/0 - 0.0 ov</div>
       </div>
 
       <div class="card">
@@ -102,7 +103,7 @@
 
     <!-- SCORECARD (final, static) -->
     <section id="score-panel" class="panel show">
-      <!-- Headline lines like Live -->
+      <!-- Headline lines -->
       <div class="card">
         <div id="headline-a" style="font-weight:800;font-size:1.05rem;">—</div>
         <div id="headline-b" style="font-weight:800;font-size:1.05rem;margin-top:6px;">—</div>
@@ -148,14 +149,23 @@
       <div class="card">
         <h3>Match Summary</h3>
         <div id="result-line" style="margin:6px 0 12px 0;font-weight:700"></div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div style="background:#10151f;border:1px solid #22304b;border-radius:10px;padding:10px">
             <div id="sum-home-name" class="muted">Home</div>
             <div id="sum-home-score" style="font-size:1.1rem;font-weight:800">--/--</div>
+            <div style="margin-top:8px;font-weight:700">Top Batters</div>
+            <ul id="sum-home-topbat" style="margin:6px 0 0 18px;line-height:1.4"></ul>
+            <div style="margin-top:8px;font-weight:700">Top Bowlers</div>
+            <ul id="sum-home-topbowl" style="margin:6px 0 0 18px;line-height:1.4"></ul>
           </div>
           <div style="background:#10151f;border:1px solid #22304b;border-radius:10px;padding:10px">
             <div id="sum-away-name" class="muted">Away</div>
             <div id="sum-away-score" style="font-size:1.1rem;font-weight:800">--/--</div>
+            <div style="margin-top:8px;font-weight:700">Top Batters</div>
+            <ul id="sum-away-topbat" style="margin:6px 0 0 18px;line-height:1.4"></ul>
+            <div style="margin-top:8px;font-weight:700">Top Bowlers</div>
+            <ul id="sum-away-topbowl" style="margin:6px 0 0 18px;line-height:1.4"></ul>
           </div>
         </div>
       </div>
@@ -199,7 +209,6 @@
     tabs.replay.onclick = ()=>activate("replay");
     tabs.score.onclick = ()=>activate("score");
     tabs.summary.onclick = ()=>activate("summary");
-    // ensure initial state
     activate("score");
 
     /* Elements */
@@ -232,6 +241,10 @@
     const sumHomeScore = document.getElementById("sum-home-score");
     const sumAwayName = document.getElementById("sum-away-name");
     const sumAwayScore = document.getElementById("sum-away-score");
+    const sumHomeTopBat = document.getElementById("sum-home-topbat");
+    const sumHomeTopBowl = document.getElementById("sum-home-topbowl");
+    const sumAwayTopBat = document.getElementById("sum-away-topbat");
+    const sumAwayTopBowl = document.getElementById("sum-away-topbowl");
 
     /* Replay controls */
     const btnPlay = document.getElementById("btn-play");
@@ -292,10 +305,11 @@
       const map = {};
       balls.filter(b=>b.innings===inn).forEach(b=>{
         if(!b.bowler_id) return;
+        const isBowlerWicket = b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout';
         const m = map[b.bowler_id] ||= {r:0,b:0,w:0};
         m.r += (b.runs_scored||0) + (b.extras||0);
         m.b += 1;
-        if (b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout') m.w += 1;
+        if (isBowlerWicket) m.w += 1;
       });
       return map;
     }
@@ -332,31 +346,6 @@
       }
       if (d.type === "runout" || d.type === "run-out") return d.fielder ? `run out (${fldTxt})` : `run out`;
       return bowTxt ? `b ${bowTxt}` : "out";
-    }
-
-    function renderBatTable(tbody, map, dm){
-      tbody.innerHTML = "";
-      Object.entries(map).forEach(([pid,st])=>{
-        const nm = nameWithBadges(pid);
-        const sr = st.b ? ((st.r/st.b)*100).toFixed(1) : "0.0";
-        const dis = dismissText(pid, dm);
-        tbody.insertAdjacentHTML("beforeend",
-          `<tr>
-            <td class="left">${nm}</td>
-            <td class="left">${dis} ${st.b?` ${st.r}(${st.b})`:''}</td>
-            <td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td>
-          </tr>`);
-      });
-    }
-    function renderBowlTable(tbody, map){
-      tbody.innerHTML = "";
-      Object.entries(map).forEach(([pid,st])=>{
-        const nm = nameWithBadges(pid);
-        const ov = (st.b/6).toFixed(1);
-        const eco = st.b ? (st.r/(st.b/6)).toFixed(1) : "0.0";
-        tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${nm}</td><td>${ov}</td><td>${st.r}</td><td>${st.w}</td><td>${eco}</td></tr>`);
-      });
     }
 
     /* Commentary */
@@ -444,11 +433,33 @@
     }
 
     speedSel.onchange = ()=>{ delay = parseInt(speedSel.value,10) || 700; if (timer){ pause(); play(); } };
-    btnPlay.onclick = ()=>play();
-    btnPause.onclick = ()=>pause();
+    btnPlay.onclick = ()=>{ play(); };
+    btnPause.onclick = ()=>{ pause(); };
     btnNext.onclick = ()=>{ stepOne(); setButtons(); };
     btnOver.onclick = ()=>{ stepOver(); setButtons(); };
     btnRestart.onclick = ()=>{ restart(); };
+
+    /* Helper: top performers */
+    function topBattersFor(teamId, batsMap){
+      const rows = Object.entries(batsMap)
+        .filter(([pid])=> players[pid]?.team_id === teamId)
+        .map(([pid,st])=> ({ pid, r:st.r, b:st.b, sr: st.b? (st.r/st.b)*100 : 0 }))
+        .sort((a,b)=> b.r - a.r || b.sr - a.sr)
+        .slice(0,3);
+      return rows.map(x=> `${nameWithBadges(x.pid)} — ${x.r} (${x.b}), SR ${x.sr.toFixed(1)}`);
+    }
+    function topBowlersFor(teamId, bowlMap){
+      const rows = Object.entries(bowlMap)
+        .filter(([pid])=> players[pid]?.team_id === teamId)
+        .map(([pid,st])=> ({ pid, w:st.w, r:st.r, b:st.b, eco: st.b? st.r/(st.b/6) : 0 }))
+        .sort((a,b)=> b.w - a.w || a.eco - b.eco)
+        .slice(0,3);
+      return rows.map(x=> `${nameWithBadges(x.pid)} — ${x.w} wkts, ${x.eco.toFixed(1)} econ`);
+    }
+    function fillList(ul, items){
+      ul.innerHTML = "";
+      items.forEach(t=> ul.insertAdjacentHTML("beforeend", `<li>${t}</li>`));
+    }
 
     /* Load all data, then render FINAL scorecard + summary immediately */
     async function loadReplay(){
@@ -469,7 +480,7 @@
       names = {};
       (teams||[]).forEach(t=> names[t.id] = t.team_name);
 
-      // Players
+      // Players (needs RLS to allow both teams — see note below)
       const { data: ps } = await supabase
         .from("players").select("id,name,team_id")
         .in("team_id", [m.home_team_id, m.away_team_id]);
@@ -537,6 +548,23 @@
       sumAwayName.textContent = awayName;
       sumHomeScore.textContent = `${homeRuns} (${oversTxt(t1.balls)} ov)`;
       sumAwayScore.textContent = `${awayRuns} (${oversTxt(t2.balls)} ov)`;
+
+      // --- Top performers (both innings combined, per team) ---
+      const batsBoth = Object.assign({}, batAgg1);
+      Object.entries(aggBatting(allBalls,2)).forEach(([pid,st])=>{
+        const cur = batsBoth[pid] ||= {r:0,b:0,f:0,s:0};
+        cur.r += st.r; cur.b += st.b; cur.f += st.f; cur.s += st.s;
+      });
+      const bowlBoth = Object.assign({}, bowlAgg1);
+      Object.entries(aggBowling(allBalls,2)).forEach(([pid,st])=>{
+        const cur = bowlBoth[pid] ||= {r:0,b:0,w:0};
+        cur.r += st.r; cur.b += st.b; cur.w += st.w;
+      });
+
+      fillList(sumHomeTopBat, topBattersFor(m.home_team_id, batsBoth));
+      fillList(sumHomeTopBowl, topBowlersFor(m.home_team_id, bowlBoth));
+      fillList(sumAwayTopBat, topBattersFor(m.away_team_id, batsBoth));
+      fillList(sumAwayTopBowl, topBowlersFor(m.away_team_id, bowlBoth));
     }
 
     // go
