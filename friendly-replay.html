@@ -28,9 +28,9 @@
     th{background:#192238}
     td.left{text-align:left}
 
-    /* mini score strip */
-    .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;
-      font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
+    /* mini score strip: force visible & above */
+    .score-strip{display:flex !important;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;
+      font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0;position:relative;z-index:2}
     .score-strip .big{font-size:1.05rem}
 
     /* commentary list */
@@ -41,6 +41,9 @@
     .wkt{background:#3a0e14;border-color:#521b24;color:#ffd6d6}
     .b4{background:#123d27;border-color:#1c593a;color:#b8ffd6}
     .b6{background:#0e2e57;border-color:#1a4886;color:#cfe8ff}
+
+    .meta-line{opacity:.9;margin:4px 0 0 0}
+    .notice{opacity:.95;font-style:italic}
   </style>
 </head>
 <body>
@@ -85,8 +88,8 @@
         </div>
       </div>
 
-      <!-- Mini score strip (always visible / refreshed) -->
-      <div id="replay-strip" class="score-strip" style="display:flex">
+      <!-- Mini score strip -->
+      <div id="replay-strip" class="score-strip">
         <div class="big" id="mini-a">0/0 - 0.0 ov</div>
         <div class="big" id="mini-b">0/0 - 0.0 ov</div>
       </div>
@@ -210,19 +213,23 @@
     const titleEl = document.getElementById("match-title");
     const subEl   = document.getElementById("match-sub");
     const replayDate = document.getElementById("replay-date");
+
     const headlineA = document.getElementById("headline-a");
     const headlineB = document.getElementById("headline-b");
     const in1Name = document.getElementById("in1-name");
     const in2Name = document.getElementById("in2-name");
     const in1Tot  = document.getElementById("in1-total");
     const in2Tot  = document.getElementById("in2-total");
+
     const bat1 = document.getElementById("bat1");
     const bat2 = document.getElementById("bat2");
     const bowl1 = document.getElementById("bowl1");
     const bowl2 = document.getElementById("bowl2");
+
     const miniA = document.getElementById("mini-a");
     const miniB = document.getElementById("mini-b");
     const commFeed = document.getElementById("comm-feed");
+    const replayStrip = document.getElementById("replay-strip");
 
     const resLine = document.getElementById("result-line");
     const sumHomeName = document.getElementById("sum-home-name");
@@ -267,7 +274,7 @@
     function nameWithBadges(pid){
       if (!pid) return "—";
       const p = players[pid];
-      if (!p) return `Player ${short(pid)}`; // RLS fallback
+      if (!p) return `Player ${short(pid)}`; // fallback masked by RLS (shouldn't happen now)
       const r = roles[p.team_id] || {};
       const tags=[];
       if (r.captain===pid) tags.push("C");
@@ -348,7 +355,7 @@
       });
     }
 
-    /* Commentary variants */
+    /* Commentary helpers */
     const VARIANTS={
       0:["Dot ball.","Beaten!","Good length — no run."],
       1:["Just a single.","Nudged for one.","Soft hands, one run."],
@@ -360,11 +367,14 @@
     };
     const pick=(a)=>a[Math.floor(Math.random()*a.length)];
 
-    function outcomeText(b){
-      if (b.wicket) return `WICKET, ${pick(VARIANTS.W)}`;
+    function runsText(b){
       const r = Number.isFinite(b.runs_scored) ? b.runs_scored : 0;
-      const pool = VARIANTS[Math.min(6, Math.max(0, r))] || ["Runs added."];      
+      const pool = VARIANTS[Math.min(6, Math.max(0, r))] || ["Runs added."];
       return `Runs: ${r}, ${pick(pool)}`;
+    }
+
+    function overHeader(b){
+      return `Innings ${b.innings} • Over ${b.over_number}.${b.ball_in_over}`;
     }
 
     function pills(b){
@@ -375,34 +385,39 @@
       return a.join(" ");
     }
 
-    /* 0-based over display: first ball -> 0.1 */
-    function overTag(b){
-      const o = Math.max(0, (b.over_number ?? 1) - 1);
-      const ball = b.ball_in_over ?? 1;
-      return `I${b.innings} • ${o}.${ball}`;
+    // cumulative stats for a batsman up to index i (inclusive)
+    function batterStatsUpto(index, pid, inn){
+      let r=0, balls=0;
+      for(let k=0;k<=index;k++){
+        const x=allBalls[k];
+        if (!x || x.innings!==inn) continue;
+        if (x.striker_id===pid){
+          r += x.runs_scored||0;
+          balls += 1;
+        }
+      }
+      return {r, balls};
     }
 
-    function comLine(b){
-      const bow=nameWithBadges(b.bowler_id);
-      const bat=nameWithBadges(b.striker_id);
-      return `
-        <div class="ball">
-          <div class="head">
-            <div>${overTag(b)}</div>
-            <div>${pills(b)}</div>
-          </div>
-          <div><strong>${bow}</strong> to <strong>${bat}</strong></div>
-          <div>${outcomeText(b)}</div>
-        </div>`;
+    function milestoneLines(index, b){
+      const lines=[];
+      const pid=b.striker_id;
+      if(!pid) return lines;
+      const before = batterStatsUpto(index-1, pid, b.innings);
+      const after  = batterStatsUpto(index,   pid, b.innings);
+      const crossed50 = before.r < 50 && after.r >= 50;
+      const crossed100= before.r <100 && after.r>=100;
+      if (crossed100) lines.push(`<div class="notice"><strong>${nameWithBadges(pid)}</strong> scores his <strong>HUNDRED</strong></div>`);
+      else if (crossed50) lines.push(`<div class="notice"><strong>${nameWithBadges(pid)}</strong> scores his <strong>FIFTY</strong></div>`);
+      return lines;
     }
 
     function updateMini(part){
       const t1=totals(part,1), t2=totals(part,2);
       miniA.textContent = `${t1.runs}/${t1.wkts} - ${oversTxt(t1.balls)} ov`;
       miniB.textContent = `${t2.runs}/${t2.wkts} - ${oversTxt(t2.balls)} ov`;
-      // ensure visible
-      const strip = document.getElementById("replay-strip");
-      if (strip && strip.style.display === "none") strip.style.display = "flex";
+      replayStrip.style.display = "flex";
+      replayStrip.style.visibility = "visible";
     }
 
     function setButtons(){
@@ -417,18 +432,90 @@
       timer=setInterval(()=>{ if(!stepOne()) pause(); },delay); setButtons(); }
     function pause(){ if(timer) clearInterval(timer); timer=null; setButtons(); }
     function restart(){ pause(); shown=0; commFeed.innerHTML=""; updateMini([]); setButtons(); }
+
+    function insertBlock(html){ commFeed.insertAdjacentHTML("afterbegin", `<div class="ball">${html}</div>`); }
+
     function stepOne(){
       if (shown>=allBalls.length) return false;
-      const b=allBalls[shown++]; commFeed.insertAdjacentHTML("afterbegin", comLine(b));
+      const i=shown, b=allBalls[i];
+      const bow=nameWithBadges(b.bowler_id);
+      const bat=nameWithBadges(b.striker_id);
+      const dm = dismissalMap(allBalls,b.innings); // for names only
+
+      let html = `
+        <div class="head">
+          <div>${overHeader(b)}</div>
+          <div>${pills(b)}</div>
+        </div>
+      `;
+
+      // Over start line
+      if (b.ball_in_over===1){
+        html += `<div class="meta-line notice"><strong>${bow}</strong> comes into the attack.</div>`;
+      }
+
+      // New batsman comes in (if previous ball was wicket in same innings)
+      if (i>0){
+        const prev = allBalls[i-1];
+        if (prev.innings===b.innings && prev.wicket){
+          const newcomer = nameWithBadges(b.striker_id);
+          html += `<div class="meta-line notice">${newcomer} comes in to the Crease.</div>`;
+        }
+      }
+
+      // Main delivery lines
+      html += `<div><strong>${bow}</strong> to <strong>${bat}</strong></div>`;
+      html += `<div>${runsText(b)}</div>`;
+
+      // Milestones after this ball
+      milestoneLines(i,b).forEach(s=> html += s);
+
+      // Wicket details line (score at dismissal)
+      if (b.wicket && b.dismissed_batsman_id){
+        const outId=b.dismissed_batsman_id;
+        const st = batterStatsUpto(i, outId, b.innings);
+        const dis = dismissText(outId, dm);
+        html += `<div class="meta-line"><strong>${nameWithBadges(outId)}</strong> ${dis} — ${st.r}(${st.balls})</div>`;
+      }
+
+      // End of innings 1 target line (when next ball is I2 or no next)
+      const next = allBalls[i+1];
+      if (b.innings===1 && (!next || next.innings===2)){
+        const t1 = totals(allBalls,1);
+        const teamB = names[match.away_team_id]||"Team B";
+        const need = (t1.runs+1);
+        html += `<div class="meta-line notice">${teamB} required ${need} runs from 120 balls to win</div>`;
+      }
+
+      // End of match winner line (last ball)
+      if (!next){
+        const t1=totals(allBalls,1), t2=totals(allBalls,2);
+        const home = names[match.home_team_id]||"Home";
+        const away = names[match.away_team_id]||"Away";
+        if (t2.runs>=t1.runs+1){
+          const wktsLeft = Math.max(0, 10 - t2.wkts);
+          html += `<div class="meta-line notice"><strong>${away}</strong> win by ${wktsLeft} wickets</div>`;
+        } else if (t1.runs>t2.runs){
+          const margin = t1.runs - t2.runs;
+          html += `<div class="meta-line notice"><strong>${home}</strong> win by ${margin} runs</div>`;
+        } else {
+          html += `<div class="meta-line notice"><strong>Match tied</strong></div>`;
+        }
+      }
+
+      insertBlock(html);
+      shown++;
       updateMini(allBalls.slice(0,shown));
       return shown<allBalls.length;
     }
+
     function stepOver(){
       if (shown>=allBalls.length) return;
       const curr=allBalls[shown]; if(!curr) return;
       const tgtInn=curr.innings, tgtOver=curr.over_number+1;
       while(shown<allBalls.length){ const b=allBalls[shown]; stepOne(); if(b.innings===tgtInn&&b.over_number===tgtOver) break; }
     }
+
     speedSel.onchange=()=>{ delay=parseInt(speedSel.value,10)||700; if(timer){ pause(); play(); } };
     btnPlay.onclick=()=>play(); btnPause.onclick=()=>pause();
     btnNext.onclick=()=>{ stepOne(); setButtons(); };
@@ -460,16 +547,18 @@
         .order("ball_in_over",{ascending:true});
       allBalls = balls||[];
       shown=0; commFeed.innerHTML="";
-      updateMini(allBalls.slice(0,shown));  // refresh strip immediately
-      setButtons();
+      updateMini(allBalls.slice(0,shown)); // ensure strip visible & initialised
+      replayStrip.style.display = "flex";
 
+      // Titles / when
       titleEl.textContent = `${names[m.home_team_id]||"Home"} vs ${names[m.away_team_id]||"Away"}`;
       const when = m.kickoff_at || (m.date && m.start_time ? `${m.date}T${m.start_time}` : null);
       replayDate.textContent = when ? fmtDateTime(when) : "--";
       subEl.textContent = `Kickoff — ${when?fmtDateTime(when):"--"}`;
 
+      // Final scorecard & summary
       const t1=totals(allBalls,1), t2=totals(allBalls,2);
-      headlineA.textContent = `${names[m.home_team_id]||"Home"} ${t1.runs}/${t1.wkts} (${oversTxt(t1.balls)} ov)`;
+      headlineA.textContent = `${names[m.home_team_id]||"Home"} ${t1.rins}/${t1.wkts} (${oversTxt(t1.balls)} ov)`.replace('rins','runs');
       headlineB.textContent = `${names[m.away_team_id]||"Away"} ${t2.runs}/${t2.wkts} (${oversTxt(t2.balls)} ov)`;
 
       in1Name.textContent = `${names[m.home_team_id]||"Home"} — Innings 1`;
@@ -497,7 +586,6 @@
       sumHomeScore.textContent=`${homeRuns} (${oversTxt(t1.balls)} ov)`;
       sumAwayScore.textContent=`${awayRuns} (${oversTxt(t2.balls)} ov)`;
 
-      /* Top performers */
       function topBattersFor(teamId, maps){
         const comb={}; for(const map of maps){ for(const [pid,st] of Object.entries(map)){ const c=comb[pid] ||= {r:0,b:0}; c.r+=st.r; c.b+=st.b; } }
         return Object.entries(comb)
@@ -526,7 +614,14 @@
       fill(document.getElementById("sum-away-topbowl"), bwAway);
     }
 
+    // controls wiring
+    let players = {}; let names = {}; let match = null; // (for scoping)
     loadReplay();
+
+    // speed
+    let timer=null, delay=700, shown=0, allBalls=[];
+    speedSel.onchange=()=>{ delay=parseInt(speedSel.value,10)||700; if(timer){ pause(); play(); } };
+    function pause(){ if(timer) clearInterval(timer); timer=null; }
   </script>
 </body>
 </html>
