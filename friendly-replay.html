@@ -357,6 +357,7 @@
       });
     }
 
+    /* Commentary variants */
     const VARIANTS={
       0:["Dot ball.","Beaten!","Good length — no run."],
       1:["Just a single.","Nudged for one.","Soft hands, one run."],
@@ -366,30 +367,41 @@
       6:["SIX! Launched.","Into the stands — six!","Clean strike — maximum!"],
       W:["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
     };
-    function randomLine(b){
-      if (b.commentary && b.commentary.trim()) return b.commentary;
-      if (b.wicket) return VARIANTS.W[Math.floor(Math.random()*VARIANTS.W.length)];
-      const pool = VARIANTS[Math.min(6, Math.max(0, b.runs_scored||0))]||["Runs added."];
-      return pool[Math.floor(Math.random()*pool.length)];
+    const pick=(a)=>a[Math.floor(Math.random()*a.length)];
+
+    function outcomeText(b){
+      if (b.wicket) return `WICKET, ${pick(VARIANTS.W)}`;
+      const r = Number.isFinite(b.runs_scored) ? b.runs_scored : 0;
+      const pool = VARIANTS[Math.min(6, Math.max(0, r))] || ["Runs added."];      
+      return `Runs: ${r}, ${pick(pool)}`;
     }
 
-    // Commentary HTML (with extras)
-    function ballHtml(b, extraLines=[]){
-      const head = `Innings ${b.innings} • Over ${overLabel(b)}`;
-      const bow = nameWithBadges(b.bowler_id);
-      const bat = nameWithBadges(b.striker_id);
-      const tags=[];
-      if (b.wicket) tags.push('<span class="tag wkt">WICKET</span>');
-      if (b.runs_scored===4) tags.push('<span class="tag b4">FOUR</span>');
-      if (b.runs_scored===6) tags.push('<span class="tag b6">SIX</span>');
-      const line = `Runs: ${b.runs_scored||0}, ${randomLine(b)}`;
-      const extras = extraLines.length ? `<div class="sub">${extraLines.join("<br/>")}</div>` : "";
+    function pills(b){
+      const a=[];
+      if (b.wicket) a.push('<span class="tag wkt">WICKET</span>');
+      if (b.runs_scored===4) a.push('<span class="tag b4">FOUR</span>');
+      if (b.runs_scored===6) a.push('<span class="tag b6">SIX</span>');
+      return a.join(" ");
+    }
+
+    /* 0-based over display: first ball -> 0.1 */
+    function overTag(b){
+      const o = Math.max(0, (b.over_number ?? 1) - 1);
+      const ball = b.ball_in_over ?? 1;
+      return `I${b.innings} • ${o}.${ball}`;
+    }
+
+    function comLine(b){
+      const bow=nameWithBadges(b.bowler_id);
+      const bat=nameWithBadges(b.striker_id);
       return `
         <div class="ball">
-          <div class="head">${head}${tags.join("")}</div>
+          <div class="head">
+            <div>${overTag(b)}</div>
+            <div>${pills(b)}</div>
+          </div>
           <div><strong>${bow}</strong> to <strong>${bat}</strong></div>
-          <div>${line}</div>
-          ${extras}
+          <div>${outcomeText(b)}</div>
         </div>`;
     }
 
