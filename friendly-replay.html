@@ -179,7 +179,7 @@
     const qs = new URLSearchParams(location.search);
     const matchId = qs.get("id");
 
-    // IMPORTANT: scope reads to this specific match via header (used by RLS policies below)
+    // Scope reads to this match via header (aligns with RLS you installed)
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE",
@@ -370,6 +370,17 @@
       const pool = VARIANTS[Math.min(6, Math.max(0, b.runs_scored||0))]||["Runs added."];
       return pool[Math.floor(Math.random()*pool.length)];
     }
+
+    // NEW: build the outcome line as requested
+    function outcomeText(b){
+      if (b.wicket){
+        return `WICKET, ${lineText(b)}`;
+      }
+      const r = typeof b.runs_scored === "number" ? b.runs_scored : 0;
+      return `Runs: ${r}, ${lineText(b)}`;
+    }
+
+    // UPDATED: three-line layout
     function comLine(b){
       const bow=nameWithBadges(b.bowler_id);
       const bat=nameWithBadges(b.striker_id);
@@ -379,7 +390,8 @@
             <div>I${b.innings} • ${b.over_number}.${b.ball_in_over}</div>
             <div>${pills(b)}</div>
           </div>
-          <div><strong>${bow}</strong> to <strong>${bat}</strong> — ${lineText(b)}</div>
+          <div><strong>${bow}</strong> to <strong>${bat}</strong></div>
+          <div>${outcomeText(b)}</div>
         </div>`;
     }
 
@@ -431,7 +443,7 @@
       const { data:teams } = await supabase.from("teams").select("id,team_name").in("id",[m.home_team_id,m.away_team_id]);
       (teams||[]).forEach(t=> names[t.id]=t.team_name);
 
-      // players (RLS-scoped by header)
+      // players
       const { data:ps } = await supabase.from("players").select("id,name,team_id").in("team_id",[m.home_team_id,m.away_team_id]);
       (ps||[]).forEach(p=> players[p.id]={ name:p.name, team_id:p.team_id });
 
