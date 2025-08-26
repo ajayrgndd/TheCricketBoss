@@ -437,13 +437,13 @@
       return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
                 <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
     }
-    function rowBowl(pid, stat, star=false) {
-      const nm = nameWithBadges(pid);
-      const ov = `${Math.floor(stat.balls/6)}.${stat.balls%6}`;  <!-- FIXED -->
-      const eco = stat.balls ? (stat.runs/(stat.balls/6)).toFixed(1) : "0.0";
-      return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
-                <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
-    }
+    function rowBowl(pid, stat, star = false) {
+  const nm = nameWithBadges(pid);
+  const ov = `${Math.floor(stat.balls / 6)}.${stat.balls % 6}`; // cricket-style overs
+  const eco = stat.balls ? (stat.runs / (stat.balls / 6)).toFixed(1) : "0.0";
+  return `<tr><td style="text-align:left">${nm}${star ? " ★" : ""}</td>
+            <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
+}
     function rowBatFull(pid, stat, dm) {
       const nm = nameWithBadges(pid);
       const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
