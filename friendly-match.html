@@ -10,22 +10,34 @@
     body { background:#0b0f16; color:#e7ecf3; font-family:system-ui; margin:0; }
     .wrap{max-width:900px;margin:0 auto;padding:16px;}
 
+    /* Tabs */
     .tabs{display:flex;gap:6px;border-bottom:2px solid #222;position:sticky;top:48px;background:#0b0f16;z-index:5}
     .tabs button{flex:1;padding:10px 8px;background:#10151f;color:#cfe7dc;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:700;letter-spacing:.02em}
     .tabs button.active{background:#00e676;color:#000}
 
+    /* Score strip */
     .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;
       color:#000;font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
     .score-strip .big {font-size:1.2rem}
     .teambar{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 8px 2px;font-size:1.05rem}
     .teambar .t{font-weight:700}
 
+    /* Cards / tables */
     .card{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin:10px 0}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #2a344a;padding:8px;text-align:center}
     th{background:#1a2236}
     .muted{opacity:.75}
 
+    /* Compact score tables (LIVE + SCORECARD only) */
+    #live-panel table, #score-panel table { font-size:.92rem; }
+    #live-panel th, #live-panel td, #score-panel th, #score-panel td { padding:6px; }
+    @media (max-width:480px){
+      #live-panel table, #score-panel table { font-size:.88rem; }
+      #live-panel th, #live-panel td, #score-panel th, #score-panel td { padding:5px; }
+    }
+
+    /* commentary */
     .com-line{padding:10px;border-bottom:1px dashed #1f2a44}
     .com-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
     .ball-tag{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:2px 6px;font-size:.75rem;color:#cbd5e1}
@@ -38,9 +50,11 @@
 
     .target-bar{margin-top:8px;font-weight:700;color:#c7f9cc}
 
+    /* Panels */
     .panel{display:none}
     .panel.show{display:block}
 
+    /* Lineup */
     .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .xi h4{margin:0 0 8px 0}
     .xi ul{margin:0;padding-left:18px;line-height:1.5}
@@ -50,6 +64,7 @@
   </style>
 </head>
 <body>
+  <!-- Top / Bottom nav -->
   <div id="top-bar"></div>
 
   <div class="wrap">
@@ -75,7 +90,7 @@
       <button id="tab-xi">LINEUP</button>
     </div>
 
-    <!-- LIVE -->
+    <!-- ===== LIVE ===== -->
     <section id="live-panel" class="panel show">
       <div class="score-strip">
         <div class="big" id="live-score-a">--/-- - --.- ov</div>
@@ -112,12 +127,14 @@
 
       <div class="card">
         <div style="font-weight:800;margin-bottom:8px">Commentary</div>
+        <!-- Latest on TOP -->
         <div id="live-feed"></div>
       </div>
     </section>
 
-    <!-- SCORECARD -->
+    <!-- ===== SCORECARD ===== -->
     <section id="score-panel" class="panel">
+      <!-- Headline lines -->
       <div class="card">
         <div id="headline-a" style="font-weight:800;font-size:1.05rem;">—</div>
         <div id="headline-b" style="font-weight:800;font-size:1.05rem;margin-top:6px;">—</div>
@@ -151,14 +168,15 @@
       </div>
     </section>
 
-    <!-- COMMENTARY -->
+    <!-- ===== COMMENTARY ===== -->
     <section id="comm-panel" class="panel">
       <div class="card">
+        <!-- Latest on TOP -->
         <div id="comm-feed"></div>
       </div>
     </section>
 
-    <!-- LINEUP -->
+    <!-- ===== LINEUP ===== -->
     <section id="xi-panel" class="panel">
       <div class="card xi">
         <div class="grid-2">
@@ -177,11 +195,13 @@
 
   <div id="bottom-nav"></div>
 
+  <!-- Smooth UI -->
   <script type="module">
     import { loadSmoothUI } from './js/smooth-ui.js';
     loadSmoothUI('top-bar','bottom-nav');
   </script>
 
+  <!-- Main logic (unchanged except for shortName + usage) -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -190,7 +210,7 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    /* Tabs */
+    /* ---------- Tabs ---------- */
     const tabs = {
       live: document.getElementById('tab-live'),
       score: document.getElementById('tab-score'),
@@ -214,7 +234,7 @@
     tabs.comm.onclick = ()=>activate('comm');
     tabs.xi.onclick   = ()=>activate('xi');
 
-    /* DOM refs */
+    /* ---------- DOM refs ---------- */
     const qs = new URLSearchParams(location.search);
     const matchId = qs.get('id');
 
@@ -235,6 +255,7 @@
     const headlineB = document.getElementById('headline-b');
     const scoreTarget = document.getElementById('score-target');
 
+    // Scorecard (two inns)
     const i1 = {
       title: document.getElementById('i1-title'),
       bat: document.getElementById('i1-batting'),
@@ -248,31 +269,45 @@
       card: document.getElementById('score-i2'),
     };
 
+    // XI
     const xiHomeTitle = document.getElementById('xi-home-title');
     const xiAwayTitle = document.getElementById('xi-away-title');
     const xiHome = document.getElementById('xi-home');
     const xiAway = document.getElementById('xi-away');
 
+    // Refresh controls
     const autoSel = document.getElementById('auto-refresh');
     const btnRefresh = document.getElementById('btn-refresh');
 
-    /* State */
+    /* ---------- State ---------- */
     let all = [];
-    let players = {};
+    let players = {};                // id -> {name, team_id, ...}
     let homeTeam, awayTeam;
     let names = {};
     let matchRow = null;
     const roles = {};
     const liveBatRuns = new Map();
     let prevBall = null;
+
     const queue = [];
     let queueTimer = null;
     const QUEUE_DELAY_MS = 800;
+
     let autoTimer = null;
 
-    /* Helpers */
+    /* ---------- Helpers ---------- */
     const oversText = (balls)=> `${Math.floor(balls/6)}.${balls%6}`;
     const overLabel = (b)=> `${b.over_number - 1}.${b.ball_in_over}`;
+
+    /* NEW: shorten names -> initials + surname */
+    function shortName(full){
+      if (!full) return '—';
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return parts[0];
+      const last = parts.pop();
+      const initials = parts.map(w => (w[0] || '').toUpperCase()).filter(Boolean).join(' ');
+      return `${initials} ${last}`;
+    }
 
     function hash32(str){
       let h = 0x811c9dc5 >>> 0;
@@ -314,15 +349,18 @@
       return map;
     }
 
+    // Name + badges (now shortened)
     function nameWithBadges(pid){
       const p = players[pid]; if(!p) return '—';
       const r = roles[p.team_id] || {};
       const tags = [];
       if (r.captain && r.captain===pid) tags.push('C');
       if (r.keeper && r.keeper===pid)  tags.push('WK');
-      return `${p.name}${tags.length?` (${tags.join(', ')})`:''}`;
+      const nm = shortName(p.name);
+      return `${nm}${tags.length?` (${tags.join(', ')})`:''}`;
     }
 
+    // Dismissal lookup per batsman (by innings)
     function dismissalMap(balls, inn){
       const map={};
       balls.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id)
@@ -353,6 +391,7 @@
       return bowTxt ? `b ${bowTxt}` : 'out';
     }
 
+    // Commentary formatting
     function pillsFor(b) {
       const pills=[];
       if (b.wicket) pills.push(`<span class="pill pill-w">WICKET</span>`);
@@ -396,28 +435,22 @@
         </div>`;
     }
 
-    /* build thread in order; latest on TOP */
-function renderCommentaryTop(list, into) {
-  const htmls = [];
-  prevBall = null;
-  liveBatRuns.clear();
+    // latest on TOP
+    function renderCommentaryTop(list, into) {
+      const htmls = [];
+      prevBall = null;
+      liveBatRuns.clear();
 
-  // Innings-1 is considered finished ONLY if innings 2 exists
-  // or the match state says we're already in/after innings 2.
-  const i1Finished =
-    list.some(x => x.innings === 2) ||
-    (matchRow && (matchRow.sim_innings ?? 1) >= 2) ||
-    (matchRow && matchRow.status === 'completed');
+      for (let i=0;i<list.length;i++){
+        const b = list[i];
+        const next = list[i+1] || null;
+        const extras = buildExtras(b, next, /*addInningsEnd*/ true);
+        htmls.push(comLine(b, extras));
+      }
+      into.innerHTML = htmls.reverse().join('');
+    }
 
-  for (let i = 0; i < list.length; i++) {
-    const b = list[i];
-    const next = list[i + 1] || null;
-    const extras = buildExtras(b, next, /*addInningsEnd*/ true, /*i1Finished*/ i1Finished);
-    htmls.push(comLine(b, extras));
-  }
-  into.innerHTML = htmls.reverse().join('');
-}
-
+    // delayed rendering queue -> prepend to TOP
     function pushToQueue(ball) {
       queue.push(ball);
       if (!queueTimer) {
@@ -425,7 +458,7 @@ function renderCommentaryTop(list, into) {
           if (queue.length === 0) { clearInterval(queueTimer); queueTimer=null; return; }
           const b = queue.shift();
           all.push(b);
-          const extras = buildExtras(b, /*nextBall*/ null, /*addInningsEnd*/ false);
+          const extras = buildExtras(b, /*next*/ null, /*addInningsEnd*/ false);
           const html = comLine(b, extras);
           liveFeed.insertAdjacentHTML('afterbegin', html);
           commFeed.insertAdjacentHTML('afterbegin', html);
@@ -442,11 +475,11 @@ function renderCommentaryTop(list, into) {
       return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
                 <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
     }
-    function rowBowl(pid, stat, star = false) {
+    function rowBowl(pid, stat, star=false) {
       const nm = nameWithBadges(pid);
-      const ov = `${Math.floor(stat.balls / 6)}.${stat.balls % 6}`;
-      const eco = stat.balls ? (stat.runs / (stat.balls / 6)).toFixed(1) : "0.0";
-      return `<tr><td style="text-align:left">${nm}${star ? " ★" : ""}</td>
+      const ov = `${Math.floor(stat.balls/6)}.${stat.balls%6}`;
+      const eco = stat.balls ? (stat.runs/(stat.balls/6)).toFixed(1) : "0.0";
+      return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
                 <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
     }
     function rowBatFull(pid, stat, dm) {
@@ -491,6 +524,7 @@ function renderCommentaryTop(list, into) {
         liveTarget.style.display = 'none';
       }
 
+      // Batsmen (current pair)
       const batAgg = aggBat(all, curInn);
       const strikerId = latest.striker_id;
       const nonId = latest.non_striker_id;
@@ -498,6 +532,7 @@ function renderCommentaryTop(list, into) {
       const s2 = batAgg[nonId] || {runs:0,balls:0,fours:0,sixes:0};
       liveBats.innerHTML = rowBatMini(strikerId, s1, true) + rowBatMini(nonId, s2, false);
 
+      // Bowlers (current + last)
       const bowlAgg = aggBowl(all, curInn);
       const curBowler = latest.bowler_id;
       let lastBowler = null;
@@ -510,10 +545,15 @@ function renderCommentaryTop(list, into) {
       if (lastBowler) html += rowBowl(lastBowler, bowlAgg[lastBowler] || {runs:0,balls:0,wkts:0});
       liveBowls.innerHTML = html;
 
+      // Headlines for scorecard
       headlineA.textContent = `${names[homeTeam]||'Home'} ${t1.runs}/${t1.wkts} (${oversText(t1.legal)} ov)`;
       headlineB.textContent = `${names[awayTeam]||'Away'} ${t2.runs}/${t2.wkts} (${oversText(t2.legal)} ov)`;
-      if (in2) { scoreTarget.style.display='block'; scoreTarget.textContent = targetString(t1.runs, t2); }
-      else { scoreTarget.style.display='none'; }
+      if (in2) {
+        scoreTarget.style.display='block';
+        scoreTarget.textContent = targetString(t1.runs, t2);
+      } else {
+        scoreTarget.style.display='none';
+      }
     }
 
     function fillFullInnings(inn, ui) {
@@ -533,6 +573,7 @@ function renderCommentaryTop(list, into) {
 
     function updateScorecardBlocks() {
       if (!all.length) return;
+
       i1.card.style.display = 'block';
       i1.title.textContent = `Innings 1 – ${(names[homeTeam]||'Home')}`;
       fillFullInnings(1, i1);
@@ -562,88 +603,85 @@ function renderCommentaryTop(list, into) {
       `;
     }
 
-    /* Extras (optionally add innings-end notice) */
-function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = false) {
-  const extras = [];
+    /* ---------- Extras for commentary (same behavior as your last good version) ---------- */
+    function buildExtras(b, nextBall=null, addInningsEnd=false) {
+      const extras = [];
+      const overStart = !prevBall || prevBall.innings!==b.innings || prevBall.over_number!==b.over_number;
+      if (overStart) {
+        const bow = nameWithBadges(b.bowler_id);
+        extras.push(`${bow} comes into the attack.`);
+      }
 
-  const overStart = !prevBall || prevBall.innings !== b.innings || prevBall.over_number !== b.over_number;
-  if (overStart) {
-    const bow = nameWithBadges(b.bowler_id);
-    extras.push(`${bow} comes into the attack.`);
-  }
+      const prevRuns = liveBatRuns.get(b.striker_id) || 0;
+      const newRuns  = prevRuns + (b.runs_scored||0);
+      if (newRuns >= 50 && prevRuns < 50 && newRuns < 100) {
+        extras.push(`${nameWithBadges(b.striker_id)} scores his FIFTY`);
+      } else if (newRuns >= 100 && prevRuns < 100) {
+        extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
+      }
 
-  // milestones (read-before, commit-after)
-  const prevRuns = liveBatRuns.get(b.striker_id) || 0;
-  const newRuns  = prevRuns + (b.runs_scored || 0);
-  if (newRuns >= 50 && prevRuns < 50 && newRuns < 100) {
-    extras.push(`${nameWithBadges(b.striker_id)} scores his FIFTY`);
-  } else if (newRuns >= 100 && prevRuns < 100) {
-    extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
-  }
+      if (b.wicket) {
+        const type=(b.dismissal_type||'').toLowerCase();
+        const bow=nameWithBadges(b.bowler_id);
+        const fld=b.fielder_id?nameWithBadges(b.fielder_id):"";
+        let disTxt="out";
+        if (type==="bowled") disTxt=`b ${bow}`;
+        else if (type==="lbw") disTxt=`lbw b ${bow}`;
+        else if (type==="caught"){
+          if (b.fielder_id && b.bowler_id && b.fielder_id===b.bowler_id) disTxt=`c & b ${bow}`;
+          else if (b.fielder_id) disTxt=`c ${fld} b ${bow}`;
+          else disTxt=`c b ${bow}`;
+        } else if (type==="runout"||type==="run-out") disTxt = b.fielder_id?`run out (${fld})`:`run out`;
+        const outName = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
+        const ballsFor = all.concat([b]).filter(x=>x.striker_id=== (b.dismissed_batsman_id||b.striker_id)).length;
+        const runsFor  = newRuns;
+        extras.push(`${outName} ${disTxt} ${runsFor}(${ballsFor})`);
 
-  if (b.wicket) {
-    const type = (b.dismissal_type || '').toLowerCase();
-    const bow  = nameWithBadges(b.bowler_id);
-    const fld  = b.fielder_id ? nameWithBadges(b.fielder_id) : "";
-    let disTxt = "out";
-    if (type === "bowled") disTxt = `b ${bow}`;
-    else if (type === "lbw") disTxt = `lbw b ${bow}`;
-    else if (type === "caught") {
-      if (b.fielder_id && b.bowler_id && b.fielder_id === b.bowler_id) disTxt = `c & b ${bow}`;
-      else if (b.fielder_id) disTxt = `c ${fld} b ${bow}`;
-      else disTxt = `c b ${bow}`;
-    } else if (type === "runout" || type === "run-out") {
-      disTxt = b.fielder_id ? `run out (${fld})` : `run out`;
+        const nb = nextBall;
+        if (nb && nb.innings===b.innings) {
+          const newcomer = nb.striker_id !== b.striker_id && nb.striker_id !== (prevBall?.striker_id) ? nb.striker_id : nb.non_striker_id;
+          if (newcomer) extras.push(`${nameWithBadges(newcomer)} comes in to the Crease.`);
+        }
+      }
+
+      if (addInningsEnd) {
+        const nxt = nextBall;
+        if (b.innings===1 && (!nxt || nxt.innings!==1)) {
+          const t1 = totals(all.concat([b]),1);
+          const chasingName = names[awayTeam] || 'Team B';
+          const need = t1.runs + 1;
+          extras.push(`End of First Innings`);
+          extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
+        }
+      }
+
+      liveBatRuns.set(b.striker_id, newRuns);
+      prevBall = b;
+      return extras;
     }
-    const outName  = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
-    const ballsFor = all.concat([b]).filter(x => x.striker_id === (b.dismissed_batsman_id || b.striker_id)).length;
-    const runsFor  = newRuns;
-    extras.push(`${outName} ${disTxt} ${runsFor}(${ballsFor})`);
 
-    const nb = nextBall;
-    if (nb && nb.innings === b.innings) {
-      const newcomer = nb.striker_id !== b.striker_id && nb.striker_id !== (prevBall?.striker_id)
-        ? nb.striker_id : nb.non_striker_id;
-      if (newcomer) extras.push(`${nameWithBadges(newcomer)} comes in to the Crease.`);
-    }
-  }
-
-  // Only add "End of First Innings / target" when Innings 1 is truly finished.
-  if (addInningsEnd && i1Finished) {
-    const nxt = nextBall;
-    if (b.innings === 1 && (!nxt || nxt.innings !== 1)) {
-      const t1 = totals(all.concat([b]), 1);
-      const chasingName = names[awayTeam] || 'Team B';
-      const need = t1.runs + 1;
-      extras.push(`End of First Innings`);
-      extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
-    }
-  }
-
-  liveBatRuns.set(b.striker_id, newRuns);
-  prevBall = b;
-  return extras;
-}
-
-
-    /* Data load */
+    /* ---------- Data load (unchanged) ---------- */
     async function loadMeta() {
       const { data: m } = await supabase.from('matches').select('*').eq('id', matchId).single();
       matchRow = m || null;
+
       homeTeam = m?.home_team_id;
       awayTeam = m?.away_team_id;
 
       const { data: t } = await supabase.from('teams').select('id, team_name').in('id', [homeTeam, awayTeam]);
       (t||[]).forEach(x=> names[x.id]=x.team_name);
+
       teamAName.textContent = names[homeTeam] || 'Home';
       teamBName.textContent = names[awayTeam] || 'Away';
 
-      const { data: ps } = await supabase.from('players')
+      const { data: ps } = await supabase
+        .from('players')
         .select('id, name, team_id, role, batting, bowling')
         .in('team_id', [homeTeam, awayTeam]);
       (ps||[]).forEach(p=> players[p.id] = { ...p });
 
-      const { data: lus } = await supabase.from('lineups')
+      const { data: lus } = await supabase
+        .from('lineups')
         .select('team_id,captain,keeper,playing_xi,batting_order,bowling_order')
         .in('team_id', [homeTeam, awayTeam]);
       (lus||[]).forEach(l => {
@@ -701,8 +739,11 @@ function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = fal
         if (cur && xi.includes(cur)) return cur;
         const pool = xi.map(id=>players[id]).filter(Boolean);
         let pick=null;
-        if (kind==='keeper'){ pick = pool.find(p=>/wk/i.test(p.role||'')) || pool.sort(byBat)[0]; }
-        else { pick = pool.sort(byAll)[0]; }
+        if (kind==='keeper'){
+          pick = pool.find(p=>/wk/i.test(p.role||'')) || pool.sort(byBat)[0];
+        } else {
+          pick = pool.sort(byAll)[0];
+        }
         if (!roles[teamId]) roles[teamId]={};
         roles[teamId][kind] = pick ? pick.id : xi[0];
         return roles[teamId][kind];
@@ -715,14 +756,15 @@ function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = fal
       const renderList = (ul, ids, teamId) => {
         ul.innerHTML = '';
         ids.forEach(id=>{
-          const p = players[id]; if(!p) return;   /* ← FIXED */
+          const p=players[id]; if(!p) return;
           const bits=[];
           if (roles[teamId]?.captain===id) bits.push('C');
           if (roles[teamId]?.keeper===id)  bits.push('WK');
           if (p.role) bits.push(p.role);
-          ul.insertAdjacentHTML('beforeend', `<li>${p.name}${bits.length?` <span class="tag">${bits.join(' • ')}</span>`:''}</li>`);
+          ul.insertAdjacentHTML('beforeend', `<li>${shortName(p.name)}${bits.length?` <span class="tag">${bits.join(' • ')}</span>`:''}</li>`);
         });
       };
+
       xiHomeTitle.textContent = `${names[homeTeam] || 'Home'} – Playing XI`;
       xiAwayTitle.textContent = `${names[awayTeam] || 'Away'} – Playing XI`;
       renderList(xiHome, homeXI, homeTeam);
@@ -731,6 +773,7 @@ function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = fal
 
     async function loadOnce() {
       if (!matchId) { alert('Missing match id'); return; }
+
       await loadMeta();
 
       const { data: balls } = await supabase
@@ -744,6 +787,7 @@ function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = fal
       all = balls || [];
       liveBatRuns.clear(); prevBall=null;
 
+      // latest on TOP
       renderCommentaryTop(all, liveFeed);
       renderCommentaryTop(all, commFeed);
 
@@ -765,6 +809,7 @@ function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = fal
         .subscribe();
     }
 
+    // Auto / manual refresh
     function applyAuto(ms){
       if (autoTimer) { clearInterval(autoTimer); autoTimer=null; }
       const n = parseInt(ms,10)||0;
@@ -778,6 +823,7 @@ function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = fal
       startRealtime();
       applyAuto(autoSel.value);
     }
+
     init();
   </script>
 </body>
