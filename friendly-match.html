@@ -402,12 +402,11 @@
       prevBall = null;
       liveBatRuns.clear();
 
-      for (let i=0;i<list.length;i++){
+      for (let i = 0; i < list.length; i++) {
         const b = list[i];
-        const next = list[i+1] || null;
-        const cur = liveBatRuns.get(b.striker_id) || 0;
-        liveBatRuns.set(b.striker_id, cur + (b.runs_scored || 0));
-        const extras = buildExtras(b, next);
+        const next = list[i + 1] || null;
+        // IMPORTANT: do not pre-increment here — buildExtras reads "before" and commits "after".
+        const extras = buildExtras(b, next, /*addInningsEnd*/ true);
         htmls.push(comLine(b, extras));
       }
       into.innerHTML = htmls.reverse().join('');
@@ -420,7 +419,8 @@
           if (queue.length === 0) { clearInterval(queueTimer); queueTimer=null; return; }
           const b = queue.shift();
           all.push(b);
-          const extras = buildExtras(b, null);
+          // Live inserts: do NOT add innings-end banner repeatedly.
+          const extras = buildExtras(b, /*nextBall*/ null, /*addInningsEnd*/ false);
           const html = comLine(b, extras);
           liveFeed.insertAdjacentHTML('afterbegin', html);
           commFeed.insertAdjacentHTML('afterbegin', html);
@@ -438,12 +438,12 @@
                 <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
     }
     function rowBowl(pid, stat, star = false) {
-  const nm = nameWithBadges(pid);
-  const ov = `${Math.floor(stat.balls / 6)}.${stat.balls % 6}`; // cricket-style overs
-  const eco = stat.balls ? (stat.runs / (stat.balls / 6)).toFixed(1) : "0.0";
-  return `<tr><td style="text-align:left">${nm}${star ? " ★" : ""}</td>
-            <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
-}
+      const nm = nameWithBadges(pid);
+      const ov = `${Math.floor(stat.balls / 6)}.${stat.balls % 6}`;
+      const eco = stat.balls ? (stat.runs / (stat.balls / 6)).toFixed(1) : "0.0";
+      return `<tr><td style="text-align:left">${nm}${star ? " ★" : ""}</td>
+                <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
+    }
     function rowBatFull(pid, stat, dm) {
       const nm = nameWithBadges(pid);
       const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
@@ -557,57 +557,70 @@
       `;
     }
 
-    /* Extras (with innings-end notice) */
-    function buildExtras(b, nextBall=null) {
+    /* Extras (optionally add innings-end notice) */
+    function buildExtras(b, nextBall = null, addInningsEnd = false) {
       const extras = [];
-      const overStart = !prevBall || prevBall.innings!==b.innings || prevBall.over_number!==b.over_number;
+
+      // Over start / bowler change
+      const overStart = !prevBall || prevBall.innings !== b.innings || prevBall.over_number !== b.over_number;
       if (overStart) {
         const bow = nameWithBadges(b.bowler_id);
         extras.push(`${bow} comes into the attack.`);
       }
 
+      // Milestones for striker (read BEFORE, then commit AFTER)
       const prevRuns = liveBatRuns.get(b.striker_id) || 0;
-      const newRuns = prevRuns + (b.runs_scored||0);
-      liveBatRuns.set(b.striker_id, newRuns);
+      const newRuns  = prevRuns + (b.runs_scored || 0);
       if (newRuns >= 50 && prevRuns < 50 && newRuns < 100) {
         extras.push(`${nameWithBadges(b.striker_id)} scores his FIFTY`);
       } else if (newRuns >= 100 && prevRuns < 100) {
         extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
       }
 
+      // Wicket lines + next batter
       if (b.wicket) {
-        const type=(b.dismissal_type||'').toLowerCase();
-        const bow=nameWithBadges(b.bowler_id);
-        const fld=b.fielder_id?nameWithBadges(b.fielder_id):"";
-        let disTxt="out";
-        if (type==="bowled") disTxt=`b ${bow}`;
-        else if (type==="lbw") disTxt=`lbw b ${bow}`;
-        else if (type==="caught"){
-          if (b.fielder_id && b.bowler_id && b.fielder_id===b.bowler_id) disTxt=`c & b ${bow}`;
-          else if (b.fielder_id) disTxt=`c ${fld} b ${bow}`;
-          else disTxt=`c b ${bow}`;
-        } else if (type==="runout"||type==="run-out") disTxt = b.fielder_id?`run out (${fld})`:`run out`;
-        const outName = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
-        const ballsFor = all.concat([b]).filter(x=>x.striker_id=== (b.dismissed_batsman_id||b.striker_id)).length;
-        const runsFor  = (liveBatRuns.get(b.dismissed_batsman_id||b.striker_id) || (prevRuns + (b.runs_scored||0)));
+        const type = (b.dismissal_type || '').toLowerCase();
+        const bow  = nameWithBadges(b.bowler_id);
+        const fld  = b.fielder_id ? nameWithBadges(b.fielder_id) : "";
+        let disTxt = "out";
+        if (type === "bowled") disTxt = `b ${bow}`;
+        else if (type === "lbw") disTxt = `lbw b ${bow}`;
+        else if (type === "caught") {
+          if (b.fielder_id && b.bowler_id && b.fielder_id === b.bowler_id) disTxt = `c & b ${bow}`;
+          else if (b.fielder_id) disTxt = `c ${fld} b ${bow}`;
+          else disTxt = `c b ${bow}`;
+        } else if (type === "runout" || type === "run-out") {
+          disTxt = b.fielder_id ? `run out (${fld})` : `run out`;
+        }
+        const outName  = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
+        const ballsFor = all.concat([b]).filter(x => x.striker_id === (b.dismissed_batsman_id || b.striker_id)).length;
+        const runsFor  = newRuns;
         extras.push(`${outName} ${disTxt} ${runsFor}(${ballsFor})`);
 
-        const nb = nextBall ?? (all[all.length] || null);
-        if (nb && nb.innings===b.innings) {
-          const newcomer = nb.striker_id !== b.striker_id && nb.striker_id !== (prevBall?.striker_id) ? nb.striker_id : nb.non_striker_id;
+        // New batter announcement (only when we know the next ball)
+        const nb = nextBall;
+        if (nb && nb.innings === b.innings) {
+          const newcomer = nb.striker_id !== b.striker_id && nb.striker_id !== (prevBall?.striker_id)
+            ? nb.striker_id
+            : nb.non_striker_id;
           if (newcomer) extras.push(`${nameWithBadges(newcomer)} comes in to the Crease.`);
         }
       }
 
-      /* add once on last ball of Innings 1 */
-      const nxt = nextBall ?? (all[all.length] || null);
-      if (b.innings===1 && (!nxt || nxt.innings!==1)) {
-        const t1 = totals(all.concat([b]),1);
-        const chasingName = names[awayTeam] || 'Team B';
-        const need = t1.runs + 1;
-        extras.push(`End of First Innings`);
-        extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
+      // Add once on the last ball of Innings 1 (ONLY during initial render)
+      if (addInningsEnd) {
+        const nxt = nextBall;
+        if (b.innings === 1 && (!nxt || nxt.innings !== 1)) {
+          const t1 = totals(all.concat([b]), 1);
+          const chasingName = names[awayTeam] || 'Team B';
+          const need = t1.runs + 1;
+          extras.push(`End of First Innings`);
+          extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
+        }
       }
+
+      // Commit striker runs now
+      liveBatRuns.set(b.striker_id, newRuns);
 
       prevBall = b;
       return extras;
@@ -702,7 +715,7 @@
       const renderList = (ul, ids, teamId) => {
         ul.innerHTML = '';
         ids.forEach(id=>{
-          const p=players[id]; if(!p) return;
+          const p=players[id]); if(!p) return;
           const bits=[];
           if (roles[teamId]?.captain===id) bits.push('C');
           if (roles[teamId]?.keeper===id)  bits.push('WK');
@@ -730,11 +743,8 @@
 
       all = balls || [];
       liveBatRuns.clear(); prevBall=null;
-      all.forEach(b=>{
-        const cur = liveBatRuns.get(b.striker_id)||0;
-        liveBatRuns.set(b.striker_id, cur + (b.runs_scored||0));
-      });
 
+      // Do NOT pre-increment liveBatRuns here; buildExtras handles committing.
       renderCommentaryTop(all, liveFeed);
       renderCommentaryTop(all, commFeed);
 
