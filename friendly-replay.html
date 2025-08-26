@@ -28,6 +28,14 @@
     th{background:#192238}
     td.left{text-align:left}
 
+    /* compact score tables (SCORECARD only) */
+    #score-panel table{font-size:.92rem}
+    #score-panel th,#score-panel td{padding:6px}
+    @media (max-width:480px){
+      #score-panel table{font-size:.88rem}
+      #score-panel th,#score-panel td{padding:5px}
+    }
+
     .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;
       font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
     .score-strip .big{font-size:1.05rem}
@@ -260,6 +268,17 @@
       return `${dd}-${mm}-${yyyy}, ${hh}:${mi} ${ampm}`;
     }
     const short = (id)=> id ? String(id).slice(0,8) : "—";
+
+    /* NEW: shorten names -> initials + surname */
+    function shortName(full){
+      if (!full) return "—";
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return parts[0];
+      const last = parts.pop();
+      const initials = parts.map(w => (w[0] || "").toUpperCase()).filter(Boolean).join(" ");
+      return `${initials} ${last}`;
+    }
+
     function nameWithBadges(pid){
       if (!pid) return "—";
       const p = players[pid];
@@ -268,7 +287,8 @@
       const tags=[];
       if (r.captain===pid) tags.push("C");
       if (r.keeper===pid)  tags.push("WK");
-      return `${p.name}${tags.length?` (${tags.join(", ")})`:''}`;
+      const nm = shortName(p.name);
+      return `${nm}${tags.length?` (${tags.join(", ")})`:''}`;
     }
 
     function totals(list, inn){
@@ -342,7 +362,6 @@
           } else if (d.type==="runout"||d.type==="run-out") dis=d.fielder?`run out (${fld})`:`run out`;
           else dis=bow?`b ${bow}`:"out";
         }
-        // IMPORTANT: no runs/balls appended to dismissal column
         tbody.insertAdjacentHTML("beforeend",
           `<tr><td class="left">${nm}</td><td class="left">${dis}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
       });
@@ -368,7 +387,6 @@
       W:["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
     };
     function randomLine(b){
-      // Use DB commentary only if it's not an auto "Runs:" or bare "OUT!"
       const c = (b.commentary||"").trim();
       if (c && !/^runs?\s*:/i.test(c) && !/^out!?$/i.test(c)) return c;
       if (b.wicket) return VARIANTS.W[Math.floor(Math.random()*VARIANTS.W.length)];
