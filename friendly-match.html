@@ -574,31 +574,48 @@
     }
 
     /* ---------- Data load ---------- */
-    async function loadMeta(){
-      const { data:m } = await supabase.from('matches').select('*').eq('id', matchId).single();
-      matchRow = m||null;
-      homeTeam = m?.home_team_id; awayTeam = m?.away_team_id;
+    async function loadMeta() {
+  const { data: m } = await supabase
+    .from('matches')
+    .select('*')
+    .eq('id', matchId)
+    .single();
+  matchRow = m || null;
 
-      const { data:t } = await supabase.from('teams').select('id,team_name').in('id',[homeTeam,awayTeam]);
-      (t||[]).forEach(x=> names[x.id]=x.team_name);
-      teamAName.textContent = names[homeTeam] || 'Home';
-      teamBName.textContent = names[awayTeam] || 'Away';
-      xiHomeTitle.textContent = `${names[homeTeam]||'Home'} – Playing XI`;
-      xiAwayTitle.textContent = `${names[awayTeam]||'Away'} – Playing XI`;
+  homeTeam = m?.home_team_id;
+  awayTeam = m?.away_team_id;
 
-      const { data:ps } = await supabase.from('players')
-        .select('id,name,team_id,role,batting,bowling,is_keeper')
-        .in('team_id',[homeTeam,awayTeam]);
-      (ps||[]).forEach(p=> players[p.id]={...p});
+  // team names
+  const { data: t } = await supabase
+    .from('teams')
+    .select('id, team_name')
+    .in('id', [homeTeam, awayTeam]);
+  (t || []).forEach(x => (names[x.id] = x.team_name));
 
-      const { data:lus } = await supabase.from('lineups')
-        .select('team_id,captain,keeper,playing_xi,batting_order,bowling_order')
-        .in('team_id',[homeTeam,awayTeam]);
-      (lus||[]).forEach(l=> roles[l.team_id]={ captain:l.captain, keeper:l.keeper });
+  // players (names/ratings/roles)
+  const { data: ps } = await supabase
+    .from('players')
+    .select('id,name,team_id,role,batting,bowling')
+    .in('team_id', [homeTeam, awayTeam]);
+  (ps || []).forEach(p => (players[p.id] = { ...p }));
 
-      await buildLineupUI(lus||[]);
-    }
+  // lineups (use only captain/keeper + playing_xi; no reliance on players.is_keeper)
+  const { data: lus } = await supabase
+    .from('lineups')
+    .select('team_id,captain,keeper,playing_xi,batting_order,bowling_order')
+    .in('team_id', [homeTeam, awayTeam]);
 
+  // store captain/keeper if present (we’ll sanitize later)
+  (lus || []).forEach(l => {
+    roles[l.team_id] = { captain: l.captain || null, keeper: l.keeper || null, playing_xi: Array.isArray(l.playing_xi) ? l.playing_xi.slice() : null };
+  });
+
+  teamAName.textContent = names[homeTeam] || 'Home';
+  teamBName.textContent = names[awayTeam] || 'Away';
+
+  // build XI UI w/ fallbacks + missing-player replacement
+  await buildLineupUI(lus || []);
+}
     async function buildLineupUI(lineupRows){
       function fromLineup(teamId){
         const row = lineupRows.find(r=>r.team_id===teamId);
