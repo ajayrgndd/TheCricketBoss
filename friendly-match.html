@@ -714,8 +714,8 @@
 
       const renderList = (ul, ids, teamId) => {
         ul.innerHTML = '';
-        ids.forEach(id=>{
-          const p=players[id]); if(!p) return;
+        ids.forEach(id)=>{
+          const p=players[id]; if(!p) return;
           const bits=[];
           if (roles[teamId]?.captain===id) bits.push('C');
           if (roles[teamId]?.keeper===id)  bits.push('WK');
