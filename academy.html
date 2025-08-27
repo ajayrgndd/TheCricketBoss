@@ -14,6 +14,7 @@
     main { padding: 88px 14px 92px; max-width: 1000px; margin: 0 auto; }
     .title { font-size:1.6rem; font-weight:800; }
     .sub { color:var(--dim); font-size:.95rem; }
+
     .grid { display:grid; gap:12px; }
     @media (min-width: 900px){ .grid { grid-template-columns: 2fr 1fr; } }
 
@@ -36,7 +37,6 @@
     .btn { background:#0f1a2a; border:1px solid #1f2c46; color:var(--text); padding:10px 12px; border-radius:12px; font-weight:800; }
     .btn.acc { background:#10351f; border-color:#1f6e40; }
     .btn.warn { background:#2b240a; border-color:#645311; }
-    .btn.danger { background:#2b0f0f; border-color:#5b1a1a; }
     .btn:disabled { opacity:.6; }
 
     select, input { background:#0f1a2a; color:var(--text); border:1px solid #1f2c46; border-radius:10px; padding:8px; width:100%; }
@@ -44,8 +44,8 @@
   </style>
 </head>
 <body>
-  <!-- Top bar injected by shared-ui.js -->
-  <div id="topbar-root"></div>
+  <!-- smooth-ui will inject the real nav content here -->
+  <div id="top-nav"></div>
 
   <main>
     <div class="title">Player Academy</div>
@@ -189,15 +189,10 @@
     </section>
   </main>
 
-  <!-- Bottom nav injected by shared-ui.js -->
-  <div id="bottombar-root"></div>
+  <!-- smooth-ui will inject the bottom nav here -->
+  <div id="bottom-nav"></div>
 
-  <!-- Supabase client (fallback if you don't already init it globally) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/shared-ui.js"></script>
-  <script src="js/academy.js"></script>
+  <!-- ES module app code -->
+  <script type="module" src="js/academy.js"></script>
 </body>
 </html>
-
-
-
