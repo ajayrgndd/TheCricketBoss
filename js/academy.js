@@ -1,104 +1,320 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-import { loadSharedUI } from "./shared-ui.js";
+/* Player Academy – Frontend (Supabase RPC)
+   - Uses RPCs created in DB steps:
+     • rpc_academy_start(p_team_id, p_player_id, p_slot, p_kind, p_skill_key, p_instant)
+     • rpc_academy_status_for_me()
+   - Reads profile (coins) and players for the user's team
+*/
 
-const supabase = createClient(
-  "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-);
+(() => {
+  // ---------- Supabase client ----------
+  const SUPABASE_URL = window.SUPABASE_URL || 'https://iukofcmatlfhfwcechdq.supabase.co';
+  const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
+  const supabase = window.supabase?.supabaseUrl ? window.supabase
+                  : window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+                  : window.createClient ? window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+                  : window.supabase = window.supabase || createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const user = await supabase.auth.getUser().then(res => res.data.user);
-if (!user) window.location.href = "index.html";
+  // ---------- DOM ----------
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const el = {
+    playerSelect: $('#playerSelect'),
+    playerRole:   $('#playerRole'),
+    playerExp:    $('#playerExp'),
 
-// Profile and UI
-const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-loadSharedUI({ manager_name: profile.manager_name, xp: profile.xp, coins: profile.coins, cash: profile.cash });
+    s1Kind: $('#s1Kind'), s1Key: $('#s1Key'),
+    s2Kind: $('#s2Kind'), s2Key: $('#s2Key'),
 
-// Team
-const { data: team } = await supabase.from("teams").select("id").eq("owner_id", user.id).single();
-const { data: players } = await supabase.from("players").select("*").eq("team_id", team.id);
-const { data: academyRows } = await supabase.from("academy").select("*").eq("user_id", user.id).eq("completed", false);
+    s1Assign: $('#s1Assign'), s1Instant: $('#s1Instant'),
+    s2Assign: $('#s2Assign'), s2Instant: $('#s2Instant'),
 
-const activePlayerIds = academyRows.map(r => r.player_id);
-const academyList = document.getElementById("academyList");
+    s1State: $('#s1State'), s2State: $('#s2State'),
 
-const skillOptions = [
-  "Big Hitter", "Finisher", "Anchor", "Powerplay Master",
-  "Swing Specialist", "Yorker King", "Death Over Expert",
-  "Sharp Reflexes", "Diving Stop", "Glove Master"
-];
+    coinsVal: $('#coinsVal'),
+    academyStatus: $('#academyStatus'),
+    activePlayerVal: $('#activePlayerVal'),
+    timeLeftVal: $('#timeLeftVal'),
 
-for (const player of players) {
-  const skillsOwned = [player.skill1, player.skill2].filter(Boolean);
-  const availableSlot = skillsOwned.length < 2;
-  const slotName = skillsOwned.length === 0 ? "skill1" : "skill2";
-  const cost = slotName === "skill1" ? 300 : 500;
-  const duration = slotName === "skill1" ? 72 : 120;
+    noPlayers: $('#noPlayers'),
+  };
 
-  const alreadyLearning = academyRows.find(r => r.player_id === player.id);
+  // ---------- Catalog ----------
+  const CATALOG = {
+    batting: {
+      skill1: ['Top Order','Middle Order','Lower Order'],
+      skill2: ['Power Hitter','Game Builder','Big Hitter','Finisher'],
+    },
+    bowling: {
+      skill1: ['Top Hunter','Middle Hunter','Death Hunter'],
+      skill2: ['The Miser','The Boom','Big Shot','Deadly'],
+    }
+  };
 
-  const card = document.createElement("div");
-  card.className = "player-card";
-  card.innerHTML = `
-    <h3>${player.name}</h3>
-    <p><strong>Role:</strong> ${player.role}</p>
-    <p class="active-skill">Skills: ${skillsOwned.join(", ") || "None"}</p>
-    ${alreadyLearning ? `
-      <p class="status">⏳ In progress: ${alreadyLearning.skill} (ends ${new Date(alreadyLearning.end_time).toLocaleString()})</p>
-    ` : !availableSlot ? `
-      <p class="status">🎓 Already has 2 skills</p>
-    ` : academyRows.length ? `
-      <p class="status">⏳ Only 1 player can be trained at a time</p>
-    ` : `
-      <label>Select a Skill:</label>
-      <select id="skill-${player.id}">
-        ${skillOptions
-          .filter(skill => !skillsOwned.includes(skill))
-          .map(skill => `<option value="${skill}">${skill}</option>`).join("")}
-      </select>
-      <div class="coin-cost">⏳ ${duration}h OR ⚡ Quick Activate using ${cost} Coins</div>
-      <button onclick="window.trainSkill('${player.id}', '${slotName}', ${cost}, ${duration})">Start Training</button>
-      <button onclick="window.quickActivate('${player.id}', '${slotName}', ${cost})">⚡ Quick Activate</button>
-    `}
-  `;
-  academyList.appendChild(card);
-}
+  // ---------- State ----------
+  let session = null;
+  let profile = null;     // {user_id, team_id, coins, ...}
+  let teamId = null;
+  let players = [];       // [{id,name,role,experience,skill1,skill2,in_academy}, ...]
+  let statusRows = [];    // v_academy_player_status rows
+  let ticker = null;
 
-window.trainSkill = async (playerId, slotName, cost, durationHours) => {
-  const skill = document.getElementById(`skill-${playerId}`).value;
-  const endTime = new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
+  // ---------- UI helpers ----------
+  const fillOptions = (sel, arr) => sel.innerHTML = arr.map(k=>`<option value="${k}">${k}</option>`).join('');
+  const roleKindFor = (role) => {
+    role = (role||'').toLowerCase();
+    if (role.includes('bowler')) return 'bowling';
+    if (role.includes('all')) return 'either';
+    return 'batting'; // batsman or wicket keeper
+  };
+  const gatesOk = (slot, p, kind) => {
+    const need = slot==='skill1' ? 31 : 51;
+    if ((p.experience||0) < need) return { ok:false, msg:`Requires Experience ≥ ${need}` };
+    const rk = roleKindFor(p.role);
+    if (rk==='bowling' && kind!=='bowling') return { ok:false, msg:'Bowler can take only Bowling skills' };
+    if (rk==='batting' && kind!=='batting') return { ok:false, msg:'This role can take only Batting skills' };
+    if (slot==='skill2') {
+      if (!p.skill1) return { ok:false, msg:'Assign Skill 1 first' };
+      // For all-rounder, skill2 must match kind of skill1; infer kind from skill1 key
+      const s1 = p.skill1;
+      const s1Kind = ['Top Order','Middle Order','Lower Order','Power Hitter','Game Builder','Big Hitter','Finisher'].includes(s1) ? 'batting' : 'bowling';
+      if (rk==='either' && s1Kind !== kind) return { ok:false, msg:'Skill 2 must match Skill 1 type' };
+    }
+    return { ok:true };
+  };
+  const fmtLeft = (secs) => {
+    if (!secs || secs <= 0) return '—';
+    const d = Math.floor(secs/86400);
+    const h = Math.floor((secs%86400)/3600);
+    const m = Math.floor((secs%3600)/60);
+    const s = secs%60;
+    return (d?`${d}d `:'') + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  };
 
-  const { error } = await supabase.from("academy").insert({
-    user_id: user.id,
-    player_id: playerId,
-    skill_slot: slotName,
-    skill,
-    start_time: new Date().toISOString(),
-    end_time: endTime,
-    completed: false
-  });
+  // ---------- Data fetch ----------
+  async function getSession() {
+    const { data: { session: s } } = await supabase.auth.getSession();
+    session = s;
+    return s;
+  }
 
-  if (error) return alert("Error: " + error.message);
-  alert("🎯 Skill training started!");
-  location.reload();
-};
+  async function fetchProfileAndTeam() {
+    // profiles is PK by user_id; we need coins + team_id + manager_name/team_name for topbar
+    const uid = session?.user?.id;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('user_id, manager_name, team_name, coins, cash, xp, team_id')
+      .eq('user_id', uid)
+      .single();
+    if (error) throw error;
+    profile = data;
+    teamId = data.team_id;
+    el.coinsVal.textContent = data.coins ?? 0;
 
-window.quickActivate = async (playerId, slotName, cost) => {
-  const skill = document.getElementById(`skill-${playerId}`).value;
-  if (profile.coins < cost) return alert("❌ Not enough coins");
+    // Top bar
+    if (window.renderTopBar) {
+      window.renderTopBar({
+        mountId: 'topbar-root',
+        username: data.manager_name || 'Manager',
+        xp: data.xp || 0,
+        coins: data.coins || 0,
+        cash: data.cash || 0,
+        pageTitle: 'Academy',
+      });
+    }
+    if (window.renderBottomBar) {
+      window.renderBottomBar({ mountId: 'bottombar-root', active: 'academy' });
+    }
+  }
 
-  const confirmQuick = confirm(`⚡ Quick Activate "${skill}" using ${cost} coins?`);
-  if (!confirmQuick) return;
+  async function fetchPlayers() {
+    const { data, error } = await supabase
+      .from('players')
+      .select('id,name,role,experience,skill1,skill2,in_academy')
+      .eq('team_id', teamId)
+      .order('name', { ascending: true });
+    if (error) throw error;
+    players = data || [];
+    if (!players.length) {
+      el.noPlayers.style.display = '';
+    } else {
+      el.noPlayers.style.display = 'none';
+    }
+  }
 
-  const updates = [];
-  updates.push(supabase.from("profiles").update({ coins: profile.coins - cost }).eq("id", user.id));
+  async function fetchStatus() {
+    const { data, error } = await supabase.rpc('rpc_academy_status_for_me');
+    if (error) throw error;
+    statusRows = data || [];
+  }
 
-  const updateObj = {};
-  updateObj[slotName] = skill;
-  updates.push(supabase.from("players").update(updateObj).eq("id", playerId));
+  // ---------- Render ----------
+  function populatePlayerDropdown() {
+    el.playerSelect.innerHTML = players.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  }
+  function selectedPlayer() {
+    const id = el.playerSelect.value;
+    return players.find(p => String(p.id) === String(id));
+  }
 
-  const { error } = await Promise.all(updates).then(() => ({})).catch(e => ({ error: e }));
-  if (error) return alert("Error: " + error.message);
+  function fillSkillDropdowns(p) {
+    const rk = roleKindFor(p.role);
+    // Skill 1 kinds
+    const s1Kinds = rk === 'either' ? ['batting','bowling'] : [rk];
+    el.s1Kind.innerHTML = s1Kinds.map(k=>`<option value="${k}">${k}</option>`).join('');
+    // Default keys for s1
+    fillOptions(el.s1Key, CATALOG[el.s1Kind.value].skill1);
 
-  alert(`✅ Skill "${skill}" activated instantly!`);
-  location.reload();
-};
+    // Skill 2 kinds
+    let s2Kinds = rk === 'either' ? ['batting','bowling'] : [rk];
+    if (p.skill1 && rk === 'either') {
+      const s1Kind = ['Top Order','Middle Order','Lower Order','Power Hitter','Game Builder','Big Hitter','Finisher'].includes(p.skill1) ? 'batting' : 'bowling';
+      s2Kinds = [s1Kind];
+    }
+    el.s2Kind.innerHTML = s2Kinds.map(k=>`<option value="${k}">${k}</option>`).join('');
+    fillOptions(el.s2Key, CATALOG[el.s2Kind.value].skill2);
+  }
+
+  function renderPlayerPanel() {
+    const p = selectedPlayer();
+    if (!p) return;
+
+    el.playerRole.textContent = p.role || '—';
+    el.playerExp.textContent  = p.experience ?? 0;
+
+    fillSkillDropdowns(p);
+
+    // Current states (from player columns; activation shown below)
+    el.s1State.textContent = p.skill1 ? `${p.skill1} (active)` : '—';
+    el.s2State.textContent = p.skill2 ? `${p.skill2} (active)` : '—';
+
+    // Lock UI if another player is pending
+    const pending = statusRows.find(r => r.activation_status === 'pending');
+    const hasPending = !!pending;
+    const pendingPid = pending?.player_id;
+
+    const s1Gate = gatesOk('skill1', p, el.s1Kind.value);
+    const s2Gate = gatesOk('skill2', p, el.s2Kind.value);
+
+    // Block if pending exists and it's not this player
+    const blockedByOther = hasPending && String(pendingPid) !== String(p.id);
+
+    // Also block if this player already has the slot filled (we disallow overwrite on FE)
+    const s1Blocked = !!p.skill1;
+    const s2Blocked = !!p.skill2;
+
+    el.s1Assign.disabled  = blockedByOther || s1Blocked || !s1Gate.ok;
+    el.s1Instant.disabled = blockedByOther || s1Blocked || !s1Gate.ok;
+    el.s2Assign.disabled  = blockedByOther || s2Blocked || !s2Gate.ok;
+    el.s2Instant.disabled = blockedByOther || s2Blocked || !s2Gate.ok;
+
+    el.s1Assign.title  = s1Gate.ok ? '' : s1Gate.msg;
+    el.s1Instant.title = el.s1Assign.title;
+    el.s2Assign.title  = s2Gate.ok ? '' : s2Gate.msg;
+    el.s2Instant.title = el.s2Assign.title;
+
+    // Status header + countdown
+    if (hasPending) {
+      el.academyStatus.textContent = `Activating: ${pending.name}`;
+      el.activePlayerVal.textContent = pending.name;
+      el.timeLeftVal.textContent = fmtLeft(pending.seconds_left);
+    } else {
+      el.academyStatus.textContent = 'No active activation';
+      el.activePlayerVal.textContent = '—';
+      el.timeLeftVal.textContent = '—';
+    }
+  }
+
+  function syncCoinsTopbar(v) {
+    el.coinsVal.textContent = v;
+    if (window.updateTopBar) window.updateTopBar({ coins: v });
+  }
+
+  // ---------- Actions ----------
+  async function startActivation(slot, instant) {
+    const p = selectedPlayer();
+    if (!p) return;
+    const kind = (slot === 'skill1' ? el.s1Kind.value : el.s2Kind.value);
+    const key  = (slot === 'skill1' ? el.s1Key.value  : el.s2Key.value);
+
+    // Client-side gates (server validates too)
+    const g = gatesOk(slot, p, kind);
+    if (!g.ok) return alert(g.msg);
+
+    // Call RPC
+    const { data, error } = await supabase.rpc('rpc_academy_start', {
+      p_team_id: teamId,
+      p_player_id: p.id,
+      p_slot: slot,
+      p_kind: kind,
+      p_skill_key: key,
+      p_instant: !!instant
+    });
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    // Refresh everything
+    await Promise.all([fetchProfileAndTeam(), fetchPlayers(), fetchStatus()]);
+    populatePlayerDropdown();
+    // keep same selection if possible
+    el.playerSelect.value = p.id;
+    renderPlayerPanel();
+  }
+
+  // ---------- Events ----------
+  $('#s1Assign').addEventListener('click', () => startActivation('skill1', false));
+  $('#s1Instant').addEventListener('click', () => startActivation('skill1', true));
+  $('#s2Assign').addEventListener('click', () => startActivation('skill2', false));
+  $('#s2Instant').addEventListener('click', () => startActivation('skill2', true));
+
+  $('#playerSelect').addEventListener('change', renderPlayerPanel);
+  $('#s1Kind').addEventListener('change', () => { fillOptions(el.s1Key, CATALOG[el.s1Kind.value].skill1); renderPlayerPanel(); });
+  $('#s2Kind').addEventListener('change', () => { fillOptions(el.s2Key, CATALOG[el.s2Kind.value].skill2); renderPlayerPanel(); });
+
+  // ---------- Boot ----------
+  (async () => {
+    try {
+      // Session
+      await getSession();
+      if (!session) {
+        // If not logged in, redirect to login
+        window.location.href = 'login.html';
+        return;
+      }
+      await fetchProfileAndTeam();
+      if (!teamId) {
+        el.academyStatus.textContent = 'No team found for your profile';
+        return;
+      }
+      await fetchPlayers();
+      await fetchStatus();
+
+      if (players.length) populatePlayerDropdown();
+      if (players.length) el.playerSelect.value = players[0].id;
+
+      renderPlayerPanel();
+      syncCoinsTopbar(profile?.coins ?? 0);
+
+      // Countdown ticker based on seconds_left from RPC
+      ticker = setInterval(async () => {
+        // decrement local seconds_left for smoother UI; refetch periodically
+        let pending = statusRows.find(r => r.activation_status === 'pending');
+        if (pending && pending.seconds_left > 0) {
+          pending.seconds_left -= 1;
+        } else {
+          // periodically refresh status to pick up server settlement
+          await fetchStatus();
+          // after settlement, update players (skill1/skill2/in_academy) + coins
+          await Promise.all([fetchPlayers(), fetchProfileAndTeam()]);
+        }
+        renderPlayerPanel();
+      }, 1000);
+
+    } catch (e) {
+      console.error(e);
+      el.academyStatus.textContent = 'Error loading Academy';
+      alert(e.message || e);
+    }
+  })();
+})();
