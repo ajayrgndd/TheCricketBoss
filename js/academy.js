@@ -1,17 +1,15 @@
-/* Player Academy – ES module version
-   Uses your smooth-ui/nav-loader for nav + profile fill
-   Calls RPCs:
-     • rpc_academy_start(p_team_id, p_player_id, p_slot, p_kind, p_skill_key, p_instant)
-     • rpc_academy_status_for_me()
+/* Player Academy – Patched ES module
+   - Uses smooth-ui/nav-loader for nav + profile fill
+   - Fixes multiple client + undefined uuid bug
 */
 
 import { loadSmoothUI } from './smooth-ui.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// ---- Supabase client (use the same project as nav-loader.js) ----
+// ---- Supabase client (singleton) ----
 const SUPABASE_URL = 'https://iukofcmatlfhfwcechdq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = window.__supabase ?? (window.__supabase = createClient(SUPABASE_URL, SUPABASE_KEY));
 
 // ---- DOM helpers ----
 const $ = (s) => document.querySelector(s);
@@ -49,19 +47,18 @@ const CATALOG = {
 };
 
 // ---- State ----
-let session = null;
-let profile = null;     // {user_id, team_id, coins, ...}
+let profile = null;
 let teamId = null;
-let players = [];       // [{id,name,role,experience,skill1,skill2,in_academy}, ...]
-let statusRows = [];    // v_academy_player_status rows
-let ticker = null;
+let players = [];
+let statusRows = [];
 
+// ---- Helpers ----
 const fillOptions = (sel, arr) => sel.innerHTML = arr.map(k=>`<option value="${k}">${k}</option>`).join('');
 const roleKindFor = (role) => {
   role = (role||'').toLowerCase();
   if (role.includes('bowler')) return 'bowling';
   if (role.includes('all')) return 'either';
-  return 'batting'; // batsman or wicket keeper
+  return 'batting';
 };
 const gatesOk = (slot, p, kind) => {
   const need = slot==='skill1' ? 31 : 51;
@@ -71,8 +68,7 @@ const gatesOk = (slot, p, kind) => {
   if (rk==='batting' && kind!=='batting') return { ok:false, msg:'This role can take only Batting skills' };
   if (slot==='skill2') {
     if (!p.skill1) return { ok:false, msg:'Assign Skill 1 first' };
-    const s1 = p.skill1;
-    const s1Kind = ['Top Order','Middle Order','Lower Order','Power Hitter','Game Builder','Big Hitter','Finisher'].includes(s1) ? 'batting' : 'bowling';
+    const s1Kind = ['Top Order','Middle Order','Lower Order','Power Hitter','Game Builder','Big Hitter','Finisher'].includes(p.skill1) ? 'batting' : 'bowling';
     if (rk==='either' && s1Kind !== kind) return { ok:false, msg:'Skill 2 must match Skill 1 type' };
   }
   return { ok:true };
@@ -87,19 +83,18 @@ const fmtLeft = (secs) => {
 };
 
 // ---- Data fetch ----
-async function getSession() {
-  const { data: { session: s } } = await supabase.auth.getSession();
-  session = s;
-  return s;
-}
 async function fetchProfileAndTeam() {
-  const uid = session?.user?.id;
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw userErr;
+  if (!user) { location.href = 'login.html'; throw new Error('Not logged in'); }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('user_id, manager_name, team_name, coins, cash, xp, team_id')
-    .eq('user_id', uid)
+    .eq('user_id', user.id)
     .single();
   if (error) throw error;
+
   profile = data;
   teamId = data.team_id;
   el.coinsVal.textContent = data.coins ?? 0;
@@ -123,9 +118,6 @@ async function fetchStatus() {
 // ---- UI render ----
 function populatePlayerDropdown() {
   el.playerSelect.innerHTML = players.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-  // preselect via ?pid= query if present
-  const pid = new URLSearchParams(location.search).get('pid');
-  if (pid && players.some(p=>String(p.id)===pid)) el.playerSelect.value = pid;
 }
 function selectedPlayer() {
   const id = el.playerSelect.value;
@@ -133,12 +125,10 @@ function selectedPlayer() {
 }
 function fillSkillDropdowns(p) {
   const rk = roleKindFor(p.role);
-  // Skill 1 types
   const s1Kinds = rk === 'either' ? ['batting','bowling'] : [rk];
   el.s1Kind.innerHTML = s1Kinds.map(k=>`<option value="${k}">${k}</option>`).join('');
   fillOptions(el.s1Key, CATALOG[el.s1Kind.value].skill1);
 
-  // Skill 2 types
   let s2Kinds = rk === 'either' ? ['batting','bowling'] : [rk];
   if (p.skill1 && rk === 'either') {
     const s1Kind = ['Top Order','Middle Order','Lower Order','Power Hitter','Game Builder','Big Hitter','Finisher'].includes(p.skill1) ? 'batting' : 'bowling';
@@ -155,12 +145,9 @@ function renderPlayerPanel() {
   el.playerExp.textContent  = p.experience ?? 0;
 
   fillSkillDropdowns(p);
-
-  // Current active skills from players table
   el.s1State.textContent = p.skill1 ? `${p.skill1} (active)` : '—';
   el.s2State.textContent = p.skill2 ? `${p.skill2} (active)` : '—';
 
-  // Pending activation (only one per team)
   const pending = statusRows.find(r => r.activation_status === 'pending');
   const hasPending = !!pending;
   const pendingPid = pending?.player_id;
@@ -213,7 +200,6 @@ async function startActivation(slot, instant) {
   });
   if (error) { alert(error.message); return; }
 
-  // refresh everything + nav coins
   await Promise.all([fetchProfileAndTeam(), fetchPlayers(), fetchStatus()]);
   await loadSmoothUI('top-nav', 'bottom-nav');
   el.playerSelect.value = p.id;
@@ -221,32 +207,24 @@ async function startActivation(slot, instant) {
 }
 
 // ---- Events ----
-$('#s1Assign').addEventListener('click', () => startActivation('skill1', false));
-$('#s1Instant').addEventListener('click', () => startActivation('skill1', true));
-$('#s2Assign').addEventListener('click', () => startActivation('skill2', false));
-$('#s2Instant').addEventListener('click', () => startActivation('skill2', true));
-
-$('#playerSelect').addEventListener('change', renderPlayerPanel);
-$('#s1Kind').addEventListener('change', () => { fillOptions(el.s1Key, CATALOG[el.s1Kind.value].skill1); renderPlayerPanel(); });
-$('#s2Kind').addEventListener('change', () => { fillOptions(el.s2Key, CATALOG[el.s2Kind.value].skill2); renderPlayerPanel(); });
+el.s1Assign.addEventListener('click', () => startActivation('skill1', false));
+el.s1Instant.addEventListener('click', () => startActivation('skill1', true));
+el.s2Assign.addEventListener('click', () => startActivation('skill2', false));
+el.s2Instant.addEventListener('click', () => startActivation('skill2', true));
+el.playerSelect.addEventListener('change', renderPlayerPanel);
+el.s1Kind.addEventListener('change', () => { fillOptions(el.s1Key, CATALOG[el.s1Kind.value].skill1); renderPlayerPanel(); });
+el.s2Kind.addEventListener('change', () => { fillOptions(el.s2Key, CATALOG[el.s2Kind.value].skill2); renderPlayerPanel(); });
 
 // ---- Boot ----
 (async () => {
-  // 1) Load nav (auth + profile fill + body padding)
   await loadSmoothUI('top-nav', 'bottom-nav');
 
-  // 2) Require auth
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    // nav-loader already redirects on non-public pages, but keep a guard
-    location.href = 'login.html';
-    return;
-  }
+  if (!user) { location.href = 'login.html'; return; }
 
-  // 3) Load profile/team/players/status
-  await (await supabase.auth.getSession()); // sync session
   await fetchProfileAndTeam();
-  if (!teamId) { $('#academyStatus').textContent = 'No team found for your profile'; return; }
+  if (!teamId) { el.academyStatus.textContent = 'No team found for your profile'; return; }
+
   await fetchPlayers();
   await fetchStatus();
 
@@ -256,15 +234,14 @@ $('#s2Kind').addEventListener('change', () => { fillOptions(el.s2Key, CATALOG[el
   }
   renderPlayerPanel();
 
-  // 4) Ticker: smooth countdown + periodic refresh
   setInterval(async () => {
-    let pending = statusRows.find(r => r.activation_status === 'pending');
+    const pending = statusRows.find(r => r.activation_status === 'pending');
     if (pending && pending.seconds_left > 0) {
       pending.seconds_left -= 1;
     } else {
       await fetchStatus();
       await Promise.all([fetchPlayers(), fetchProfileAndTeam()]);
-      await loadSmoothUI('top-nav', 'bottom-nav'); // keep coins fresh
+      await loadSmoothUI('top-nav', 'bottom-nav');
     }
     renderPlayerPanel();
   }, 1000);
