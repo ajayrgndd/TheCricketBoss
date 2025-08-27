@@ -1,5 +1,4 @@
-/* Player Academy – FINAL (ES module, stable, no blinking) */
-/* Requires: smooth-ui.js + nav-loader.js (both as ES modules) */
+/* Player Academy – FINAL (no blinking, cancel support, ES modules) */
 
 import { loadSmoothUI } from './smooth-ui.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -28,6 +27,7 @@ const el = {
   academyStatus: $('#academyStatus'),
   activePlayerVal: $('#activePlayerVal'),
   timeLeftVal: $('#timeLeftVal'),
+  cancelPendingBtn: $('#cancelPendingBtn'),
 
   noPlayers: $('#noPlayers'),
 };
@@ -60,7 +60,7 @@ const roleKindFor = (role) => {
   role = (role||'').toLowerCase();
   if (role.includes('bowler')) return 'bowling';
   if (role.includes('all')) return 'either';
-  return 'batting'; // batsman / wicket keeper
+  return 'batting';
 };
 const s1KeyIsBatting = (key) =>
   ['Top Order','Middle Order','Lower Order','Power Hitter','Game Builder','Big Hitter','Finisher'].includes(key);
@@ -72,8 +72,6 @@ const fmtLeft = (secs) => {
   const s = secs%60;
   return (d?`${d}d `:'') + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
 };
-
-/* gates without re-rendering selects */
 function gatesOk(slot, p, kind) {
   const need = slot==='skill1' ? 31 : 51;
   if ((p.experience||0) < need) return { ok:false, msg:`Requires Experience ≥ ${need}` };
@@ -120,7 +118,7 @@ async function fetchStatus() {
   statusRows = data || [];
 }
 
-/* ---------- UI (no blinking) ---------- */
+/* ---------- UI ---------- */
 function populatePlayerDropdown() {
   el.playerSelect.innerHTML = players.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
   const pid = new URLSearchParams(location.search).get('pid');
@@ -149,9 +147,8 @@ function fillSkillDropdowns(p) {
   fillOptions(el.s2Key, CATALOG[el.s2Kind.value].skill2);
 }
 function applyButtonGates(p) {
-  const hasPending = !!statusRows.find(r => r.activation_status === 'pending');
-  const pendingPid = statusRows.find(r => r.activation_status === 'pending')?.player_id;
-  const blockedByOther = hasPending && String(pendingPid) !== String(p.id);
+  const pending = statusRows.find(r => r.activation_status === 'pending');
+  const blockedByOther = !!pending && String(pending.player_id) !== String(p.id);
   const s1Blocked = !!p.skill1;
   const s2Blocked = !!p.skill2;
 
@@ -174,10 +171,12 @@ function renderHeaderStatus() {
     el.academyStatus.textContent = `Activating: ${pending.name}`;
     el.activePlayerVal.textContent = pending.name;
     el.timeLeftVal.textContent = fmtLeft(pending.seconds_left);
+    el.cancelPendingBtn.style.display = '';
   } else {
     el.academyStatus.textContent = 'No active activation';
     el.activePlayerVal.textContent = '—';
     el.timeLeftVal.textContent = '—';
+    el.cancelPendingBtn.style.display = 'none';
   }
 }
 function renderPlayerPanel(initial=false) {
@@ -187,7 +186,6 @@ function renderPlayerPanel(initial=false) {
   el.playerRole.textContent = p.role || '—';
   el.playerExp.textContent  = p.experience ?? 0;
 
-  // Only rebuild dropdowns on initial render or when switching player
   if (initial) fillSkillDropdowns(p);
 
   el.s1State.textContent = p.skill1 ? `${p.skill1} (active)` : '—';
@@ -197,7 +195,7 @@ function renderPlayerPanel(initial=false) {
   renderHeaderStatus();
 }
 
-/* ---------- Nav numbers (no full reload) ---------- */
+/* ---------- Nav number (no full reload) ---------- */
 function updateNavCoins(val) {
   el.coinsVal.textContent = val;
   const coinsEl = document.getElementById('nav-coins');
@@ -225,13 +223,23 @@ async function startActivation(slot, instant) {
   if (error) { alert(error.message); return; }
 
   // Refresh minimal data
-  await fetchProfileAndTeam();      // updates coins
+  await fetchProfileAndTeam();
   updateNavCoins(profile.coins);
   await Promise.all([fetchPlayers(), fetchStatus()]);
 
-  // Keep selection and repaint states only (no dropdown reset)
+  // Keep selection and repaint (no dropdown reset)
   el.playerSelect.value = p.id;
   renderPlayerPanel(false);
+}
+
+async function cancelPending() {
+  if (!confirm('Cancel current Academy activation?')) return;
+  const { error } = await supabase.rpc('rpc_academy_cancel_current', { p_team_id: teamId });
+  if (error) { alert(error.message); return; }
+  await Promise.all([fetchPlayers(), fetchStatus(), fetchProfileAndTeam()]);
+  updateNavCoins(profile.coins);
+  renderPlayerPanel(false);
+  alert('Activation cancelled.');
 }
 
 /* ---------- Events ---------- */
@@ -239,12 +247,13 @@ el.s1Assign.addEventListener('click', () => startActivation('skill1', false));
 el.s1Instant.addEventListener('click', () => startActivation('skill1', true));
 el.s2Assign.addEventListener('click', () => startActivation('skill2', false));
 el.s2Instant.addEventListener('click', () => startActivation('skill2', true));
+el.cancelPendingBtn.addEventListener('click', cancelPending);
 
 el.playerSelect.addEventListener('change', () => {
   const p = selectedPlayer();
   if (!p) return;
-  fillSkillDropdowns(p);         // re-evaluate kinds/keys for this player once
-  renderPlayerPanel(false);      // repaint labels/buttons only
+  fillSkillDropdowns(p);
+  renderPlayerPanel(false);
 });
 
 el.s1Kind.addEventListener('change', () => {
@@ -258,7 +267,6 @@ el.s2Kind.addEventListener('change', () => {
 
 /* ---------- Boot ---------- */
 (async () => {
-  // Load nav once (no loop)
   await loadSmoothUI('top-nav', 'bottom-nav');
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -276,7 +284,7 @@ el.s2Kind.addEventListener('change', () => {
   }
   renderPlayerPanel(true);
 
-  // Countdown: update ONLY the label every second; fetch/paint panel only on state change
+  // Countdown: only update label; refresh state on transition
   setInterval(async () => {
     const oldPending = statusRows.find(r => r.activation_status === 'pending');
     if (oldPending && oldPending.seconds_left > 0) {
@@ -289,17 +297,14 @@ el.s2Kind.addEventListener('change', () => {
     const newPending = statusRows.find(r => r.activation_status === 'pending');
 
     if (!newPending) {
-      // Probably settled: refresh players (skill1/skill2 changed) and repaint once
       await fetchPlayers();
       renderPlayerPanel(false);
       return;
     }
     if (newPending.activation_id !== prevId) {
-      // New activation started elsewhere → refresh once
       await fetchPlayers();
       renderPlayerPanel(false);
     } else {
-      // Same activation; just update label
       el.timeLeftVal.textContent = fmtLeft(newPending.seconds_left);
     }
   }, 1000);
