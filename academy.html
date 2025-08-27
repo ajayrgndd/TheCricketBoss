@@ -2,238 +2,199 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Academy – TheCricketBoss</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Player Academy – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    .academy-container {
-      padding: 16px;
-      max-width: 800px;
-      margin: auto;
-      color: #fff;
+    :root {
+      --bg:#0b0f14; --card:#111824; --muted:#182132; --text:#e6f0ff; --dim:#a8b3c7;
+      --acc:#35c86f; --warn:#ffcc00; --danger:#ff5f5f; --ring:#3a4b6a; --shadow:0 10px 30px rgba(0,0,0,.35); --r:18px;
     }
+    html, body { background:var(--bg); color:var(--text); }
+    main { padding: 88px 14px 92px; max-width: 1000px; margin: 0 auto; }
+    .title { font-size:1.6rem; font-weight:800; }
+    .sub { color:var(--dim); font-size:.95rem; }
+    .grid { display:grid; gap:12px; }
+    @media (min-width: 900px){ .grid { grid-template-columns: 2fr 1fr; } }
 
-    .player-card {
-      background: #2e2a4a;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
+    .card { background:linear-gradient(180deg,#111824,#0e1522); border:1px solid #1a2537; border-radius:var(--r); box-shadow:var(--shadow); }
+    .card > .hd { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px dashed #1f2940; }
+    .card > .bd { padding:12px 14px; }
 
-    select, button {
-      margin-top: 8px;
-      padding: 8px;
-      width: 100%;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-    }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row.spread { justify-content:space-between; }
 
-    .active-skill {
-      font-size: 14px;
-      color: #aaa;
-    }
+    .pill { background:#0f1a2a; border:1px solid #22324c; border-radius:999px; padding:6px 10px; color:var(--dim); font-size:.85rem; }
+    .tag { display:inline-block; background:#12243b; border:1px solid #223a5f; color:#aecaef; padding:2px 8px; border-radius:999px; font-size:.75rem; }
+    .tile { background:#0e1726; border:1px solid #1b2942; border-radius:14px; padding:10px; }
+    .empty { text-align:center; padding:22px; border-radius:14px; border:1px dashed #24324d; background:#0d1522; }
+    .kpi { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+    .kpi .box { background:#0e1726; border:1px solid #1b2942; border-radius:14px; padding:10px; text-align:center; }
+    .kpi .label { font-size:.8rem; color:var(--dim); }
+    .kpi .val { font-weight:900; font-size:1.2rem; }
 
-    .status {
-      color: #00e676;
-      font-size: 14px;
-      margin-top: 6px;
-    }
+    .btn { background:#0f1a2a; border:1px solid #1f2c46; color:var(--text); padding:10px 12px; border-radius:12px; font-weight:800; }
+    .btn.acc { background:#10351f; border-color:#1f6e40; }
+    .btn.warn { background:#2b240a; border-color:#645311; }
+    .btn.danger { background:#2b0f0f; border-color:#5b1a1a; }
+    .btn:disabled { opacity:.6; }
 
-    .coin-cost {
-      color: #ffca28;
-      font-size: 13px;
-    }
+    select, input { background:#0f1a2a; color:var(--text); border:1px solid #1f2c46; border-radius:10px; padding:8px; width:100%; }
+    label { font-size:.85rem; color:var(--dim); }
   </style>
 </head>
 <body>
-  <div class="main">
-    <h2>🏏 Academy – Train Special Skills</h2>
-    <div class="academy-container" id="academyList"></div>
-  </div>
+  <!-- Top bar injected by shared-ui.js -->
+  <div id="topbar-root"></div>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { loadSharedUI } from "./js/shared-ui.js";
+  <main>
+    <div class="title">Player Academy</div>
+    <div class="sub">Assign <b>Special Skills</b> using Coins. Only <b>one</b> player can be in activation at a time. Players in Academy can’t be in Team Lineup.</div>
 
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
+    <section class="grid" style="margin-top:12px">
+      <div class="card">
+        <div class="hd">
+          <div class="row" style="gap:8px">
+            <span class="pill">Special Skills</span>
+            <span id="academyStatus" class="tag">Loading…</span>
+          </div>
+          <a class="btn" href="team.html">Team</a>
+        </div>
+        <div class="bd">
+          <div class="row">
+            <div style="flex:1">
+              <label for="playerSelect">Player</label>
+              <select id="playerSelect"></select>
+            </div>
+            <div style="width:160px">
+              <label>Role</label>
+              <div id="playerRole" class="pill">—</div>
+            </div>
+            <div style="width:180px">
+              <label>Experience</label>
+              <div id="playerExp" class="pill">0</div>
+            </div>
+          </div>
 
-    const user = await supabase.auth.getUser().then(res => res.data.user);
-    if (!user) window.location.href = "index.html";
+          <div style="height:10px"></div>
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+          <!-- Skill 1 -->
+          <div class="tile">
+            <div class="row spread">
+              <div>
+                <div style="font-weight:800">Skill 1</div>
+                <div class="sub" style="font-size:.85rem">Cost 100 • Activates in 48h • Instant total 250</div>
+              </div>
+              <div id="s1State" class="pill">—</div>
+            </div>
+            <div style="height:8px"></div>
+            <div class="row">
+              <div style="flex:1">
+                <label for="s1Kind">Type</label>
+                <select id="s1Kind"></select>
+              </div>
+              <div style="flex:1">
+                <label for="s1Key">Skill</label>
+                <select id="s1Key"></select>
+              </div>
+            </div>
+            <div style="height:8px"></div>
+            <div class="row">
+              <button id="s1Assign" class="btn acc">Assign (100)</button>
+              <button id="s1Instant" class="btn warn">Instant (250)</button>
+            </div>
+          </div>
 
-    loadSharedUI({
-      manager_name: profile.manager_name,
-      xp: profile.xp,
-      coins: profile.coins,
-      cash: profile.cash
-    });
+          <div style="height:10px"></div>
 
-    const { data: team } = await supabase
-      .from("teams")
-      .select("id")
-      .eq("owner_id", user.id)
-      .single();
+          <!-- Skill 2 -->
+          <div class="tile">
+            <div class="row spread">
+              <div>
+                <div style="font-weight:800">Skill 2</div>
+                <div class="sub" style="font-size:.85rem">Cost 200 • Activates in 96h • Instant total 500</div>
+              </div>
+              <div id="s2State" class="pill">—</div>
+            </div>
+            <div style="height:8px"></div>
+            <div class="row">
+              <div style="flex:1">
+                <label for="s2Kind">Type</label>
+                <select id="s2Kind"></select>
+              </div>
+              <div style="flex:1">
+                <label for="s2Key">Skill</label>
+                <select id="s2Key"></select>
+              </div>
+            </div>
+            <div style="height:8px"></div>
+            <div class="row">
+              <button id="s2Assign" class="btn acc">Assign (200)</button>
+              <button id="s2Instant" class="btn warn">Instant (500)</button>
+            </div>
+            <div class="sub" style="font-size:.85rem">Skill 2 unlocks only after Skill 1. For All-rounders, Skill 2 must match Skill 1 type.</div>
+          </div>
 
-    const { data: players } = await supabase
-      .from("players")
-      .select("*")
-      .eq("team_id", team.id);
+          <div id="noPlayers" class="empty" style="display:none; margin-top:10px">
+            <div style="font-weight:800; margin-bottom:6px">No players found.</div>
+            <div class="sub">Generate your squad first.</div>
+            <div style="height:10px"></div>
+            <a class="btn" href="squad.html">Go to Squad</a>
+          </div>
+        </div>
+      </div>
 
-    const { data: academyRows } = await supabase
-      .from("academy")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("completed", false);
+      <div class="card">
+        <div class="hd"><span>Rules & Status</span></div>
+        <div class="bd">
+          <ul style="margin-left:18px; line-height:1.4">
+            <li>Only <b>one</b> activation per team at a time.</li>
+            <li>Players in Academy cannot be selected in <b>Team Lineup</b>.</li>
+            <li>Skill 1 requires <b>Experience ≥ 31</b> (Professional).</li>
+            <li>Skill 2 requires <b>Experience ≥ 51</b> (Supreme).</li>
+            <li>Role limits enforced. All-rounder: Skill 2 must match Skill 1 type.</li>
+          </ul>
+          <div style="height:8px"></div>
+          <div class="kpi">
+            <div class="box"><div class="label">Coins</div><div id="coinsVal" class="val">0</div></div>
+            <div class="box"><div class="label">Active Player</div><div id="activePlayerVal" class="val">—</div></div>
+            <div class="box"><div class="label">Time Left</div><div id="timeLeftVal" class="val">—</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    const activePlayerIds = academyRows.map(r => r.player_id);
-    const academyList = document.getElementById("academyList");
+    <section class="card" style="margin-top:12px">
+      <div class="hd"><span>Skill Catalog</span></div>
+      <div class="bd">
+        <div class="row" style="gap:8px; align-items:flex-start; flex-wrap:wrap">
+          <div class="tile" style="flex:1; min-width:260px">
+            <div class="row"><b>Batsman — Skill 1</b></div>
+            <div class="sub" style="font-size:.85rem">Top Order • Middle Order • Lower Order (+10% based on batting position)</div>
+          </div>
+          <div class="tile" style="flex:1; min-width:260px">
+            <div class="row"><b>Batsman — Skill 2</b></div>
+            <div class="sub" style="font-size:.85rem">Power Hitter • Game Builder • Big Hitter • Finisher</div>
+          </div>
+          <div class="tile" style="flex:1; min-width:260px">
+            <div class="row"><b>Bowler — Skill 1</b></div>
+            <div class="sub" style="font-size:.85rem">Top Hunter • Middle Hunter • Death Hunter (+10% by phase)</div>
+          </div>
+          <div class="tile" style="flex:1; min-width:260px">
+            <div class="row"><b>Bowler — Skill 2</b></div>
+            <div class="sub" style="font-size:.85rem">The Miser • The Boom • Big Shot • Deadly</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-    const skillOptions = [
-      "Top Order", "Middle Order", "Lower Order", "Opener", "Game Builder",
-      "Big Hitter", "Finisher", "Powerplay Specialist", "Middle Over Specialist",
-      "Death Over Specialist", "Economic", "Wicket Taker", "Big Hunter", "Deadly"
-    ];
+  <!-- Bottom nav injected by shared-ui.js -->
+  <div id="bottombar-root"></div>
 
-    for (const player of players) {
-      const alreadyLearning = academyRows.find(r => r.player_id === player.id);
-      const skillsOwned = [player.skill1, player.skill2].filter(Boolean);
-      const availableSlots = skillsOwned.length < 2;
-
-      const card = document.createElement("div");
-      card.className = "player-card";
-
-      card.innerHTML = `
-        <h3>${player.name}</h3>
-        <p><strong>Role:</strong> ${player.role}</p>
-        <p class="active-skill">Skills: ${skillsOwned.join(", ") || "None"}</p>
-
-        ${alreadyLearning ? `
-          <p class="status">⏳ In training: ${alreadyLearning.skill}<br/>
-          Completes: ${new Date(alreadyLearning.end_time).toLocaleString()}</p>
-        ` : availableSlots ? `
-          <label>Select Skill:</label>
-          <select id="skill-${player.id}">
-            ${skillOptions
-              .filter(skill => !skillsOwned.includes(skill))
-              .map(skill => `<option value="${skill}">${skill}</option>`).join("")}
-          </select>
-          <div class="coin-cost">⌛ 72h for Skill 1 / 120h for Skill 2</div>
-          <button onclick="startSkill('${player.id}', ${skillsOwned.length}, false)">🕒 Start Normal</button>
-          <button onclick="startSkill('${player.id}', ${skillsOwned.length}, true)">⚡ Quick Activate</button>
-        ` : `<p class="status">🎓 Already has 2 skills</p>`}
-
-        ${skillsOwned.length ? skillsOwned.map((skill, i) => `
-          <button onclick="removeSkill('${player.id}', '${i === 0 ? "skill1" : "skill2"}')">
-            ❌ Remove ${skill} (${i === 0 ? "Skill 1" : "Skill 2"})
-          </button>
-        `).join("") : ""}
-      `;
-
-      academyList.appendChild(card);
-    }
-
-    window.startSkill = async (playerId, slotIndex, isQuick) => {
-      const skill = document.getElementById(`skill-${playerId}`).value;
-      const skillSlot = slotIndex === 0 ? "skill1" : "skill2";
-      const costCoins = slotIndex === 0 ? 250 : 500;
-      const costCash = slotIndex === 0 ? 500000 : 1000000;
-      const quickCoins = slotIndex === 0 ? 300 : 500;
-      const durationMs = slotIndex === 0 ? 72 * 60 * 60 * 1000 : 120 * 60 * 60 * 1000;
-
-      const coinsNeeded = isQuick ? (costCoins + quickCoins) : costCoins;
-      const confirmText = isQuick
-        ? `Use ${coinsNeeded} coins for instant skill unlock?`
-        : `Start training "${skill}" for ${costCoins} coins + ₹${costCash.toLocaleString()} cash?`;
-
-      if (!confirm(confirmText)) return;
-
-      const { data: profile, error: profErr } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (profErr || profile.coins < coinsNeeded || profile.cash < costCash) {
-        alert("❌ Not enough resources.");
-        return;
-      }
-
-      // Deduct coins & cash
-      await supabase.from("profiles")
-        .update({ coins: profile.coins - coinsNeeded, cash: profile.cash - costCash })
-        .eq("id", user.id);
-
-      if (isQuick) {
-        await supabase.from("players")
-          .update({ [skillSlot]: skill })
-          .eq("id", playerId);
-        alert("✅ Skill Activated Instantly!");
-        location.reload();
-      } else {
-        const now = new Date();
-        const end = new Date(Date.now() + durationMs).toISOString();
-
-        await supabase.from("academy").insert({
-          user_id: user.id,
-          player_id: playerId,
-          skill_slot: skillSlot,
-          skill,
-          start_time: now.toISOString(),
-          end_time: end,
-          completed: false
-        });
-
-        alert("⏳ Training started!");
-        location.reload();
-      }
-    };
-
-    window.removeSkill = async (playerId, slot) => {
-      const skillCol = slot === 'skill1' ? 'skill1' : 'skill2';
-
-      if (slot === 'skill1') {
-        const { data: player } = await supabase
-          .from("players")
-          .select("skill2")
-          .eq("id", playerId)
-          .single();
-        if (player.skill2) {
-          return alert("⚠️ Remove Skill 2 before removing Skill 1.");
-        }
-      }
-
-      if (!confirm("Spend 50 Coins to remove this skill?")) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("coins")
-        .eq("id", user.id)
-        .single();
-
-      if (profile.coins < 50) {
-        return alert("🚫 Not enough coins.");
-      }
-
-      await supabase.from("profiles")
-        .update({ coins: profile.coins - 50 })
-        .eq("id", user.id);
-
-      await supabase.from("players")
-        .update({ [skillCol]: null })
-        .eq("id", playerId);
-
-      alert("🗑 Skill removed.");
-      location.reload();
-    };
-  </script>
+  <!-- Supabase client (fallback if you don't already init it globally) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="shared-ui.js"></script>
+  <script src="academy.js"></script>
 </body>
 </html>
