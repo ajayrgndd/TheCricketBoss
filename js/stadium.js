@@ -1,4 +1,4 @@
-// === YOUR ORIGINAL IMPORTS/SETUP ===
+// === IMPORTS & SETUP ===
 import { loadSharedUI } from './shared-ui-stadium.js';
 import { addManagerXP } from './shared-xp.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js';
@@ -10,6 +10,7 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE'
 );
 
+// === STADIUM UPGRADE CONFIG ===
 const STADIUM_UPGRADE_DURATIONS = {
   1: 24 * 60 * 60 * 1000,
   2: 48 * 60 * 60 * 1000,
@@ -45,7 +46,7 @@ function getManagerLevelLabel(xp) {
   return label;
 }
 
-// === ORIGINAL INIT (kept) ===
+// === PAGE INIT ===
 async function init() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
@@ -68,7 +69,7 @@ async function init() {
   if (topC) topC.textContent = `🪙 ${profile.coins}`;
   if (top$) top$.textContent = `₹ ${profile.cash}`;
 
-  // If upgrade ended, finalize
+  // Finalize upgrade if timer elapsed
   if (profile.stadium_upgrade_end && new Date(profile.stadium_upgrade_end) <= new Date()) {
     await completeUpgrade(user.id, profile.stadium_level);
     profile.stadium_level += 1;
@@ -122,7 +123,7 @@ async function init() {
     });
   }
 
-  // === PITCH MODULE INIT ===
+  // Pitch module
   await initPitchModule({ userId: user.id, teamId: profile.team_id });
 }
 
@@ -170,15 +171,6 @@ function disableUpgradeBtnWithCountdown(endTime) {
   updateCountdown();
 }
 
-function updateStadiumDisplay(level, xp) {
-  const el = (id) => document.getElementById(id);
-  if (!el("stadium-level-name")) return;
-
-  const stadium = STADIUM_LEVELS[level - 1];
-  const next = STADIIUM_LEVELS[level] || null; // <-- typo fixed below
-}
-
-// Fix the typo introduced above:
 function updateStadiumDisplay(level, xp) {
   const el = (id) => document.getElementById(id);
   if (!el("stadium-level-name")) return;
