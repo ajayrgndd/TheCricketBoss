@@ -1,12 +1,9 @@
-/* Player Academy – Patched ES module
-   - Uses smooth-ui/nav-loader for nav + profile fill
-   - Fixes multiple client + undefined uuid bug
-*/
+/* Player Academy – Stable (no nav reload loop) */
 
 import { loadSmoothUI } from './smooth-ui.js';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// ---- Supabase client (singleton) ----
+// ---- Supabase client (singleton across app) ----
 const SUPABASE_URL = 'https://iukofcmatlfhfwcechdq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
 const supabase = window.__supabase ?? (window.__supabase = createClient(SUPABASE_URL, SUPABASE_KEY));
@@ -17,20 +14,15 @@ const el = {
   playerSelect: $('#playerSelect'),
   playerRole:   $('#playerRole'),
   playerExp:    $('#playerExp'),
-
   s1Kind: $('#s1Kind'), s1Key: $('#s1Key'),
   s2Kind: $('#s2Kind'), s2Key: $('#s2Key'),
-
   s1Assign: $('#s1Assign'), s1Instant: $('#s1Instant'),
   s2Assign: $('#s2Assign'), s2Instant: $('#s2Instant'),
-
   s1State: $('#s1State'), s2State: $('#s2State'),
-
   coinsVal: $('#coinsVal'),
   academyStatus: $('#academyStatus'),
   activePlayerVal: $('#activePlayerVal'),
   timeLeftVal: $('#timeLeftVal'),
-
   noPlayers: $('#noPlayers'),
 };
 
@@ -82,19 +74,16 @@ const fmtLeft = (secs) => {
   return (d?`${d}d `:'') + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
 };
 
-// ---- Data fetch ----
+// ---- Data ----
 async function fetchProfileAndTeam() {
-  const { data: { user }, error: userErr } = await supabase.auth.getUser();
-  if (userErr) throw userErr;
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) { location.href = 'login.html'; throw new Error('Not logged in'); }
-
   const { data, error } = await supabase
     .from('profiles')
     .select('user_id, manager_name, team_name, coins, cash, xp, team_id')
     .eq('user_id', user.id)
     .single();
   if (error) throw error;
-
   profile = data;
   teamId = data.team_id;
   el.coinsVal.textContent = data.coins ?? 0;
@@ -118,6 +107,8 @@ async function fetchStatus() {
 // ---- UI render ----
 function populatePlayerDropdown() {
   el.playerSelect.innerHTML = players.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  const pid = new URLSearchParams(location.search).get('pid');
+  if (pid && players.some(p=>String(p.id)===pid)) el.playerSelect.value = pid;
 }
 function selectedPlayer() {
   const id = el.playerSelect.value;
@@ -180,6 +171,13 @@ function renderPlayerPanel() {
   }
 }
 
+// ---- Lightweight nav number updater (no full reload) ----
+function updateNavCoins(val) {
+  el.coinsVal.textContent = val;
+  const coinsEl = document.getElementById('nav-coins');
+  if (coinsEl) coinsEl.textContent = `Coins: ${val}`;
+}
+
 // ---- Actions ----
 async function startActivation(slot, instant) {
   const p = selectedPlayer();
@@ -200,8 +198,10 @@ async function startActivation(slot, instant) {
   });
   if (error) { alert(error.message); return; }
 
-  await Promise.all([fetchProfileAndTeam(), fetchPlayers(), fetchStatus()]);
-  await loadSmoothUI('top-nav', 'bottom-nav');
+  // Refresh profile (for coins) and local data
+  await fetchProfileAndTeam();         // updates el.coinsVal
+  updateNavCoins(profile.coins);       // update nav text without reloading UI
+  await Promise.all([fetchPlayers(), fetchStatus()]);
   el.playerSelect.value = p.id;
   renderPlayerPanel();
 }
@@ -217,6 +217,7 @@ el.s2Kind.addEventListener('change', () => { fillOptions(el.s2Key, CATALOG[el.s2
 
 // ---- Boot ----
 (async () => {
+  // Load nav once (no repeated fades/requests)
   await loadSmoothUI('top-nav', 'bottom-nav');
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -234,15 +235,17 @@ el.s2Kind.addEventListener('change', () => { fillOptions(el.s2Key, CATALOG[el.s2
   }
   renderPlayerPanel();
 
+  // Countdown: only fetch from server when we expect a transition
   setInterval(async () => {
     const pending = statusRows.find(r => r.activation_status === 'pending');
     if (pending && pending.seconds_left > 0) {
-      pending.seconds_left -= 1;
+      pending.seconds_left -= 1;           // smooth local countdown
+      el.timeLeftVal.textContent = fmtLeft(pending.seconds_left);
     } else {
+      // Re-check status only when countdown finishes
       await fetchStatus();
-      await Promise.all([fetchPlayers(), fetchProfileAndTeam()]);
-      await loadSmoothUI('top-nav', 'bottom-nav');
+      await fetchPlayers();
+      renderPlayerPanel();
     }
-    renderPlayerPanel();
   }, 1000);
 })();
