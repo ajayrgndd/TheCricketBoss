@@ -80,6 +80,7 @@
       <button id="train-btn" class="btn cta" disabled>Train Selected</button>
     </section>
 
+    <!-- Persistent Results -->
     <section id="results-section" class="section">
       <h3>Training Results</h3>
       <div id="result-list" class="result-list"></div>
@@ -97,7 +98,7 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Helpers
+    // ---------- Helpers ----------
     const $ = (s, r=document) => r.querySelector(s);
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
     const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'), 2000); };
@@ -112,13 +113,33 @@
              r.includes('wicket') || r.includes('keeper');
     }
 
-    // Time helpers (IST)
+    // Tiers & XP mapping
+    function getSkillLevel(v){
+      if (v >= 101) return "The Boss";
+      if (v >= 81) return "Titan";
+      if (v >= 61) return "World Class";
+      if (v >= 51) return "Supreme";
+      if (v >= 41) return "National";
+      if (v >= 31) return "Professional";
+      if (v >= 21) return "Domestic";
+      if (v >= 11) return "Trainee";
+      return "Newbie";
+    }
+    const XP_BY_UPGRADE = {
+      "Newbie>Trainee":10,"Trainee>Domestic":20,"Domestic>Professional":30,"Professional>National":40,
+      "National>Supreme":50,"Supreme>World Class":100,"World Class>Titan":200,"Titan>The Boss":500
+    };
+    const LEVEL_ORDER = ["Newbie","Trainee","Domestic","Professional","National","Supreme","World Class","Titan","The Boss"];
+    const levelRank = (name)=>LEVEL_ORDER.indexOf(name);
+
+    // ---------- Time (IST) ----------
     const MINUTES_IST = 5*60 + 30;
     const nowIST = () => { const n = new Date(); return new Date(n.getTime() + (MINUTES_IST + n.getTimezoneOffset())*60000); };
     const startOfDayIST = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
     const mondayAnchorIST = d => { const x = startOfDayIST(d); const diff = (x.getDay()+6)%7; x.setDate(x.getDate()-diff); return x; };
     const fmtDateYYYYMMDD = d => d.toISOString().split('T')[0];
 
+    // Mon 22:00 → Thu 07:00; Thu 22:00 → Mon 07:00 (IST)
     function windowStateIST(d = nowIST()) {
       const mon = mondayAnchorIST(d);
       const thu = new Date(mon); thu.setDate(mon.getDate()+3);
@@ -154,7 +175,7 @@
           label.textContent = st.label;
           const secs = Math.max(0, Math.floor((st.closesAt - nowIST())/1000));
           cd.textContent = `Closes in ${Math.floor(secs/3600)}h ${Math.floor((secs%3600)/60)}m`;
-          controls.style.display = 'none'; // hide selection UI if already used
+          controls.style.display = 'none';
           note.textContent = "Already trained this session.";
         } else {
           pill.textContent = 'CLOSED'; pill.classList.add('closed'); pill.classList.remove('open');
@@ -179,23 +200,6 @@
       }
     }
 
-    function getSkillLevel(v){
-      if (v >= 101) return "The Boss";
-      if (v >= 81) return "Titan";
-      if (v >= 61) return "World Class";
-      if (v >= 51) return "Supreme";
-      if (v >= 41) return "National";
-      if (v >= 31) return "Professional";
-      if (v >= 21) return "Domestic";
-      if (v >= 11) return "Trainee";
-      return "Newbie";
-    }
-
-    const XP_BY_UPGRADE = {
-      "Newbie>Trainee":10,"Trainee>Domestic":20,"Domestic>Professional":30,"Professional>National":40,
-      "National>Supreme":50,"Supreme>World Class":100,"World Class>Titan":200,"Titan>The Boss":500
-    };
-
     const overallLevelName = p => getSkillLevel(Math.max(num(p.batting), num(p.bowling), num(p.keeping)));
     const weekAnchorStrIST = (d = nowIST()) => fmtDateYYYYMMDD(mondayAnchorIST(d));
 
@@ -204,7 +208,7 @@
       const del = { batting:0, bowling:0, keeping:0 };
       if (base===0) return del;
       if (isWicketKeeper(p)) {
-        if (type==='bowling') return del;           // WK not allowed
+        if (type==='bowling') return del;  // WK not allowed
         del.batting = +(0.75*base).toFixed(3);
         del.keeping = +(0.50*base).toFixed(3);
         return del;
@@ -219,7 +223,7 @@
       return del;
     }
 
-    // ---- Page state
+    // ---------- Page state ----------
     let sessionType='batting', players=[], teamId=null, currentUser=null, profile=null;
 
     $('#btn-batting').addEventListener('click', ()=>setType('batting'));
@@ -228,7 +232,6 @@
 
     function setType(t){ sessionType=t; $$('.toggle button').forEach(b=>b.classList.toggle('active', b.dataset.type===t)); renderPlayers(); }
 
-    // Has this user already used the current window?
     function facilityUsedThisWindow(){
       if (!profile) return false;
       const st = windowStateIST();
@@ -238,7 +241,8 @@
     }
 
     async function init(){
-      await loadSmoothUI(); 
+      await loadSmoothUI();
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user){ location.href='login.html'; return; }
       currentUser=user;
@@ -248,13 +252,35 @@
         .eq('user_id', user.id).maybeSingle();
       if (!prof) return; profile=prof; teamId=prof.team_id;
 
-      startStatusLoop(); // after profile is loaded (so it can read facilityUsedThisWindow)
+      startStatusLoop();
 
       const { data } = await supabase.from('players')
         .select('id, team_id, name, role, batting, bowling, keeping, age_years, age_days, image_url, is_wk, last_trained_week_anchor, last_trained_type, team_name, manager_name, skill_level')
         .eq('team_id', teamId).order('name', { ascending:true });
       players = data || [];
       renderPlayers();
+
+      await loadRecentResults(); // show persisted results
+    }
+
+    async function loadRecentResults(){
+      const { data, error } = await supabase
+        .from('training_sessions')
+        .select('created_at, total_xp, session_xp, levelup_xp, lines')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending:false })
+        .limit(10);
+      if (error) return;
+      $('#result-list').innerHTML = '';
+      (data||[]).forEach(s => {
+        appendResult({
+          lines: Array.isArray(s.lines) ? s.lines : (s.lines?.length ? s.lines : []),
+          totalXp: s.total_xp || 0,
+          sessionXp: s.session_xp || 0,
+          levelUpXp: s.levelup_xp || 0,
+          createdAt: s.created_at
+        }, false); // append (they're already sorted newest→oldest)
+      });
     }
 
     function renderPlayers(){
@@ -265,7 +291,6 @@
       const st=windowStateIST();
       const used = facilityUsedThisWindow();
 
-      // hide WKs in Bowling tab
       const list = players.filter(p => !(sessionType==='bowling' && isWicketKeeper(p)));
 
       list.forEach(p=>{
@@ -328,27 +353,44 @@
       const filteredList = players.filter(p => !(sessionType==='bowling' && isWicketKeeper(p)));
       const chosen = idxs.map(i => filteredList[i]);
 
-      const updates = []; let sessionXp = 50; let levelUpXpTotal = 0; const resultLines = [];
+      const updates = []; 
+      const sessionXpBase = 50; 
+      let levelUpXpTotal = 0; 
+      const resultLines = [];
+
+      // Per-skill tier change detection + XP
+      function checkTierUpgrade(beforeVal, afterVal, playerName, roleText){
+        const before = getSkillLevel(beforeVal);
+        const after  = getSkillLevel(afterVal);
+        if (levelRank(after) > levelRank(before)) {
+          const key = `${before}>${after}`;
+          const add = XP_BY_UPGRADE[key] || 0;
+          if (add > 0) levelUpXpTotal += add;
+          resultLines.push(`${playerName} (${roleText}) upgraded to ${after} level from ${before} level. (User XP earned : + ${add} XP)`);
+        }
+      }
+
       for (const p of chosen){
-        const beforeOverall = overallLevelName(p);
+        const roleText = isWicketKeeper(p)?'Wicket Keeper':(p.role||'Player');
+
         const del = computeDeltasForPlayer(p, sessionType);
 
-        const newBat = round(num(p.batting) + (del.batting || 0), 3);
-        const newBow = round(num(p.bowling) + (del.bowling || 0), 3);
-        const newKeep = round(num(p.keeping) + (del.keeping || 0), 3);
+        const batBefore = num(p.batting), bowBefore = num(p.bowling), keepBefore = num(p.keeping);
+        const newBat = round(batBefore + (del.batting || 0), 3);
+        const newBow = round(bowBefore + (del.bowling || 0), 3);
+        const newKeep = round(keepBefore + (del.keeping || 0), 3);
 
-        const afterOverall = getSkillLevel(Math.max(newBat, newBow, newKeep));
-
-        if (beforeOverall !== afterOverall){
-          const key = `${beforeOverall}>${afterOverall}`; const add = XP_BY_UPGRADE[key] || 0;
-          if (add>0){
-            levelUpXpTotal += add;
-            const roleText = isWicketKeeper(p)?'Wicket Keeper':(p.role||'Player');
-            resultLines.push(`${p.name} (${roleText}) upgraded to ${afterOverall} level from ${beforeOverall} level. (User XP earned : + ${add} XP)`);
+        if (sessionType==='batting'){
+          checkTierUpgrade(batBefore, newBat, p.name, roleText);
+          if (del.keeping) checkTierUpgrade(keepBefore, newKeep, p.name, roleText);
+          if (del.bowling && String(p.role||'').toLowerCase()==='allrounder') {
+            checkTierUpgrade(bowBefore, newBow, p.name, roleText);
           }
-        } else {
-          const roleText = isWicketKeeper(p)?'Wicket Keeper':(p.role||'Player');
-          resultLines.push(`${p.name} (${roleText}) trained in ${sessionType.charAt(0).toUpperCase()+sessionType.slice(1)} (no level change).`);
+        } else { // bowling
+          checkTierUpgrade(bowBefore, newBow, p.name, roleText);
+          if (del.batting && String(p.role||'').toLowerCase()==='allrounder') {
+            checkTierUpgrade(batBefore, newBat, p.name, roleText);
+          }
         }
 
         updates.push({
@@ -356,7 +398,7 @@
           last_trained_week_anchor: weekAnchor,
           last_trained_session_at: now,
           last_trained_type: sessionType,
-          skill_level: afterOverall
+          skill_level: getSkillLevel(Math.max(newBat,newBow,newKeep))
         });
       }
 
@@ -372,20 +414,34 @@
         if (error){ console.error('Player update failed', error); toast('Save failed'); return; }
       }
 
-      // Mark the session as USED for this window on profiles
+      // Mark window used
       await supabase.from('profiles').update({
         last_training_window_anchor: weekAnchor,
         last_training_window_which: st.which
       }).eq('user_id', currentUser.id);
 
-      // Update user XP
-      const addXp = 50 + levelUpXpTotal;
+      // Update user XP (+50 base + per-skill upgrades)
+      const totalXpAdd = sessionXpBase + levelUpXpTotal;
       const { data: p0 } = await supabase.from('profiles').select('xp').eq('user_id', currentUser.id).maybeSingle();
-      if (p0){ await supabase.from('profiles').update({ xp: (p0.xp||0) + addXp }).eq('user_id', currentUser.id); }
+      if (p0){ await supabase.from('profiles').update({ xp: (p0.xp||0) + totalXpAdd }).eq('user_id', currentUser.id); }
 
-      appendResult({ lines: resultLines, totalXp: addXp, sessionXp: 50, levelUpXp: levelUpXpTotal });
+      // Persist session results (note: DB column is "window", quoted in SQL; JSON key can be window)
+      await supabase.from('training_sessions').insert({
+        user_id: currentUser.id,
+        team_id: teamId,
+        week_anchor: weekAnchor,
+        window: st.which,
+        session_type: sessionType,
+        total_xp: totalXpAdd,
+        session_xp: sessionXpBase,
+        levelup_xp: levelUpXpTotal,
+        lines: resultLines
+      });
 
-      // Refresh profile (so UI locks immediately) and players list
+      // Append to UI immediately
+      appendResult({ lines: resultLines, totalXp: totalXpAdd, sessionXp: sessionXpBase, levelUpXp: levelUpXpTotal });
+
+      // Refresh profile + players & lock UI
       const { data: prof2 } = await supabase.from('profiles')
         .select('user_id, team_id, xp, manager_name, last_training_window_anchor, last_training_window_which')
         .eq('user_id', currentUser.id).maybeSingle();
@@ -396,23 +452,23 @@
         .eq('team_id', teamId).order('name', { ascending:true });
       players = data || []; 
       renderPlayers();
-      startStatusLoop(); // re-run to hide controls text
+      startStatusLoop();
     }
 
-    function appendResult({ lines, totalXp, sessionXp, levelUpXp }){
+    function appendResult({ lines, totalXp, sessionXp, levelUpXp, createdAt=null }, prepend=true){
       const listEl = $('#result-list');
       const block = document.createElement('div'); block.className='result-block';
-      const time = new Date().toLocaleString('en-IN');
+      const time = createdAt ? new Date(createdAt).toLocaleString('en-IN') : new Date().toLocaleString('en-IN');
       const meta = document.createElement('div'); meta.className='muted';
       meta.textContent = `${time} — You earned +${sessionXp} XP for completing this training` + (levelUpXp ? ` and +${levelUpXp} XP from level upgrades.` : '.');
       const ul = document.createElement('div'); ul.className='result-list';
-      lines.forEach(t=>{ const d=document.createElement('div'); d.className='result-line'; d.textContent=t; ul.append(d); });
+      (lines||[]).forEach(t=>{ const d=document.createElement('div'); d.className='result-line'; d.textContent=t; ul.append(d); });
       const total = document.createElement('div'); total.style.marginTop='6px'; total.innerHTML = `<span class="xp-badge">Total XP: +${totalXp}</span>`;
       block.append(meta, ul, total);
-      listEl.prepend(block);
+      if (prepend) listEl.prepend(block); else listEl.append(block);
     }
 
-    // Optional decline hook
+    // Optional decline hook (kept)
     async function applyPostMatchDeclineForTeam(teamId){
       const { data } = await supabase.from('players').select('id, batting, bowling, keeping').eq('team_id', teamId);
       for (const p of (data||[])){
@@ -426,7 +482,6 @@
     // window.applyPostMatchDeclineForTeam = applyPostMatchDeclineForTeam;
 
     // Boot
-    await loadSmoothUI(); // ensure nav first
     init();
   </script>
 </body>
