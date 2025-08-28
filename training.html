@@ -279,7 +279,7 @@
           sessionXp: s.session_xp || 0,
           levelUpXp: s.levelup_xp || 0,
           createdAt: s.created_at
-        }, false); // append (they're already sorted newest→oldest)
+        }, false); // append (already sorted)
       });
     }
 
@@ -358,15 +358,15 @@
       let levelUpXpTotal = 0; 
       const resultLines = [];
 
-      // Per-skill tier change detection + XP
-      function checkTierUpgrade(beforeVal, afterVal, playerName, roleText){
+      // Per-skill tier change detection + XP (with Skill Type label)
+      function reportSkillUpgrade(label, beforeVal, afterVal, playerName, roleText){
         const before = getSkillLevel(beforeVal);
         const after  = getSkillLevel(afterVal);
         if (levelRank(after) > levelRank(before)) {
           const key = `${before}>${after}`;
           const add = XP_BY_UPGRADE[key] || 0;
           if (add > 0) levelUpXpTotal += add;
-          resultLines.push(`${playerName} (${roleText}) upgraded to ${after} level from ${before} level. (User XP earned : + ${add} XP)`);
+          resultLines.push(`${playerName} (${roleText}) upgraded to ${after} level from ${before} level in ${label} (User XP earned : + ${add} XP)`);
         }
       }
 
@@ -381,15 +381,15 @@
         const newKeep = round(keepBefore + (del.keeping || 0), 3);
 
         if (sessionType==='batting'){
-          checkTierUpgrade(batBefore, newBat, p.name, roleText);
-          if (del.keeping) checkTierUpgrade(keepBefore, newKeep, p.name, roleText);
+          reportSkillUpgrade('Batting', batBefore, newBat, p.name, roleText);
+          if (del.keeping) reportSkillUpgrade('Wicket Keeping', keepBefore, newKeep, p.name, roleText);
           if (del.bowling && String(p.role||'').toLowerCase()==='allrounder') {
-            checkTierUpgrade(bowBefore, newBow, p.name, roleText);
+            reportSkillUpgrade('Bowling', bowBefore, newBow, p.name, roleText);
           }
         } else { // bowling
-          checkTierUpgrade(bowBefore, newBow, p.name, roleText);
+          reportSkillUpgrade('Bowling', bowBefore, newBow, p.name, roleText);
           if (del.batting && String(p.role||'').toLowerCase()==='allrounder') {
-            checkTierUpgrade(batBefore, newBat, p.name, roleText);
+            reportSkillUpgrade('Batting', batBefore, newBat, p.name, roleText);
           }
         }
 
@@ -425,12 +425,12 @@
       const { data: p0 } = await supabase.from('profiles').select('xp').eq('user_id', currentUser.id).maybeSingle();
       if (p0){ await supabase.from('profiles').update({ xp: (p0.xp||0) + totalXpAdd }).eq('user_id', currentUser.id); }
 
-      // Persist session results (note: DB column is "window", quoted in SQL; JSON key can be window)
+      // Persist session results
       await supabase.from('training_sessions').insert({
         user_id: currentUser.id,
         team_id: teamId,
         week_anchor: weekAnchor,
-        window: st.which,
+        window: st.which,             // DB column is "window" (quoted in SQL)
         session_type: sessionType,
         total_xp: totalXpAdd,
         session_xp: sessionXpBase,
