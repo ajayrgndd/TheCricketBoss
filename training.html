@@ -65,7 +65,7 @@
           <button id="btn-batting" class="active" data-type="batting">Batting</button>
           <button id="btn-bowling" data-type="bowling">Bowling</button>
         </div>
-        <span class="note">Select exactly <b>3</b> players.</span>
+        <span id="controls-note" class="note">Select exactly <b>3</b> players.</span>
       </div>
     </section>
 
@@ -80,7 +80,6 @@
       <button id="train-btn" class="btn cta" disabled>Train Selected</button>
     </section>
 
-    <!-- Persistent Results -->
     <section id="results-section" class="section">
       <h3>Training Results</h3>
       <div id="result-list" class="result-list"></div>
@@ -105,7 +104,7 @@
     const num = (v) => v == null ? 0 : (typeof v === 'string' ? parseFloat(v) : v);
     const round = (x, d=3) => Math.round((x + Number.EPSILON) * 10**d) / 10**d;
 
-    // Robust WK detector (handles many role variants)
+    // Robust WK detector
     function isWicketKeeper(p){
       if (p?.is_wk) return true;
       const r = String(p?.role || '').toLowerCase().replace(/[-_]/g,' ');
@@ -139,18 +138,30 @@
     function startStatusLoop() {
       const updateUI = () => {
         const st = windowStateIST();
-        const pill = $('#status-pill'), label = $('#window-label'), cd = $('#countdown'), controls = $('#controls');
-        if (st.open) {
+        const pill = $('#status-pill'), label = $('#window-label'), cd = $('#countdown');
+        const controls = $('#controls'), note = $('#controls-note');
+        const used = facilityUsedThisWindow();
+
+        if (st.open && !used) {
           pill.textContent = 'OPEN'; pill.classList.add('open'); pill.classList.remove('closed');
           label.textContent = st.label;
           const secs = Math.max(0, Math.floor((st.closesAt - nowIST())/1000));
           cd.textContent = `Closes in ${Math.floor(secs/3600)}h ${Math.floor((secs%3600)/60)}m`;
           controls.style.display = '';
+          note.textContent = "Select exactly 3 players.";
+        } else if (st.open && used) {
+          pill.textContent = 'OPEN'; pill.classList.add('open'); pill.classList.remove('closed');
+          label.textContent = st.label;
+          const secs = Math.max(0, Math.floor((st.closesAt - nowIST())/1000));
+          cd.textContent = `Closes in ${Math.floor(secs/3600)}h ${Math.floor((secs%3600)/60)}m`;
+          controls.style.display = 'none'; // hide selection UI if already used
+          note.textContent = "Already trained this session.";
         } else {
           pill.textContent = 'CLOSED'; pill.classList.add('closed'); pill.classList.remove('open');
           label.textContent = '—';
           cd.textContent = `Opens ${st.opensAt.toLocaleString('en-IN')}`;
           controls.style.display = 'none';
+          note.textContent = "Opens in the next window.";
         }
       };
       updateUI(); setInterval(updateUI, 30_000);
@@ -208,6 +219,7 @@
       return del;
     }
 
+    // ---- Page state
     let sessionType='batting', players=[], teamId=null, currentUser=null, profile=null;
 
     $('#btn-batting').addEventListener('click', ()=>setType('batting'));
@@ -216,13 +228,27 @@
 
     function setType(t){ sessionType=t; $$('.toggle button').forEach(b=>b.classList.toggle('active', b.dataset.type===t)); renderPlayers(); }
 
+    // Has this user already used the current window?
+    function facilityUsedThisWindow(){
+      if (!profile) return false;
+      const st = windowStateIST();
+      if (!st.open) return false;
+      const anchor = weekAnchorStrIST();
+      return profile.last_training_window_anchor === anchor && profile.last_training_window_which === st.which;
+    }
+
     async function init(){
-      await loadSmoothUI(); startStatusLoop();
+      await loadSmoothUI(); 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user){ location.href='login.html'; return; }
       currentUser=user;
-      const { data: prof } = await supabase.from('profiles').select('user_id, team_id, xp, manager_name').eq('user_id', user.id).maybeSingle();
+
+      const { data: prof } = await supabase.from('profiles')
+        .select('user_id, team_id, xp, manager_name, last_training_window_anchor, last_training_window_which')
+        .eq('user_id', user.id).maybeSingle();
       if (!prof) return; profile=prof; teamId=prof.team_id;
+
+      startStatusLoop(); // after profile is loaded (so it can read facilityUsedThisWindow)
 
       const { data } = await supabase.from('players')
         .select('id, team_id, name, role, batting, bowling, keeping, age_years, age_days, image_url, is_wk, last_trained_week_anchor, last_trained_type, team_name, manager_name, skill_level')
@@ -235,9 +261,11 @@
       const grid=$('#players-grid'); grid.innerHTML='';
       if(!players.length){ $('#empty').style.display='block'; return;} $('#empty').style.display='none';
 
-      const weekAnchor=weekAnchorStrIST(); const st=windowStateIST();
+      const weekAnchor=weekAnchorStrIST(); 
+      const st=windowStateIST();
+      const used = facilityUsedThisWindow();
 
-      // hide WKs in Bowling tab (robust)
+      // hide WKs in Bowling tab
       const list = players.filter(p => !(sessionType==='bowling' && isWicketKeeper(p)));
 
       list.forEach(p=>{
@@ -259,7 +287,8 @@
 
         const info=document.createElement('div'); info.className='muted';
         const disabledByWeek = (p.last_trained_week_anchor && fmtDateYYYYMMDD(new Date(p.last_trained_week_anchor)) === weekAnchor);
-        if (disabledByWeek) info.textContent='Already trained this week';
+        if (used) info.textContent='Already trained this session';
+        else if (disabledByWeek) info.textContent='Already trained this week';
         else if (baseGrowth(p.age_years||0, p.age_days||0)===0) info.textContent='No gain at current age';
         else info.textContent='Eligible';
 
@@ -267,29 +296,34 @@
         const chk=document.createElement('input'); chk.type='checkbox';
         const labelSpan=document.createElement('span'); labelSpan.textContent='Select';
         select.append(chk,labelSpan);
-        chk.disabled = !st.open || disabledByWeek;
+
+        chk.disabled = !st.open || used || disabledByWeek;
         chk.addEventListener('change', ()=>{
           const chosen = $$('#players-grid input[type="checkbox"]:checked').length;
           $('#summary').textContent = `${chosen} of 3 selected`;
-          $('#train-btn').disabled = !(chosen===3 && st.open);
+          $('#train-btn').disabled = !(chosen===3 && st.open && !used);
         });
 
         meta.append(title, kv, info, select); card.append(meta);
-        if (!st.open || disabledByWeek) card.classList.add('disabled');
+        if (!st.open || used || disabledByWeek) card.classList.add('disabled');
         grid.append(card);
       });
 
       $('#summary').textContent = `0 of 3 selected`;
-      $('#train-btn').disabled = true;
+      $('#train-btn').disabled = !(st.open && !facilityUsedThisWindow());
     }
 
     async function onTrain(){
-      const st = windowStateIST(); if (!st.open) { toast('Training window closed'); return; }
+      const st = windowStateIST(); 
+      if (!st.open) { toast('Training window closed'); return; }
+      if (facilityUsedThisWindow()) { toast('You already trained this session'); return; }
+
       const checks = $$('#players-grid input[type="checkbox"]');
       const idxs = checks.map((c,i)=>c.checked ? i : -1).filter(i=>i>=0);
       if (idxs.length !== 3) { toast('Select exactly 3'); return; }
 
-      const weekAnchor = weekAnchorStrIST(); const now = new Date().toISOString();
+      const weekAnchor = weekAnchorStrIST();
+      const now = new Date().toISOString();
 
       const filteredList = players.filter(p => !(sessionType==='bowling' && isWicketKeeper(p)));
       const chosen = idxs.map(i => filteredList[i]);
@@ -326,6 +360,7 @@
         });
       }
 
+      // Save players
       for (const u of updates){
         const { error } = await supabase.from('players').update({
           batting:u.batting, bowling:u.bowling, keeping:u.keeping,
@@ -337,18 +372,31 @@
         if (error){ console.error('Player update failed', error); toast('Save failed'); return; }
       }
 
-      const addXp = sessionXp + levelUpXpTotal;
-      if (addXp>0){
-        const { data: p0 } = await supabase.from('profiles').select('xp').eq('user_id', currentUser.id).maybeSingle();
-        if (p0){ await supabase.from('profiles').update({ xp: (p0.xp||0) + addXp }).eq('user_id', currentUser.id); }
-      }
+      // Mark the session as USED for this window on profiles
+      await supabase.from('profiles').update({
+        last_training_window_anchor: weekAnchor,
+        last_training_window_which: st.which
+      }).eq('user_id', currentUser.id);
 
-      appendResult({ lines: resultLines, totalXp: addXp, sessionXp, levelUpXp: levelUpXpTotal });
+      // Update user XP
+      const addXp = 50 + levelUpXpTotal;
+      const { data: p0 } = await supabase.from('profiles').select('xp').eq('user_id', currentUser.id).maybeSingle();
+      if (p0){ await supabase.from('profiles').update({ xp: (p0.xp||0) + addXp }).eq('user_id', currentUser.id); }
+
+      appendResult({ lines: resultLines, totalXp: addXp, sessionXp: 50, levelUpXp: levelUpXpTotal });
+
+      // Refresh profile (so UI locks immediately) and players list
+      const { data: prof2 } = await supabase.from('profiles')
+        .select('user_id, team_id, xp, manager_name, last_training_window_anchor, last_training_window_which')
+        .eq('user_id', currentUser.id).maybeSingle();
+      if (prof2) profile = prof2;
 
       const { data } = await supabase.from('players')
         .select('id, team_id, name, role, batting, bowling, keeping, age_years, age_days, image_url, is_wk, last_trained_week_anchor, last_trained_type, team_name, manager_name, skill_level')
         .eq('team_id', teamId).order('name', { ascending:true });
-      players = data || []; renderPlayers();
+      players = data || []; 
+      renderPlayers();
+      startStatusLoop(); // re-run to hide controls text
     }
 
     function appendResult({ lines, totalXp, sessionXp, levelUpXp }){
@@ -378,6 +426,7 @@
     // window.applyPostMatchDeclineForTeam = applyPostMatchDeclineForTeam;
 
     // Boot
+    await loadSmoothUI(); // ensure nav first
     init();
   </script>
 </body>
