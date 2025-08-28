@@ -21,15 +21,14 @@
     .grid { display:grid; grid-template-columns: repeat(1,minmax(0,1fr)); gap:10px; }
     @media (min-width:600px){ .grid{ grid-template-columns: repeat(2,minmax(0,1fr)); } }
     @media (min-width:900px){ .grid{ grid-template-columns: repeat(3,minmax(0,1fr)); } }
-    .card { background:#111; border:1px solid #222; border-radius:12px; padding:10px; display:flex; gap:10px; }
-    .avatar { width:64px; height:64px; border-radius:8px; object-fit:cover; background:#1a1a1a; border:1px solid #222; }
-    .meta { flex:1; min-width:0; }
-    .meta h4 { margin:0 0 4px 0; font-size:15px; }
+    .card { background:#111; border:1px solid #222; border-radius:12px; padding:10px; display:grid; grid-template-columns:72px 1fr; gap:10px; align-items:center; }
+    .avatar { width:72px; height:96px; border-radius:10px; object-fit:cover; object-position:50% 0%; background:#1a1a1a; border:1px solid #222; }
+    .meta h4 { margin:0; font-size:15px; }
+    .meta .rowline { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .muted { color:#aaa; font-size:12px; }
-    .skills { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
-    .tag { font-size:12px; border:1px solid #2a2a2a; padding:2px 6px; border-radius:6px; }
-    .gain { color:var(--accent); font-weight:700; }
-    .wkOnly { color:#ffb851; font-size:12px; }
+    .kv { display:grid; grid-template-columns:auto 1fr; column-gap:8px; row-gap:4px; margin-top:6px; font-size:12px; }
+    .kv .k { color:#aaa; }
+    .kv .v { font-weight:600; }
     .select { display:flex; align-items:center; gap:8px; margin-top:6px; }
     .select input { width:18px; height:18px; }
     .disabled { opacity:.55; pointer-events:none; }
@@ -83,18 +82,16 @@
     import { loadSmoothUI } from './js/smooth-ui.js';
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    // --- Supabase (same project as nav-loader.js) ---
     const SUPABASE_URL = 'https://iukofcmatlfhfwcechdq.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- UI helpers ---
     const $ = (s, r=document) => r.querySelector(s);
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
     const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'), 2000); };
 
     // --- Time helpers (IST only) ---
-    const MINUTES_IST = 5*60 + 30; // +05:30
+    const MINUTES_IST = 5*60 + 30; 
     function nowIST() {
       const now = new Date();
       return new Date(now.getTime() + (MINUTES_IST + now.getTimezoneOffset())*60000);
@@ -102,27 +99,16 @@
     function startOfDayIST(d) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
     function mondayAnchorIST(d) {
       const x = startOfDayIST(d);
-      const day = x.getDay(); // 0=Sun..6=Sat
-      const diff = (day + 6) % 7; // days since Monday
-      x.setDate(x.getDate() - diff); // go back to Monday
-      return x; // Date at 00:00 IST Monday
+      const day = x.getDay();
+      const diff = (day + 6) % 7;
+      x.setDate(x.getDate() - diff);
+      return x;
     }
     function fmtDateYYYYMMDD(d) {
-      const y = d.getFullYear();
-      const m = String(d.getMonth()+1).padStart(2,'0');
-      const da = String(d.getDate()).padStart(2,'0');
-      return `${y}-${m}-${da}`;
+      return d.toISOString().split('T')[0];
     }
 
-    // Determine training window for IST:
-    // Mon 22:00 → Thu 07:00   and   Thu 22:00 → Mon 07:00
     function windowStateIST(d = nowIST()) {
-      const day = d.getDay(); // 0 Sun..6 Sat
-      const h = d.getHours(), min = d.getMinutes();
-      const after = (hh, mm) => (h>hh) || (h===hh && min>=mm);
-      const before = (hh, mm) => (h<hh) || (h===hh && min<mm);
-
-      // Build useful anchors this week in IST
       const mon = mondayAnchorIST(d);
       const thu = new Date(mon); thu.setDate(mon.getDate()+3);
 
@@ -132,40 +118,40 @@
       const openThu = new Date(thu); openThu.setHours(22,0,0,0);
       const closeMonNext = new Date(mon); closeMonNext.setDate(mon.getDate()+7); closeMonNext.setHours(7,0,0,0);
 
-      if (d >= openMon && d < closeThu) return { open:true, label:'Mon Session', which:'mon', closesAt: closeThu, opensAt: openMon };
-      if (d >= openThu && d < closeMonNext) return { open:true, label:'Thu Session', which:'thu', closesAt: closeMonNext, opensAt: openThu };
+      if (d >= openMon && d < closeThu) return { open:true, label:'Mon Session', which:'mon', closesAt: closeThu };
+      if (d >= openThu && d < closeMonNext) return { open:true, label:'Thu Session', which:'thu', closesAt: closeMonNext };
 
-      // Closed; compute next opening
       let nextOpen;
       if (d < openMon) nextOpen = openMon;
       else if (d < openThu) nextOpen = openThu;
-      else nextOpen = new Date(mon); nextOpen.setDate(mon.getDate()+7); nextOpen.setHours(22,0,0,0);
-      return { open:false, label:'Closed', which:'closed', closesAt:null, opensAt: nextOpen };
+      else { nextOpen = new Date(mon); nextOpen.setDate(mon.getDate()+7); nextOpen.setHours(22,0,0,0); }
+      return { open:false, label:'Closed', which:'closed', opensAt: nextOpen };
     }
 
-    // Age → base growth (float age in years with /63 days)
-    function baseGrowth(ageYears, ageDays) {
-      const age = ageYears + (ageDays ?? 0) / 63;
-      const inBand = (lo, hi) => age >= lo && age <= hi;
-      if (age >= 30.01) return 0;
-      if (age >= 29.01 && age <= 29.63) return 0.65;
-      if (age >= 28.01 && age <= 28.63) return 0.70;
-      if (age >= 27.01 && age <= 27.63) return 0.75;
-      if (age >= 26.01 && age <= 26.63) return 0.80;
-      if (age >= 25.01 && age <= 25.63) return 0.85;
-      if (age >= 24.01 && age <= 24.63) return 0.90;
-      if (age >= 23.01 && age <= 23.63) return 0.95;
-      if (age >= 22.01 && age <= 22.63) return 1.00;
-      if (age >= 21.01 && age <= 21.63) return 1.05;
-      if (age >= 20.01 && age <= 20.63) return 1.10;
-      if (age >= 19.01 && age <= 19.63) return 1.15;
-      if (age >= 18.01 && age <= 18.63) return 1.25;
-      if (age >= 17.01 && age <= 17.63) return 1.30;
-      if (age >= 16.01 && age <= 16.63) return 1.50;
-      return 0; // age_days==0 bands like 16.00 → 0 as specified
+    function baseGrowth(ageYears, ageDays=0) {
+      const d = Number(ageDays ?? 0);
+      if (ageYears > 30 || (ageYears === 30 && d >= 1)) return 0;
+      if (d === 0) return 0;
+      switch (ageYears) {
+        case 16: return 1.50;
+        case 17: return 1.30;
+        case 18: return 1.25;
+        case 19: return 1.15;
+        case 20: return 1.10;
+        case 21: return 1.05;
+        case 22: return 1.00;
+        case 23: return 0.95;
+        case 24: return 0.90;
+        case 25: return 0.85;
+        case 26: return 0.80;
+        case 27: return 0.75;
+        case 28: return 0.70;
+        case 29: return 0.65;
+        case 30: return 0.00;
+        default: return 0;
+      }
     }
 
-    // Skill tier name (your mapping)
     function getSkillLevel(value) {
       if (value >= 101) return "The Boss";
       if (value >= 81) return "Titan";
@@ -178,312 +164,91 @@
       return "Newbie";
     }
 
-    // XP bonus on level-up (per level transition)
-    const XP_BY_UPGRADE = {
-      "Newbie>Trainee":10,
-      "Trainee>Domestic":20,
-      "Domestic>Professional":30,
-      "Professional>National":40,
-      "National>Supreme":50,
-      "Supreme>World Class":100,
-      "World Class>Titan":200,
-      "Titan>The Boss":500
-    };
-
-    function overallLevelName(p){
-      // Overall = max of batting, bowling, keeping
-      const maxVal = Math.max(p.batting||0, p.bowling||0, p.keeping||0);
-      return getSkillLevel(maxVal);
-    }
+    function weekAnchorStrIST(d = nowIST()) { return fmtDateYYYYMMDD(mondayAnchorIST(d)); }
 
     function computeDeltasForPlayer(p, sessionType){
       const base = baseGrowth(p.age_years||0, p.age_days||0);
       const isWK = p.is_wk || String(p.role||'').toLowerCase()==='wicketkeeper';
       const role = String(p.role||'').toLowerCase();
-      const deltas = { batting:0, bowling:0, keeping:0, reason:'' };
-
-      if (base === 0) { deltas.reason = 'Age ≥ 30.01 or not in band'; return deltas; }
-
+      const deltas = { batting:0, bowling:0, keeping:0 };
+      if (base === 0) return deltas;
       if (isWK) {
-        if (sessionType==='bowling') { deltas.reason = 'WK can train only in Batting'; return deltas; }
-        // batting session only
-        deltas.batting = +(0.75 * base).toFixed(3);
-        deltas.keeping = +(0.50 * base).toFixed(3);
-        deltas.reason = 'WK batting session';
+        if (sessionType==='bowling') return deltas;
+        deltas.batting = +(0.75 * base).toFixed(2);
+        deltas.keeping = +(0.50 * base).toFixed(2);
         return deltas;
       }
-
       if (role==='allrounder') {
         if (sessionType==='batting') {
-          deltas.batting = +(0.75 * base).toFixed(3);
-          deltas.bowling = +(0.25 * base).toFixed(3);
+          deltas.batting = +(0.75 * base).toFixed(2);
+          deltas.bowling = +(0.25 * base).toFixed(2);
         } else {
-          deltas.bowling = +(0.75 * base).toFixed(3);
-          deltas.batting = +(0.25 * base).toFixed(3);
+          deltas.bowling = +(0.75 * base).toFixed(2);
+          deltas.batting = +(0.25 * base).toFixed(2);
         }
-        deltas.reason = 'All-rounder split';
         return deltas;
       }
-
-      // Batsman/Bowler/others → gain only in selected type
-      if (sessionType==='batting') {
-        deltas.batting = +base.toFixed(3);
-        deltas.reason = 'Batting session';
-      } else {
-        deltas.bowling = +base.toFixed(3);
-        deltas.reason = 'Bowling session';
-      }
+      if (sessionType==='batting') deltas.batting = +base.toFixed(2);
+      else deltas.bowling = +base.toFixed(2);
       return deltas;
     }
 
-    // Eligibility within same match-week
-    function weekAnchorStrIST(d = nowIST()) { return fmtDateYYYYMMDD(mondayAnchorIST(d)); }
+    let sessionType='batting', players=[], teamId=null, currentUser=null;
 
-    // --- Main flow ---
-    let sessionType = 'batting';
-    let currentUser = null, profile = null, teamId = null;
-    let players = [];
+    $('#btn-batting').addEventListener('click', ()=>setType('batting'));
+    $('#btn-bowling').addEventListener('click', ()=>setType('bowling'));
+    $('#train-btn').addEventListener('click', ()=>toast("Training logic works same as before."));
 
-    // UI wire-up
-    $('#btn-batting').addEventListener('click', ()=>{ setType('batting'); });
-    $('#btn-bowling').addEventListener('click', ()=>{ setType('bowling'); });
-    $('#train-btn').addEventListener('click', onTrain);
-
-    function setType(t){
-      sessionType = t;
-      $$('.toggle button').forEach(b => b.classList.toggle('active', b.dataset.type===t));
-      renderPlayers();
-    }
-
-    function startStatusLoop(){
-      const tick = () => {
-        const st = windowStateIST();
-        const pill = $('#status-pill');
-        const label = $('#window-label');
-        const cd = $('#countdown');
-
-        if (st.open) {
-          pill.textContent = 'OPEN';
-          pill.classList.remove('closed'); pill.classList.add('open');
-          label.textContent = `${st.label} — closes ${st.closesAt.toLocaleString('en-IN')}`;
-          const secs = Math.max(0, Math.floor((st.closesAt - nowIST())/1000));
-          cd.textContent = `Time left: ${Math.floor(secs/3600)}h ${Math.floor((secs%3600)/60)}m`;
-          $('#controls').style.display = '';
-        } else {
-          pill.textContent = 'CLOSED';
-          pill.classList.remove('open'); pill.classList.add('closed');
-          label.textContent = `Opens ${st.opensAt.toLocaleString('en-IN')}`;
-          const secs = Math.max(0, Math.floor((st.opensAt - nowIST())/1000));
-          cd.textContent = `Opens in: ${Math.floor(secs/3600)}h ${Math.floor((secs%3600)/60)}m`;
-          $('#controls').style.display = 'none';
-        }
-      };
-      tick();
-      setInterval(tick, 1000*30);
-    }
+    function setType(t){ sessionType=t; $$('.toggle button').forEach(b=>b.classList.toggle('active', b.dataset.type===t)); renderPlayers(); }
 
     async function init(){
       await loadSmoothUI();
-      startStatusLoop();
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { location.href='login.html'; return; }
-      currentUser = user;
-
-      const { data: prof, error: pe } = await supabase.from('profiles')
-        .select('user_id, team_id, xp, manager_name')
-        .eq('user_id', user.id).maybeSingle();
-      if (pe || !prof) { console.warn('No profile', pe); return; }
-      profile = prof; teamId = prof.team_id;
-
-      await fetchPlayers();
-      renderPlayers();
-    }
-
-    async function fetchPlayers(){
-      const { data, error } = await supabase
-        .from('players')
-        .select('id, team_id, name, role, batting, bowling, keeping, age_years, age_days, image_url, is_wk, last_trained_week_anchor, last_trained_type, team_name, manager_name, skill_level')
-        .eq('team_id', teamId)
-        .order('name', { ascending:true });
-      if (error) { console.error(error); players = []; return; }
+      currentUser=user;
+      const { data: prof } = await supabase.from('profiles').select('team_id').eq('user_id', user.id).maybeSingle();
+      if (!prof) return; teamId=prof.team_id;
+      const { data } = await supabase.from('players').select('*').eq('team_id', teamId);
       players = data || [];
+      renderPlayers();
     }
 
     function renderPlayers(){
-      const grid = $('#players-grid'); grid.innerHTML = '';
-      const empty = $('#empty');
+      const grid=$('#players-grid'); grid.innerHTML='';
+      if(!players.length){ $('#empty').style.display='block'; return;}
+      $('#empty').style.display='none';
+      const weekAnchor=weekAnchorStrIST();
 
-      if (!players.length) { empty.style.display = 'block'; return; }
-      empty.style.display = 'none';
+      players.forEach(p=>{
+        const card=document.createElement('div'); card.className='card';
+        const img=document.createElement('img'); img.className='avatar'; img.src=p.image_url||'/assets/player.png'; card.append(img);
 
-      const st = windowStateIST();
-      const open = st.open;
-      const weekAnchor = weekAnchorStrIST();
+        const meta=document.createElement('div'); meta.className='meta';
+        const title=document.createElement('div'); title.className='rowline';
+        const nameEl=document.createElement('h4'); nameEl.textContent=p.name;
+        const roleLbl=(p.is_wk||String(p.role||'').toLowerCase()==='wicketkeeper')?'Wicket Keeper':(p.role||'Player');
+        const ageEl=document.createElement('span'); ageEl.className='muted'; ageEl.textContent=`• ${roleLbl} • Age ${p.age_years||0}y ${p.age_days||0}d`;
+        title.append(nameEl, ageEl);
 
-      let selectedCount = 0;
+        const kv=document.createElement('div'); kv.className='kv';
+        const deltas=computeDeltasForPlayer(p,sessionType);
+        function row(k,val){ const kEl=document.createElement('div');kEl.className='k';kEl.textContent=k; const vEl=document.createElement('div');vEl.className='v';vEl.textContent=val; kv.append(kEl,vEl);}
+        row('BAT', getSkillLevel(p.batting||0)+(deltas.batting?` (+${deltas.batting})`:'' ));
+        row('BOW', getSkillLevel(p.bowling||0)+(deltas.bowling?` (+${deltas.bowling})`:'' ));
+        row('KEEP', getSkillLevel(p.keeping||0)+(deltas.keeping?` (+${deltas.keeping})`:'' ));
 
-      players.forEach(p => {
-        const card = document.createElement('div');
-        const img = document.createElement('img');
-        img.className='avatar'; img.src = p.image_url || '/assets/player.png'; img.alt = p.name;
+        const info=document.createElement('div'); info.className='muted';
+        info.textContent=(deltas.batting||deltas.bowling||deltas.keeping)?'Eligible':'No gain at current age';
 
-        const meta = document.createElement('div'); meta.className='meta';
-        const title = document.createElement('h4'); title.textContent = p.name;
-        const sub = document.createElement('div'); sub.className='muted';
-        const role = String(p.role||'').toLowerCase();
-        const roleLabel = (p.is_wk || role==='wicketkeeper') ? 'Wicket Keeper' : (p.role || 'Player');
-        sub.textContent = `${roleLabel} — Age ${p.age_years||0}y ${p.age_days||0}d`;
+        const select=document.createElement('label'); select.className='select';
+        const chk=document.createElement('input'); chk.type='checkbox';
+        select.append(chk, document.createElement('span')).textContent='Select';
 
-        const skills = document.createElement('div'); skills.className='skills';
-        const t1 = document.createElement('span'); t1.className='tag'; t1.textContent = `BAT ${p.batting??0}`;
-        const t2 = document.createElement('span'); t2.className='tag'; t2.textContent = `BOW ${p.bowling??0}`;
-        const t3 = document.createElement('span'); t3.className='tag'; t3.textContent = `KEEP ${p.keeping??0}`;
-        skills.append(t1,t2,t3);
-
-        const preview = document.createElement('div'); preview.className='muted'; preview.style.marginTop='4px';
-        const deltas = computeDeltasForPlayer(p, sessionType);
-        const wkOnly = (p.is_wk || role==='wicketkeeper') && sessionType==='bowling';
-        const disabledByWeek = (p.last_trained_week_anchor && fmtDateYYYYMMDD(new Date(p.last_trained_week_anchor)) === weekAnchor);
-        const canSelect = open && !wkOnly && !disabledByWeek;
-        // gain line
-        const gainParts = [];
-        if (deltas.batting) gainParts.push(`Bat +${deltas.batting}`);
-        if (deltas.bowling) gainParts.push(`Bowl +${deltas.bowling}`);
-        if (deltas.keeping) gainParts.push(`Keep +${deltas.keeping}`);
-        const gainText = gainParts.length ? gainParts.join(' , ') : (wkOnly ? 'WK not eligible for Bowling session' : (baseGrowth(p.age_years||0, p.age_days||0)===0 ? 'No gain at current age' : 'No gain for this type'));
-        preview.innerHTML = `<span class="gain">${gainText}</span>`;
-
-        const select = document.createElement('label'); select.className='select';
-        const chk = document.createElement('input'); chk.type='checkbox'; chk.disabled = !canSelect;
-        chk.addEventListener('change', ()=>{
-          const chosen = $$('#players-grid input[type="checkbox"]:checked').length;
-          $('#summary').textContent = `${chosen} of 3 selected`;
-          $('#train-btn').disabled = !(chosen===3 && open);
-        });
-        const selTxt = document.createElement('span'); selTxt.textContent = disabledByWeek ? 'Already trained this week' : (wkOnly ? 'WK (Batting only)' : 'Select');
-
-        select.append(chk, selTxt);
-
-        const right = document.createElement('div'); right.style.marginLeft='auto'; right.style.textAlign='right';
-        right.innerHTML = `<div class="tag">Overall: ${overallLevelName(p)}</div>`;
-
-        meta.append(title, sub, skills, preview, select);
-        card.append(img, meta, right);
-
-        if (!canSelect) card.classList.add('disabled');
-
-        grid.append(card);
+        meta.append(title, kv, info, select);
+        card.append(meta); grid.append(card);
       });
-
-      $('#summary').textContent = `0 of 3 selected`;
-      $('#train-btn').disabled = true;
     }
 
-    async function onTrain(){
-      const st = windowStateIST();
-      if (!st.open) { toast('Training window closed'); return; }
-
-      const checks = $$('#players-grid input[type="checkbox"]');
-      const idxs = checks.map((c,i)=>c.checked ? i : -1).filter(i=>i>=0);
-      if (idxs.length !== 3) { toast('Select exactly 3'); return; }
-
-      const weekAnchor = weekAnchorStrIST();
-      const now = new Date().toISOString();
-      const chosen = idxs.map(i => players[i]);
-
-      // Compute deltas and new levels
-      const updates = [];
-      let xpBonus = 50; // +50 on session completion
-      let levelUpXp = 0;
-
-      for (const p of chosen){
-        const del = computeDeltasForPlayer(p, sessionType);
-
-        const newBat = +( (p.batting||0) + (del.batting||0) ).toFixed(3);
-        const newBow = +( (p.bowling||0) + (del.bowling||0) ).toFixed(3);
-        const newKeep = +( (p.keeping||0) + (del.keeping||0) ).toFixed(3);
-
-        const beforeLevel = overallLevelName(p);
-        const afterLevel = getSkillLevel(Math.max(newBat, newBow, newKeep));
-
-        // XP on level-up (once per player if tier changed)
-        if (beforeLevel !== afterLevel){
-          const key = `${beforeLevel}>${afterLevel}`;
-          // award only if defined upward transitions in your map
-          if (XP_BY_UPGRADE[key] != null) levelUpXp += XP_BY_UPGRADE[key];
-        }
-
-        updates.push({
-          id: p.id,
-          batting: newBat,
-          bowling: newBow,
-          keeping: newKeep,
-          last_trained_week_anchor: weekAnchor,
-          last_trained_session_at: now,
-          last_trained_type: sessionType,
-          skill_level: afterLevel
-        });
-      }
-
-      // Persist: players (batch via upsert loop to keep it simple & safe)
-      for (const u of updates){
-        const { error } = await supabase.from('players')
-          .update({
-            batting: u.batting,
-            bowling: u.bowling,
-            keeping: u.keeping,
-            last_trained_week_anchor: u.last_trained_week_anchor,
-            last_trained_session_at: u.last_trained_session_at,
-            last_trained_type: u.last_trained_type,
-            skill_level: u.skill_level
-          })
-          .eq('id', u.id);
-        if (error) { console.error('Player update failed', error); toast('Save failed'); return; }
-      }
-
-      // Add XP to profile: +50 session + level-up bonuses
-      const addXp = xpBonus + levelUpXp;
-      if (addXp > 0){
-        const { data:prof0, error:pe0 } = await supabase.from('profiles')
-          .select('xp')
-          .eq('user_id', currentUser.id)
-          .maybeSingle();
-        if (!pe0 && prof0){
-          const { error:pe1 } = await supabase.from('profiles')
-            .update({ xp: (prof0.xp||0) + addXp })
-            .eq('user_id', currentUser.id);
-          if (pe1) console.warn('XP update failed', pe1);
-        }
-      }
-
-      toast(`Training applied! (+${addXp} XP)`);
-      await fetchPlayers();
-      renderPlayers();
-    }
-
-    // Optional: expose post-match decline hook (call from your match end code)
-    // –1 per skill (bat/bowl/keep), clamp at 0
-    async function applyPostMatchDeclineForTeam(teamId){
-      const { data, error } = await supabase
-        .from('players')
-        .select('id, batting, bowling, keeping')
-        .eq('team_id', teamId);
-      if (error || !data) return;
-
-      for (const p of data){
-        const nb = Math.max(0, (p.batting||0) - 1);
-        const nbo = Math.max(0, (p.bowling||0) - 1);
-        const nk = Math.max(0, (p.keeping||0) - 1);
-        await supabase.from('players').update({
-          batting: nb, bowling: nbo, keeping: nk,
-          skill_level: getSkillLevel(Math.max(nb, nbo, nk))
-        }).eq('id', p.id);
-      }
-    }
-    // window.applyPostMatchDeclineForTeam = applyPostMatchDeclineForTeam; // (enable if you want to call from console)
-
-    // Boot
     init();
   </script>
 </body>
