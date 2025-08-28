@@ -40,14 +40,12 @@
     .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:70px; background:#141414; border:1px solid #2a2a2a; padding:10px 14px; border-radius:10px; font-weight:700; }
     .hidden { display:none; }
 
-    /* Result modal */
-    .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:2000; }
-    .modal{ width:min(700px,92vw); background:#101010; border:1px solid #2a2a2a; border-radius:14px; padding:14px; }
-    .modal h3{ margin:6px 0 8px; }
+    /* Results section */
+    #results-section h3 { margin:2px 0 8px 0; }
+    .result-list{ display:flex; flex-direction:column; gap:8px; }
+    .result-block{ border:1px solid #333; border-radius:12px; padding:10px; background:#141414; }
     .result-line{ padding:8px 10px; border:1px solid #242424; border-radius:10px; background:#0d0d0d; }
-    .result-list{ display:flex; flex-direction:column; gap:8px; margin:10px 0; }
     .xp-badge{ display:inline-block; background:#0f0; color:#000; font-weight:800; padding:2px 8px; border-radius:999px; }
-    .modal .actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
   </style>
 </head>
 <body>
@@ -82,19 +80,13 @@
       <div id="summary" class="muted">0 of 3 selected</div>
       <button id="train-btn" class="btn cta" disabled>Train Selected</button>
     </section>
-  </main>
 
-  <!-- Training Result Modal -->
-  <div id="result-wrap" class="modal-backdrop hidden">
-    <div class="modal">
-      <h3>Training Result</h3>
-      <div id="result-meta" class="muted"></div>
-      <div class="result-list" id="result-list"></div>
-      <div class="actions">
-        <button id="result-close" class="btn">Close</button>
-      </div>
-    </div>
-  </div>
+    <!-- Persistent Results -->
+    <section id="results-section" class="section">
+      <h3>Training Results</h3>
+      <div id="result-list" class="result-list"></div>
+    </section>
+  </main>
 
   <div id="toast" class="toast hidden">Saved</div>
   <div id="bottom-nav"></div>
@@ -108,7 +100,7 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- Tiny helpers ---
+    // --- Helpers ---
     const $ = (s, r=document) => r.querySelector(s);
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
     const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'), 2000); };
@@ -177,7 +169,7 @@
       setInterval(updateUI, 30_000);
     }
 
-    // Age band → base growth (no display on card; used in backend calc)
+    // Age band → base growth (used internally)
     function baseGrowth(ageYears, ageDays=0) {
       const d = Number(ageDays ?? 0);
       if (ageYears > 30 || (ageYears === 30 && d >= 1)) return 0;
@@ -202,7 +194,7 @@
       }
     }
 
-    // Skill tiers
+    // Skill tiers and XP mapping
     function getSkillLevel(value) {
       if (value >= 101) return "The Boss";
       if (value >= 81) return "Titan";
@@ -227,7 +219,7 @@
     const overallLevelName = (p) => getSkillLevel(Math.max(p.batting||0, p.bowling||0, p.keeping||0));
     const weekAnchorStrIST = (d = nowIST()) => fmtDateYYYYMMDD(mondayAnchorIST(d));
 
-    // Compute training deltas for a player (no UI display)
+    // Compute training deltas for a player (no display)
     function computeDeltasForPlayer(p, sessionType){
       const base = baseGrowth(p.age_years||0, p.age_days||0);
       const isWK = p.is_wk || String(p.role||'').toLowerCase()==='wicketkeeper';
@@ -262,7 +254,6 @@
     $('#btn-batting').addEventListener('click', ()=>setType('batting'));
     $('#btn-bowling').addEventListener('click', ()=>setType('bowling'));
     $('#train-btn').addEventListener('click', onTrain);
-    $('#result-close').addEventListener('click', ()=>$('#result-wrap').classList.add('hidden'));
 
     function setType(t){ sessionType=t; $$('.toggle button').forEach(b=>b.classList.toggle('active', b.dataset.type===t)); renderPlayers(); }
 
@@ -294,7 +285,7 @@
       const weekAnchor=weekAnchorStrIST();
       const st=windowStateIST();
 
-      // build list; hide WKs in Bowling tab
+      // list; hide WKs in Bowling tab
       const list = players.filter(p=>{
         const isWK = p.is_wk || String(p.role||'').toLowerCase()==='wicketkeeper';
         return !(sessionType==='bowling' && isWK);
@@ -359,15 +350,15 @@
 
       const weekAnchor = weekAnchorStrIST();
       const now = new Date().toISOString();
-      const allCards = $$('#players-grid .card');
-      const chosen = idxs.map(i => {
-        // map back to player from filtered list
-        const isWK = (x)=> x.is_wk || String(x.role||'').toLowerCase()==='wicketkeeper';
-        const filtered = players.filter(p=>!(sessionType==='bowling' && isWK(p)));
-        return filtered[i];
-      });
 
-      // compute and persist updates
+      // rebuild filtered list to map indexes correctly (WKs hidden in bowling)
+      const filteredList = players.filter(p=>{
+        const isWK = p.is_wk || String(p.role||'').toLowerCase()==='wicketkeeper';
+        return !(sessionType==='bowling' && isWK);
+      });
+      const chosen = idxs.map(i => filteredList[i]);
+
+      // compute & persist
       const updates = [];
       let sessionXp = 50; // +50 for completing training
       let levelUpXpTotal = 0;
@@ -389,11 +380,13 @@
           const add = XP_BY_UPGRADE[key] || 0;
           if (add > 0){
             levelUpXpTotal += add;
-            resultLines.push(`${p.name} (${(p.is_wk||String(p.role||'').toLowerCase()==='wicketkeeper')?'Wicket Keeper':(p.role||'Player')}) upgraded to ${afterOverall} level from ${beforeOverall} level. (User XP earned : + ${add} XP)`);
+            const roleText = (p.is_wk||String(p.role||'').toLowerCase()==='wicketkeeper')?'Wicket Keeper':(p.role||'Player');
+            resultLines.push(`${p.name} (${roleText}) upgraded to ${afterOverall} level from ${beforeOverall} level. (User XP earned : + ${add} XP)`);
           }
         } else {
-          // Show generic trained line (no level change)
-          resultLines.push(`${p.name} (${(p.is_wk||String(p.role||'').toLowerCase()==='wicketkeeper')?'Wicket Keeper':(p.role||'Player')}) trained in ${sessionType.charAt(0).toUpperCase()+sessionType.slice(1)} (no level change).`);
+          // Generic trained line
+          const roleText = (p.is_wk||String(p.role||'').toLowerCase()==='wicketkeeper')?'Wicket Keeper':(p.role||'Player');
+          resultLines.push(`${p.name} (${roleText}) trained in ${sessionType.charAt(0).toUpperCase()+sessionType.slice(1)} (no level change).`);
         }
 
         updates.push({
@@ -424,7 +417,7 @@
         if (error) { console.error('Player update failed', error); toast('Save failed'); return; }
       }
 
-      // Update user XP: +50 session + level-up total
+      // Update user XP
       const addXp = sessionXp + levelUpXpTotal;
       if (addXp > 0){
         const { data: p0 } = await supabase.from('profiles').select('xp').eq('user_id', currentUser.id).maybeSingle();
@@ -433,8 +426,8 @@
         }
       }
 
-      // Show Result modal
-      showResultModal({
+      // Append persistent result block
+      appendResult({
         lines: resultLines,
         totalXp: addXp,
         sessionXp,
@@ -450,23 +443,38 @@
       renderPlayers();
     }
 
-    function showResultModal({ lines, totalXp, sessionXp, levelUpXp }){
-      $('#result-meta').textContent = `You earned +${sessionXp} XP for completing the session` + (levelUpXp ? ` and +${levelUpXp} XP from level upgrades.` : '.');
-      const listEl = $('#result-list'); listEl.innerHTML='';
+    function appendResult({ lines, totalXp, sessionXp, levelUpXp }){
+      const listEl = $('#result-list');
+
+      const block = document.createElement('div');
+      block.className='result-block';
+
+      const time = new Date().toLocaleString('en-IN');
+      const meta = document.createElement('div');
+      meta.className='muted';
+      meta.textContent = `${time} — You earned +${sessionXp} XP for completing this training` + (levelUpXp ? ` and +${levelUpXp} XP from level upgrades.` : '.');
+      block.append(meta);
+
+      const ul = document.createElement('div');
+      ul.className='result-list';
       lines.forEach(t=>{
         const div=document.createElement('div');
         div.className='result-line';
         div.textContent=t;
-        listEl.append(div);
+        ul.append(div);
       });
+      block.append(ul);
+
       const total = document.createElement('div');
       total.style.marginTop='6px';
       total.innerHTML = `<span class="xp-badge">Total XP: +${totalXp}</span>`;
-      listEl.append(total);
-      $('#result-wrap').classList.remove('hidden');
+      block.append(total);
+
+      // Newest on top
+      listEl.prepend(block);
     }
 
-    // Optional: post-match decline hook (–1 per skill; clamp ≥0)
+    // Optional: post-match decline (–1 per skill; clamp ≥0)
     async function applyPostMatchDeclineForTeam(teamId){
       const { data } = await supabase
         .from('players')
