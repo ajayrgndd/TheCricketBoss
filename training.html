@@ -105,6 +105,10 @@
     const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
     const toast = (msg) => { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'), 2000); };
 
+    // numeric helpers for PostgREST numeric-as-string + rounding
+    const num = (v) => v == null ? 0 : (typeof v === 'string' ? parseFloat(v) : v);
+    const round = (x, d=3) => Math.round((x + Number.EPSILON) * 10**d) / 10**d;
+
     // --- Time helpers (IST only) ---
     const MINUTES_IST = 5*60 + 30;
     const nowIST = () => {
@@ -216,7 +220,7 @@
       "World Class>Titan":200,
       "Titan>The Boss":500
     };
-    const overallLevelName = (p) => getSkillLevel(Math.max(p.batting||0, p.bowling||0, p.keeping||0));
+    const overallLevelName = (p) => getSkillLevel(Math.max(num(p.batting), num(p.bowling), num(p.keeping)));
     const weekAnchorStrIST = (d = nowIST()) => fmtDateYYYYMMDD(mondayAnchorIST(d));
 
     // Compute training deltas for a player (no display)
@@ -307,9 +311,9 @@
         // skills as tier names only
         const kv=document.createElement('div'); kv.className='kv';
         const row = (k,val)=>{ const kEl=document.createElement('div');kEl.className='k';kEl.textContent=k; const vEl=document.createElement('div');vEl.className='v';vEl.textContent=val; kv.append(kEl,vEl); };
-        row('BAT', getSkillLevel(p.batting||0));
-        row('BOW', getSkillLevel(p.bowling||0));
-        row('KEEP', getSkillLevel(p.keeping||0));
+        row('BAT', getSkillLevel(num(p.batting)));
+        row('BOW', getSkillLevel(num(p.bowling)));
+        row('KEEP', getSkillLevel(num(p.keeping)));
 
         // eligibility line
         const info=document.createElement('div'); info.className='muted';
@@ -368,9 +372,9 @@
         const beforeOverall = overallLevelName(p);
         const del = computeDeltasForPlayer(p, sessionType);
 
-        const newBat = +( (p.batting||0) + (del.batting||0) ).toFixed(3);
-        const newBow = +( (p.bowling||0) + (del.bowling||0) ).toFixed(3);
-        const newKeep = +( (p.keeping||0) + (del.keeping||0) ).toFixed(3);
+        const newBat = round(num(p.batting) + (del.batting || 0), 3);
+        const newBow = round(num(p.bowling) + (del.bowling || 0), 3);
+        const newKeep = round(num(p.keeping) + (del.keeping || 0), 3);
 
         const afterOverall = getSkillLevel(Math.max(newBat, newBow, newKeep));
 
@@ -384,7 +388,6 @@
             resultLines.push(`${p.name} (${roleText}) upgraded to ${afterOverall} level from ${beforeOverall} level. (User XP earned : + ${add} XP)`);
           }
         } else {
-          // Generic trained line
           const roleText = (p.is_wk||String(p.role||'').toLowerCase()==='wicketkeeper')?'Wicket Keeper':(p.role||'Player');
           resultLines.push(`${p.name} (${roleText}) trained in ${sessionType.charAt(0).toUpperCase()+sessionType.slice(1)} (no level change).`);
         }
@@ -481,9 +484,9 @@
         .select('id, batting, bowling, keeping')
         .eq('team_id', teamId);
       for (const p of (data||[])){
-        const nb = Math.max(0, (p.batting||0) - 1);
-        const nbo = Math.max(0, (p.bowling||0) - 1);
-        const nk = Math.max(0, (p.keeping||0) - 1);
+        const nb = Math.max(0, num(p.batting) - 1);
+        const nbo = Math.max(0, num(p.bowling) - 1);
+        const nk = Math.max(0, num(p.keeping) - 1);
         await supabase.from('players').update({
           batting: nb, bowling: nbo, keeping: nk,
           skill_level: getSkillLevel(Math.max(nb,nbo,nk))
