@@ -242,7 +242,10 @@
 
         const select=document.createElement('label'); select.className='select';
         const chk=document.createElement('input'); chk.type='checkbox';
-        select.append(chk, document.createElement('span')).textContent='Select';
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = 'Select';
+        select.append(chk, labelSpan);
+
 
         meta.append(title, kv, info, select);
         card.append(meta); grid.append(card);
@@ -253,3 +256,4 @@
   </script>
 </body>
 </html>
+
