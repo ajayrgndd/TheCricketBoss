@@ -219,6 +219,18 @@ function fmtDaysLeft(lastChangedIso) {
   const left = Math.max(0, COOLDOWN_DAYS - Math.floor(daysBetweenTs(Date.parse(lastChangedIso))));
   return left <= 0 ? "available now" : `${left} day(s)`;
 }
+function updatePitchLabel(key, lastChangedIso) {
+  const labelEl = document.getElementById("stadium-pitch-label");
+  if (!labelEl) return;
+
+  const info = PITCH_TYPES[key] || PITCH_TYPES.balanced;
+  let text = info.name;
+  if (lastChangedIso) {
+    const d = new Date(lastChangedIso);
+    text += ` (changed ${d.toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})})`;
+  }
+  labelEl.textContent = text;
+}
 function effectLines(mods){
   const toPct = v => (v>=0?"+":"") + Math.round(v*100) + "%";
   return [
@@ -327,6 +339,7 @@ async function initPitchModule({ userId, teamId }) {
   renderPitchButtons(currentPitch);
   updateEffectsPreview(currentPitch);
   showCooldownPill(lastChanged);
+  updatePitchLabel(currentPitch, lastChanged);
 
   cancelBtn.addEventListener("click", () => {
     selectedPitch = currentPitch;
@@ -370,6 +383,7 @@ async function initPitchModule({ userId, teamId }) {
     showCooldownPill(lastChanged);
     renderPitchButtons(selectedPitch);
     updateEffectsPreview(selectedPitch);
+    updatePitchLabel(currentPitch, lastChanged);
   });
 }
 
