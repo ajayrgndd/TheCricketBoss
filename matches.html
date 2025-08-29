@@ -71,7 +71,7 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // 👇 Custom formatter: "DD-MM-YYYY, HH:MM AM/PM"
+    // "DD-MM-YYYY, HH:MM AM/PM"
     function formatDateTime(ts) {
       if (!ts) return "";
       const d = new Date(ts);
@@ -88,12 +88,12 @@
     const badge = (kind) =>
       `<span class="badge ${kind==='league'?'badge-league':'badge-friendly'}">${kind==='league'?'League':'Friendly'}</span>`;
 
-    // Frontend LIVE definition: only LIVE at/after kickoff time (not earlier)
+    // Frontend: LIVE at/after kickoff
     function isFrontEndLive(m) {
       if (m.status === 'completed' || m.status === 'cancelled') return false;
       const now = Date.now();
       const ko = new Date(m.kickoff_at).getTime();
-      return now >= ko; // show LIVE only from scheduled kickoff onward
+      return now >= ko;
     }
 
     const statusChip = (m) => {
@@ -104,113 +104,151 @@
       return `<span class="chip ${cls}">${txt}</span>`;
     };
 
-    // ---- Helpers to safely read result / live state ----
+    // ---------- Robust helpers ----------
     const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
     function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
 
-    // Extract quick printable score "R/W (O)" from totals or ball_by_ball
-    function formatScore(totals){
-      if (!totals) return '—';
-      const r = totals.runs ?? totals.score ?? '—';
-      const w = totals.wickets ?? totals.wkts ?? 0;
-      let overs = totals.overs ?? totals.ovr;
-      if (overs == null && Array.isArray(totals.ball_by_ball) && totals.ball_by_ball.length){
-        // last delivery's over.ball if present
-        const last = totals.ball_by_ball[totals.ball_by_ball.length-1];
-        if (last?.over != null && last?.ball != null) overs = `${last.over}.${last.ball}`;
+    const ob = (o,b) => {
+      const O = Number(o) || 0;
+      const B = Number(b);
+      if (Number.isFinite(B) && B >= 0) return `${O}.${Math.min(5,B)}`;
+      return String(o);
+    };
+
+    // compute overs from many shapes (fields, balls, or ball_by_ball)
+    function inferOvers(totals, bbb, which=1){
+      if (!totals) return null;
+      const direct = totals.overs ?? totals.ov ?? totals.o ?? totals.over ?? totals.overs_f;
+      if (direct != null && direct !== '') return String(direct);
+
+      if (totals.balls != null) {
+        const balls = Number(totals.balls);
+        if (Number.isFinite(balls) && balls >= 0) {
+          const O = Math.floor(balls/6), B = balls%6;
+          return `${O}.${B}`;
+        }
       }
-      return `${r}/${w}${overs!=null ? ` (${overs})` : ''}`;
+
+      if (Array.isArray(bbb) && bbb.length){
+        const filt = bbb.filter(d => (d.inning ?? d.innings ?? 1) === which);
+        const arr = filt.length ? filt : bbb;
+        const last = arr[arr.length-1];
+        if (last?.over != null) return ob(last.over, last.ball);
+        if (last?.o != null) return ob(last.o, last.b);
+        if (last?.over_ball != null) return String(last.over_ball);
+      }
+      return null;
     }
 
-    // Try to detect winner margin from result/meta
+    function extractCurrentTotals(result, homeId, awayId){
+      if (!result) return { home:null, away:null, bbb:null };
+      const bbb = result.ball_by_ball ?? result.bbb ?? null;
+
+      if (Array.isArray(result.innings)) {
+        let home = null, away = null;
+        for (const [idx, inn] of result.innings.entries()) {
+          const tid = String(inn.team_id ?? inn.team ?? '');
+          const raw = inn.totals ?? {
+            runs: inn.runs, wickets: inn.wickets ?? inn.wkts, overs: inn.overs ?? null
+          };
+          const overs = raw.overs ?? inferOvers(raw, bbb, idx+1);
+          const totals = { ...raw, overs };
+          if (String(homeId) === tid) home = totals;
+          else if (String(awayId) === tid) away = totals;
+        }
+        return { home, away, bbb };
+      }
+
+      if (result.home || result.away) {
+        const h = result.home ? {
+          runs: result.home.runs ?? result.home.score,
+          wickets: result.home.wickets ?? result.home.wkts,
+          overs:  result.home.overs ?? result.home.ov ?? result.home.o ?? inferOvers(result.home, bbb, 1)
+        } : null;
+        const a = result.away ? {
+          runs: result.away.runs ?? result.away.score,
+          wickets: result.away.wickets ?? result.away.wkts,
+          overs:  result.away.overs ?? result.away.ov ?? result.away.o ?? inferOvers(result.away, bbb, 2)
+        } : null;
+        return { home:h, away:a, bbb };
+      }
+
+      if (result.scoreboard && typeof result.scoreboard === 'object') {
+        const fix = (x, which) => x ? ({
+          runs: x.runs ?? x.score,
+          wickets: x.wickets ?? x.wkts,
+          overs: x.overs ?? x.ov ?? x.o ?? inferOvers(x, bbb, which)
+        }) : null;
+        return { home: fix(result.scoreboard[homeId],1), away: fix(result.scoreboard[awayId],2), bbb };
+      }
+
+      return { home:null, away:null, bbb };
+    }
+
+    function formatScore(totals){
+      if (!totals) return '—';
+      const r = totals.runs ?? totals.score;
+      const w = totals.wickets ?? totals.wkts ?? 0;
+      const o = totals.overs ?? inferOvers(totals, null, 1);
+      let s = (r == null) ? '—' : `${r}/${w ?? 0}`;
+      if (o != null && o !== '') s += ` (${o})`;
+      return s;
+    }
+
+    function buildChaseText(result){
+      if (!result) return '';
+      if (result.target != null && result.balls_left != null) {
+        const req = Number(result.target) - Number(result.current_runs ?? result.runs ?? 0);
+        const left = Number(result.balls_left);
+        if (Number.isFinite(req) && Number.isFinite(left))
+          return `${Math.max(req,0)} runs required from ${Math.max(left,0)} balls`;
+      }
+      if (Array.isArray(result.innings) && result.innings.length>=2) {
+        const t1 = result.innings[0]?.totals ?? result.innings[0];
+        const t2 = result.innings[1]?.totals ?? result.innings[1];
+        if (t1 && t2) {
+          const target = Number(t1.runs ?? 0) + 1;
+          const cur = Number(t2.runs ?? 0);
+          const overStr = t2.overs ?? inferOvers(t2, result.ball_by_ball ?? null, 2);
+          let ballsBowled = null;
+          if (overStr != null) {
+            const [ov, ball] = String(overStr).split('.').map(Number);
+            if (Number.isFinite(ov)) ballsBowled = ov*6 + (Number.isFinite(ball)?ball:0);
+          }
+          const limit = Number(result.overs_limit ?? result.max_overs ?? 20);
+          if (Number.isFinite(ballsBowled) && Number.isFinite(limit)) {
+            const left = Math.max(limit*6 - ballsBowled, 0);
+            const need = Math.max(target - cur, 0);
+            return `${need} runs required from ${left} balls`;
+          }
+        }
+      }
+      return '';
+    }
+
     function detectResultText(m, result, homeName, awayName){
-      // Prefer explicit text if present
       const txt = m.match_result || result?.result_text || result?.summary || result?.note;
       if (txt) return txt;
 
-      // If winner_team_id is set, attempt a margin
+      const { home:h, away:a } = extractCurrentTotals(result, m.home_team_id, m.away_team_id);
+      if (h && a && (h.runs != null) && (a.runs != null)) {
+        if (h.runs === a.runs) return 'Match tied';
+        if (a.runs > h.runs) {
+          const wkLeft = 10 - Number(a.wickets ?? 0);
+          return `${awayName} won by ${wkLeft > 0 ? wkLeft : 1} wicket${wkLeft===1?'':'s'}`;
+        } else {
+          const margin = Number(h.runs) - Number(a.runs);
+          return `${homeName} won by ${margin} run${margin===1?'':'s'}`;
+        }
+      }
       if (m.winner_team_id) {
         const winner = (m.winner_team_id === m.home_team_id) ? homeName
                       : (m.winner_team_id === m.away_team_id) ? awayName : 'Winner';
-        // If innings totals exist, derive simple margin
-        const inn = result?.innings;
-        if (Array.isArray(inn) && inn.length>=2) {
-          const a = inn[0]?.totals, b = inn[1]?.totals;
-          const aR = Number(a?.runs ?? 0), bR = Number(b?.runs ?? 0);
-          const aW = Number(a?.wickets ?? a?.wkts ?? 0), bW = Number(b?.wickets ?? b?.wkts ?? 0);
-          // naive decide by runs; wickets left unknown without target/remaining
-          const runDiff = Math.abs(aR - bR);
-          if (aR > bR) return `${winner} won by ${runDiff} runs`;
-          // wickets margin needs wickets remaining info; if present in meta:
-          const wkLeft = result?.wkts_remaining ?? result?.wickets_left;
-          if (wkLeft != null) return `${winner} won by ${wkLeft} wickets`;
-        }
         return `${winner} won`;
       }
       return '';
     }
-
-    // Compute live chase text if possible
-    function buildChaseText(result){
-      if (!result) return '';
-      // If explicit
-      if (result.target != null && result.balls_left != null) {
-        const req = Number(result.target) - Number(result.current_runs ?? result.runs ?? 0);
-        const left = Number(result.balls_left);
-        if (left >= 0 && isFinite(req)) return `${Math.max(req,0)} runs required from ${left} balls`;
-      }
-      // Try infer from two-innings with overs info & max overs
-      if (Array.isArray(result.innings) && result.innings.length>=2) {
-        const t1 = result.innings[0]?.totals;
-        const t2 = result.innings[1]?.totals;
-        if (t1 && t2) {
-          const target = Number(t1.runs ?? 0) + 1;
-          const cur = Number(t2.runs ?? 0);
-          // balls bowled inference
-          let ballsBowled = null, maxBalls = null;
-          if (t2.overs != null) {
-            const [ov, ball] = String(t2.overs).split('.').map(Number);
-            if (isFinite(ov)) {
-              const b = isFinite(ball) ? ball : 0;
-              ballsBowled = ov*6 + b;
-            }
-          }
-          const limitOvers = result.overs_limit ?? result.max_overs ?? 20; // fallback 20 if unknown
-          if (ballsBowled != null && limitOvers != null) {
-            maxBalls = limitOvers*6;
-            const ballsLeft = Math.max(maxBalls - ballsBowled, 0);
-            const need = Math.max(target - cur, 0);
-            return `${need} runs required from ${ballsLeft} balls`;
-          }
-        }
-      }
-      return '';
-    }
-
-    // Prefer modern shape: result.innings = [{team_id, totals:{runs,wickets,overs}, ...}, ...]
-    function extractCurrentTotals(result, homeId, awayId){
-      if (!result) return { home:null, away:null };
-      if (Array.isArray(result.innings)) {
-        let home = null, away = null;
-        for (const inn of result.innings) {
-          const tid = String(inn.team_id ?? inn.team ?? '');
-          const totals = inn.totals ?? {
-            runs: inn.runs, wickets: inn.wickets ?? inn.wkts, overs: inn.overs
-          };
-          if (String(homeId) === tid) home = totals;
-          else if (String(awayId) === tid) away = totals;
-        }
-        return { home, away };
-      }
-      // older shapes: result.home / result.away
-      if (result.home || result.away) {
-        return {
-          home: result.home ? { runs: result.home.runs, wickets: result.home.wickets, overs: result.home.overs } : null,
-          away: result.away ? { runs: result.away.runs, wickets: result.away.wickets, overs: result.away.overs } : null
-        };
-      }
-      return { home:null, away:null };
-    }
+    // ---------- /helpers ----------
 
     function card(m){
       const homeLogo = m.home_logo || 'images/logo.png';
@@ -218,20 +256,19 @@
       const when = formatDateTime(m.kickoff_at);
       const live = isFrontEndLive(m);
 
-      // Names as links to public profiles
-      const homeNameHtml = `<a href="public-profile.html?team=${m.home_team_id}">${m.home_team_name||'Home'}</a>`;
-      const awayNameHtml = `<a href="public-profile.html?team=${m.away_team_id}">${m.away_team_name||'Away'}</a>`;
+      const homeName = m.home_team_name || 'Home';
+      const awayName = m.away_team_name || 'Away';
+      const homeNameHtml = `<a href="public-profile.html?team=${m.home_team_id}">${homeName}</a>`;
+      const awayNameHtml = `<a href="public-profile.html?team=${m.away_team_id}">${awayName}</a>`;
 
-      // Parse result to compute live/complete scores
       const res = toJSON(m.result) || {};
       const { home:homeTotals, away:awayTotals } = extractCurrentTotals(res, m.home_team_id, m.away_team_id);
 
-      const homeScore = live || m.status==='completed' ? formatScore(homeTotals) : '—';
-      const awayScore = live || m.status==='completed' ? formatScore(awayTotals) : '—';
+      const homeScore = (live || m.status==='completed') ? formatScore(homeTotals) : '—';
+      const awayScore = (live || m.status==='completed') ? formatScore(awayTotals) : '—';
 
-      // Chase or result text
-      const chaseText = (live && res) ? buildChaseText(res) : '';
-      const resultText = (m.status==='completed') ? detectResultText(m, res, m.home_team_name||'Home', m.away_team_name||'Away') : '';
+      const chaseText  = (live && res) ? buildChaseText(res) : '';
+      const resultText = (!live && m.status==='completed') ? detectResultText(m, res, homeName, awayName) : '';
 
       const div = document.createElement('div');
       div.className = 'match-card';
@@ -244,7 +281,7 @@
 
         <div class="match-body">
           <div class="team">
-            <img src="${homeLogo}" alt="${m.home_team_name||'Home'}"/>
+            <img src="${homeLogo}" alt="${homeName}"/>
             <div class="name">${homeNameHtml}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${homeScore}</div>
           </div>
@@ -252,7 +289,7 @@
           <div class="vs">vs</div>
 
           <div class="team">
-            <img src="${awayLogo}" alt="${m.away_team_name||'Away'}"/>
+            <img src="${awayLogo}" alt="${awayName}"/>
             <div class="name">${awayNameHtml}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${awayScore}</div>
           </div>
@@ -262,7 +299,6 @@
         ${(!live && m.status==='completed' && resultText) ? `<div class="subscore">${resultText}</div>` : ''}
       `;
 
-      // Click behavior (unchanged)
       if (live && m.status === 'running') {
         div.onclick = () => location.href = `friendly-match.html?id=${m.id}`;
         div.style.cursor = 'pointer';
@@ -272,7 +308,6 @@
       } else {
         div.style.cursor = 'default';
       }
-
       return div;
     }
 
@@ -309,28 +344,15 @@
       // Soft auto-refresh every 10s for live score progression
       setInterval(renderFeed, 10000);
 
-      // Realtime: refresh when any of my team’s matches update (friendlies)
+      // Realtime: refresh when any of my team’s matches update (friendlies + fixtures)
       const { data: myTeam } = await supabase
         .from('teams').select('id').eq('owner_id', user.id).maybeSingle();
       if (myTeam?.id) {
         supabase.channel('matches-feed')
-          .on('postgres_changes', {
-            event:'UPDATE', schema:'public', table:'matches',
-            filter:`home_team_id=eq.${myTeam.id}`
-          }, renderFeed)
-          .on('postgres_changes', {
-            event:'UPDATE', schema:'public', table:'matches',
-            filter:`away_team_id=eq.${myTeam.id}`
-          }, renderFeed)
-          // League fixtures realtime (optional if your RPC includes fixtures live state)
-          .on('postgres_changes', {
-            event:'UPDATE', schema:'public', table:'fixtures',
-            filter:`home_team_id=eq.${myTeam.id}`
-          }, renderFeed)
-          .on('postgres_changes', {
-            event:'UPDATE', schema:'public', table:'fixtures',
-            filter:`away_team_id=eq.${myTeam.id}`
-          }, renderFeed)
+          .on('postgres_changes', { event:'UPDATE', schema:'public', table:'matches',  filter:`home_team_id=eq.${myTeam.id}` }, renderFeed)
+          .on('postgres_changes', { event:'UPDATE', schema:'public', table:'matches',  filter:`away_team_id=eq.${myTeam.id}` }, renderFeed)
+          .on('postgres_changes', { event:'UPDATE', schema:'public', table:'fixtures', filter:`home_team_id=eq.${myTeam.id}` }, renderFeed)
+          .on('postgres_changes', { event:'UPDATE', schema:'public', table:'fixtures', filter:`away_team_id=eq.${myTeam.id}` }, renderFeed)
           .subscribe();
       }
     }
