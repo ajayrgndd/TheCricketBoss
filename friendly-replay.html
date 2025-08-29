@@ -24,7 +24,7 @@
 
     .card{background:#121825;border:1px solid #1d263a;border-radius:12px;padding:12px;margin:14px 0}
     table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid #2a344a;padding:8px;text-align:center}
+    th,td{border:1px solid #2a344a;padding:8px;text-align:center;vertical-align:top}
     th{background:#192238}
     td.left{text-align:left}
 
@@ -48,6 +48,12 @@
     .b4{background:#123d27;border-color:#1c593a;color:#b8ffd6}
     .b6{background:#0e2e57;border-color:#1a4886;color:#cfe8ff}
     .sub{opacity:.9;margin-top:4px}
+
+    /* ===== Skill bar ===== */
+    .skillbar{display:flex;gap:2px;margin-top:4px}
+    .skillbar .seg{width:6px;height:10px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+    .namecell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+    .nm{line-height:1.1}
   </style>
 </head>
 <body>
@@ -244,7 +250,7 @@
 
     /* state */
     const roles = {}; // teamId -> {captain, keeper}
-    let players = {}; // id -> {name, team_id}
+    let players = {}; // id -> {name, team_id, batting, bowling?}
     let names = {};   // teamId -> name
     let match = null;
     let allBalls = [];
@@ -252,9 +258,61 @@
     let timer = null;
     let delay = 700;
 
+    /* ==== skill-bar helpers ==== */
+    const PALETTE = [
+      "#f8f532","#f3e61c","#e9d60e","#d4cf10","#b0d022",
+      "#7ec14a","#49a769","#2f9ea6","#1d78c6","#1850a1",
+      "#1a2f7a","#5d2f7a","#a9483c","#cc1f1f"
+    ];
+    const boostMap = ()=> (match?.sim_state?.player_boosts) || (match?.sim_state?.boosts) || {};
+    function shortName(full){
+      if (!full) return "—";
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return parts[0];
+      const last = parts.pop();
+      const initials = parts.map(w => (w[0] || "").toUpperCase()).filter(Boolean).join(" ");
+      return `${initials} ${last}`;
+    }
+    function skillScore(pid, kind){
+      const p = players[pid]||{};
+      const base = kind==="bat" ? Number(p.batting)||0
+                  : kind==="bowl" ? Number(p.bowling)||0
+                  : Math.max(Number(p.batting)||0, Number(p.bowling)||0);
+      const b = Number(boostMap()[pid])||0;
+      return Math.max(0, base + b);
+    }
+    function segmentsFor(score){
+      const maxScore = 100;
+      const frac = Math.max(0, Math.min(1, score/maxScore));
+      let n = Math.round(frac*PALETTE.length);
+      return Math.max(1, Math.min(PALETTE.length, n));
+    }
+    const colorBarHTML = (pid, kind)=>{
+      const segs = segmentsFor(skillScore(pid, kind));
+      const blocks = PALETTE.slice(0,segs).map(c=>`<span class="seg" style="background:${c}"></span>`).join("");
+      return `<div class="skillbar" title="Skill+Boost: ${skillScore(pid,kind).toFixed(1)}">${blocks}</div>`;
+    };
+    function nameWithBadges(pid){
+      if (!pid) return "—";
+      const p = players[pid];
+      if (!p) return `Player ${String(pid).slice(0,8)}`;
+      const r = roles[p.team_id] || {};
+      const tags=[];
+      if (r.captain===pid) tags.push("C");
+      if (r.keeper===pid)  tags.push("WK");
+      const nm = shortName(p.name);
+      return `${nm}${tags.length?` (${tags.join(", ")})`:''}`;
+    }
+    const nameCell = (pid, kind)=>(
+      `<div class="namecell">
+         <div class="nm">${nameWithBadges(pid)}</div>
+         ${colorBarHTML(pid, kind)}
+       </div>`
+    );
+
     /* utils */
-    const oversTxt = (b)=>`${Math.floor(b/6)}.${b%6}`;
-    const overLabel = (ball)=> `${ball.over_number - 1}.${ball.ball_in_over}`; // start at 0.1 visually
+    const oversTxt = (balls)=>`${Math.floor(balls/6)}.${balls%6}`;
+    const overLabel = (ball)=> `${ball.over_number - 1}.${ball.ball_in_over}`;
     function fmtDateTime(ts){
       if(!ts) return "";
       const d = new Date(ts);
@@ -267,36 +325,20 @@
       const ampm = h24>=12?"PM":"AM";
       return `${dd}-${mm}-${yyyy}, ${hh}:${mi} ${ampm}`;
     }
-    const short = (id)=> id ? String(id).slice(0,8) : "—";
 
-    /* NEW: shorten names -> initials + surname */
-    function shortName(full){
-      if (!full) return "—";
-      const parts = String(full).trim().split(/\s+/).filter(Boolean);
-      if (parts.length === 1) return parts[0];
-      const last = parts.pop();
-      const initials = parts.map(w => (w[0] || "").toUpperCase()).filter(Boolean).join(" ");
-      return `${initials} ${last}`;
-    }
-
-    function nameWithBadges(pid){
-      if (!pid) return "—";
-      const p = players[pid];
-      if (!p) return `Player ${short(pid)}`; // RLS fallback
-      const r = roles[p.team_id] || {};
-      const tags=[];
-      if (r.captain===pid) tags.push("C");
-      if (r.keeper===pid)  tags.push("WK");
-      const nm = shortName(p.name);
-      return `${nm}${tags.length?` (${tags.join(", ")})`:''}`;
-    }
+    /* LEGAL delivery helper so wides/noballs don’t count as balls */
+    const isLegal = (b)=>{
+      const t = (b.delivery_type||"legal").toLowerCase();
+      return t!=="wide" && t!=="noball";
+    };
 
     function totals(list, inn){
       const arr=list.filter(b=>b.innings===inn);
+      const legal = arr.filter(isLegal).length;
       return {
         runs: arr.reduce((s,b)=>s+(b.runs_scored||0)+(b.extras||0),0),
         wkts: arr.reduce((s,b)=>s+(b.wicket?1:0),0),
-        balls: arr.length
+        legal
       };
     }
     function aggBat(list, inn){
@@ -304,9 +346,12 @@
       list.filter(b=>b.innings===inn).forEach(b=>{
         const id=b.striker_id; if(!id) return;
         const m=map[id] ||= {r:0,b:0,f:0,s:0};
-        m.r += b.runs_scored||0; m.b += 1;
-        if (b.runs_scored===4) m.f++;
-        if (b.runs_scored===6) m.s++;
+        m.r += b.runs_scored||0;
+        if (isLegal(b)) {
+          m.b += 1;
+          if (b.runs_scored===4) m.f++;
+          if (b.runs_scored===6) m.s++;
+        }
       }); return map;
     }
     function aggBowl(list, inn){
@@ -314,23 +359,24 @@
       list.filter(b=>b.innings===inn).forEach(b=>{
         const id=b.bowler_id; if(!id) return;
         const m=map[id] ||= {r:0,b:0,w:0};
-        m.r += (b.runs_scored||0)+(b.extras||0); m.b += 1;
-        const bowlerGetsWicket = b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout';
-        if (bowlerGetsWicket) m.w++;
+        m.r += (b.runs_scored||0)+(b.extras||0);
+        if (isLegal(b)) m.b += 1;
+        const t=(b.dismissal_type||"").toLowerCase();
+        if (b.wicket && t!=="runout" && t!=="run-out") m.w++;
       }); return map;
     }
     function dismissalMap(list, inn){
       const map={};
       list.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id).forEach(b=>{
         map[b.dismissed_batsman_id] = {
-          type:(b.dismissal_type||'').toLowerCase(),
+          type:(b.dismissal_type||"").toLowerCase(),
           bowler:b.bowler_id||null,
           fielder:b.fielder_id||null
         };
       }); return map;
     }
     function dismissTextFromBall(b){
-      const type=(b.dismissal_type||'').toLowerCase();
+      const type=(b.dismissal_type||"").toLowerCase();
       const bow=nameWithBadges(b.bowler_id);
       const fld=nameWithBadges(b.fielder_id);
       if (type==="bowled") return `b ${bow}`;
@@ -347,7 +393,7 @@
     function rowBat(tbody, map, dm){
       tbody.innerHTML="";
       Object.entries(map).forEach(([pid,st])=>{
-        const nm = nameWithBadges(pid);
+        const nmCell = nameCell(pid, "bat");
         const sr = st.b ? ((st.r/st.b)*100).toFixed(1) : "0.0";
         const d = dm[pid];
         let dis = "not out";
@@ -363,17 +409,17 @@
           else dis=bow?`b ${bow}`:"out";
         }
         tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${nm}</td><td class="left">${dis}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
+          `<tr><td class="left">${nmCell}</td><td class="left">${dis}</td><td>${st.r}</td><td>${st.b}</td><td>${st.f}</td><td>${st.s}</td><td>${sr}</td></tr>`);
       });
     }
     function rowBowl(tbody, map){
       tbody.innerHTML="";
       Object.entries(map).forEach(([pid,st])=>{
-        const nm=nameWithBadges(pid);
-        const ov=(st.b/6).toFixed(1);
+        const nmCell = nameCell(pid, "bowl");
+        const ov = `${Math.floor(st.b/6)}.${st.b%6}`;
         const eco=st.b?(st.r/(st.b/6)).toFixed(1):"0.0";
         tbody.insertAdjacentHTML("beforeend",
-          `<tr><td class="left">${nm}</td><td>${ov}</td><td>${st.r}</td><td>${st.w}</td><td>${eco}</td></tr>`);
+          `<tr><td class="left">${nmCell}</td><td>${ov}</td><td>${st.r}</td><td>${st.w}</td><td>${eco}</td></tr>`);
       });
     }
 
@@ -416,8 +462,8 @@
 
     function updateMini(part){
       const t1=totals(part,1), t2=totals(part,2);
-      miniA.textContent = `${t1.runs}/${t1.wkts} - ${oversTxt(t1.balls)} ov`;
-      miniB.textContent = `${t2.runs}/${t2.wkts} - ${oversTxt(t2.balls)} ov`;
+      miniA.textContent = `${t1.runs}/${t1.wkts} - ${oversTxt(t1.legal)} ov`;
+      miniB.textContent = `${t2.runs}/${t2.wkts} - ${oversTxt(t2.legal)} ov`;
     }
 
     /* controls */
@@ -451,7 +497,6 @@
     const liveBatRuns = new Map(); // pid -> runs so far (during replay)
     function stepOne(){
       if (shown>=allBalls.length) {
-        // end messages
         maybeFinalMessage();
         return false;
       }
@@ -459,7 +504,7 @@
 
       const extras = [];
 
-      // over start / bowler change message
+      // over start / bowler change
       const prev = allBalls[shown-2] || null;
       const overStart = !prev || prev.innings!==b.innings || prev.over_number!==b.over_number;
       if (overStart) {
@@ -467,7 +512,13 @@
         extras.push(`${bow} comes into the attack.`);
       }
 
-      // track runs for striker to detect 50/100
+      // === NEW: explicit extras like LIVE ===
+      const dt = (b.delivery_type||"legal").toLowerCase();
+      if (dt === "wide")   extras.push(`Wide — +${b.extras||1}`);
+      if (dt === "noball") extras.push(`No-ball — +${b.extras||1}`);
+      if (dt === "bye" && (b.extras_detail?.byes)) extras.push(`Byes — +${b.extras_detail.byes}`);
+
+      // milestones
       const prevRuns = liveBatRuns.get(b.striker_id) || 0;
       const newRuns = prevRuns + (b.runs_scored||0);
       liveBatRuns.set(b.striker_id, newRuns);
@@ -477,16 +528,15 @@
         extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
       }
 
-      // wicket extras (dismissal line + new batter)
+      // wicket line + newcomer
       if (b.wicket) {
         const disTxt = dismissTextFromBall(b);
         const outPid = b.dismissed_batsman_id || b.striker_id;
         const outName = nameWithBadges(outPid);
-        // balls faced + runs till now for dismissed batter (in same innings)
-        const faced = allBalls.slice(0, shown).filter(x=>x.innings===b.innings && x.striker_id=== outPid).length;
+        const faced = allBalls.slice(0, shown)
+          .filter(x=>x.innings===b.innings && x.striker_id===outPid && isLegal(x)).length;
         const runs  = liveBatRuns.get(outPid) || 0;
         extras.push(`${outName} ${disTxt} ${runs}(${faced})`);
-        // new batter announcement if we can infer
         const nextBall = allBalls[shown] || null;
         if (nextBall && nextBall.innings===b.innings) {
           const newcomer = nextBall.striker_id !== outPid && nextBall.striker_id !== (prev?.striker_id) ? nextBall.striker_id : nextBall.non_striker_id;
@@ -494,12 +544,12 @@
         }
       }
 
-      // render one block
+      // render
       commFeed.insertAdjacentHTML("afterbegin", ballHtml(b, extras));
 
       updateMini(allBalls.slice(0,shown));
 
-      // end of innings message
+      // end of innings 1 message
       const next = allBalls[shown] || null;
       if (!next || next.innings !== b.innings) {
         if (b.innings===1) {
@@ -520,7 +570,6 @@
     }
 
     function maybeFinalMessage(){
-      // final match result line
       const t1=totals(allBalls,1), t2=totals(allBalls,2);
       const homeName=names[match.home_team_id]||"Home";
       const awayName=names[match.away_team_id]||"Away";
@@ -552,50 +601,44 @@
     async function loadReplay(){
       if(!matchId){ alert("Missing match id"); return; }
 
-      // matches
       const { data:m } = await supabase.from("matches").select("*").eq("id", matchId).maybeSingle();
       if(!m){ alert("Match not found"); return; }
       match=m;
 
-      // teams
       const { data:teams } = await supabase.from("teams").select("id,team_name").in("id",[m.home_team_id,m.away_team_id]);
       (teams||[]).forEach(t=> names[t.id]=t.team_name);
 
-      // players
-      const { data:ps } = await supabase.from("players").select("id,name,team_id").in("team_id",[m.home_team_id,m.away_team_id]);
-      (ps||[]).forEach(p=> players[p.id]={ name:p.name, team_id:p.team_id });
+      const { data:ps } = await supabase.from("players").select("id,name,team_id,batting,bowling").in("team_id",[m.home_team_id,m.away_team_id]);
+      (ps||[]).forEach(p=> players[p.id]={ name:p.name, team_id:p.team_id, batting:p.batting, bowling:p.bowling });
 
-      // captain/keeper
       const { data:lus } = await supabase.from("lineups").select("team_id,captain,keeper").in("team_id",[m.home_team_id,m.away_team_id]);
       (lus||[]).forEach(l=> roles[l.team_id]={ captain:l.captain, keeper:l.keeper });
 
-      // balls (oldest->newest)
       const { data:balls } = await supabase
         .from("ball_by_ball")
         .select("*")
         .eq("match_id", matchId)
         .order("innings",{ascending:true})
         .order("over_number",{ascending:true})
-        .order("ball_in_over",{ascending:true});
+        .order("ball_in_over",{ascending:true})
+        .order("created_at",{ascending:true});
       allBalls = balls||[];
       shown=0; commFeed.innerHTML=""; updateMini([]); setButtons();
       liveBatRuns.clear();
 
-      // titles / when
       titleEl.textContent = `${names[m.home_team_id]||"Home"} vs ${names[m.away_team_id]||"Away"}`;
       const when = m.kickoff_at || (m.date && m.start_time ? `${m.date}T${m.start_time}` : null);
       replayDate.textContent = when ? fmtDateTime(when) : "--";
       subEl.textContent = `Kickoff — ${when?fmtDateTime(when):"--"}`;
 
-      // final scorecard & summary
       const t1=totals(allBalls,1), t2=totals(allBalls,2);
-      headlineA.textContent = `${names[m.home_team_id]||"Home"} ${t1.runs}/${t1.wkts} (${oversTxt(t1.balls)} ov)`;
-      headlineB.textContent = `${names[m.away_team_id]||"Away"} ${t2.runs}/${t2.wkts} (${oversTxt(t2.balls)} ov)`;
+      headlineA.textContent = `${names[m.home_team_id]||"Home"} ${t1.runs}/${t1.wkts} (${oversTxt(t1.legal)} ov)`;
+      headlineB.textContent = `${names[m.away_team_id]||"Away"} ${t2.runs}/${t2.wkts} (${oversTxt(t2.legal)} ov)`;
 
       in1Name.textContent = `${names[m.home_team_id]||"Home"} — Innings 1`;
       in2Name.textContent = `${names[m.away_team_id]||"Away"} — Innings 2`;
-      in1Tot.textContent = `${t1.runs}/${t1.wkts} in ${oversTxt(t1.balls)} ov`;
-      in2Tot.textContent = `${t2.runs}/${t2.wkts} in ${oversTxt(t2.balls)} ov`;
+      in1Tot.textContent = `${t1.runs}/${t1.wkts} in ${oversTxt(t1.legal)} ov`;
+      in2Tot.textContent = `${t2.runs}/${t2.wkts} in ${oversTxt(t2.legal)} ov`;
 
       const batAgg1=aggBat(allBalls,1), batAgg2=aggBat(allBalls,2);
       const dm1=dismissalMap(allBalls,1), dm2=dismissalMap(allBalls,2);
@@ -611,10 +654,9 @@
       const winner=m.result?.winner ?? (homeRuns>awayRuns?"home":awayRuns>homeRuns?"away":"tie");
       resLine.textContent = winner==="tie" ? `Match tied — ${homeName} ${homeRuns}, ${awayName} ${awayRuns}` : `${winner==="home"?homeName:awayName} won the match`;
       sumHomeName.textContent=homeName; sumAwayName.textContent=awayName;
-      sumHomeScore.textContent=`${homeRuns} (${oversTxt(t1.balls)} ov)`;
-      sumAwayScore.textContent=`${awayRuns} (${oversTxt(t2.balls)} ov)`;
+      sumHomeScore.textContent=`${homeRuns} (${oversTxt(t1.legal)} ov)`;
+      sumAwayScore.textContent=`${awayRuns} (${oversTxt(t2.legal)} ov)`;
 
-      // top performers (both inns)
       function topBattersFor(teamId, maps){
         const comb={}; for(const map of maps){ for(const [pid,st] of Object.entries(map)){ const c=comb[pid] ||= {r:0,b:0}; c.r+=st.r; c.b+=st.b; } }
         return Object.entries(comb)
