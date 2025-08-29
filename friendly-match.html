@@ -201,7 +201,7 @@
     loadSmoothUI('top-bar','bottom-nav');
   </script>
 
-  <!-- Main logic (unchanged except for shortName + usage) -->
+  <!-- Main logic -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -321,11 +321,18 @@
       return pool[h % pool.length];
     }
 
+    /* ===== EXTRAS-AWARE AGGREGATES ===== */
+    function isLegal(b){
+      const t = (b.delivery_type||'legal').toLowerCase();
+      return t !== 'wide' && t !== 'noball';
+    }
+
     function totals(balls, inn) {
-      const arr = balls.filter(b=>b.innings===inn);
-      const runs = arr.reduce((s,b)=> s + (b.runs_scored||0) + (b.extras||0), 0);
-      const wkts = arr.reduce((s,b)=> s + (b.wicket?1:0), 0);
-      return { runs, wkts, legal: arr.length };
+      const arrAll = balls.filter(b=>b.innings===inn);
+      const arrLegals = arrAll.filter(isLegal);
+      const runs = arrAll.reduce((s,b)=> s + (b.runs_scored||0) + (b.extras||0), 0);
+      const wkts = arrAll.reduce((s,b)=> s + (b.wicket?1:0), 0);
+      return { runs, wkts, legal: arrLegals.length };
     }
 
     function aggBat(balls, inn) {
@@ -334,17 +341,26 @@
         const id=b.striker_id; if(!id) return;
         const m = map[id] ||= {runs:0,balls:0,fours:0,sixes:0};
         m.runs += b.runs_scored||0;
-        m.balls++; if(b.runs_scored===4) m.fours++; if(b.runs_scored===6) m.sixes++;
+        if (isLegal(b)) { // only legal balls are faced
+          m.balls++;
+          if(b.runs_scored===4) m.fours++;
+          if(b.runs_scored===6) m.sixes++;
+        }
       });
       return map;
     }
+
     function aggBowl(balls, inn) {
       const map={};
       balls.filter(b=>b.innings===inn).forEach(b=>{
         const id=b.bowler_id; if(!id) return;
         const m = map[id] ||= {runs:0,balls:0,wkts:0};
+        // Runs conceded include ALL deliveries (wides, no-balls, byes)
         m.runs += (b.runs_scored||0)+(b.extras||0);
-        m.balls++; if(b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout') m.wkts++;
+        // Balls bowled count only legal deliveries
+        if (isLegal(b)) m.balls++;
+        // Wickets (bowler's) exclude run-out
+        if (b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout' && (b.dismissal_type||'').toLowerCase()!=='run-out') m.wkts++;
       });
       return map;
     }
@@ -374,23 +390,6 @@
       return map;
     }
 
-    function dismissText(pid, dm){
-      const d = dm[pid];
-      if(!d) return "not out";
-      const bowTxt = d.bowler ? nameWithBadges(d.bowler) : '';
-      const fldTxt = d.fielder ? nameWithBadges(d.fielder) : '';
-      const t = (d.type||'').toLowerCase();
-      if (t === 'bowled') return `b ${bowTxt}`;
-      if (t === 'lbw')    return `lbw b ${bowTxt}`;
-      if (t === 'caught') {
-        if (d.fielder && d.bowler && d.fielder === d.bowler) return `c & b ${bowTxt}`;
-        if (d.fielder) return `c ${fldTxt} b ${bowTxt}`;
-        return `c b ${bowTxt}`;
-      }
-      if (t === 'runout' || t==='run-out') return d.fielder ? `run out (${fldTxt})` : `run out`;
-      return bowTxt ? `b ${bowTxt}` : 'out';
-    }
-
     // Commentary formatting
     function pillsFor(b) {
       const pills=[];
@@ -411,6 +410,11 @@
     function sanitizeText(t){ return String(t||"").replace(/^\s*runs?\s*:?\s*/i,"").trim(); }
     function lineText(b) {
       if (b.commentary && b.commentary.trim()) return sanitizeText(b.commentary);
+      // Extra-only rows: say what happened explicitly
+      const dt = (b.delivery_type||'legal').toLowerCase();
+      if (dt === 'wide')  return "Wide — +1 run";
+      if (dt === 'noball')return "No-ball — +1 run";
+      if (dt === 'bye')   return `Byes — +${(b.extras_detail?.byes)||1}`;
       if (b.wicket) return sanitizeText(pickStable(VARIANTS.W, b, "W"));
       const runs = Math.min(6, Math.max(0, b.runs_scored||0));
       const pool = VARIANTS[runs] || ["Runs added."];
@@ -436,26 +440,24 @@
     }
 
     /* build thread in order; latest on TOP */
-function renderCommentaryTop(list, into) {
-  const htmls = [];
-  prevBall = null;
-  liveBatRuns.clear();
+    function renderCommentaryTop(list, into) {
+      const htmls = [];
+      prevBall = null;
+      liveBatRuns.clear();
 
-  // Innings-1 is considered finished ONLY if innings 2 exists
-  // or the match state says we're already in/after innings 2.
-  const i1Finished =
-    list.some(x => x.innings === 2) ||
-    (matchRow && (matchRow.sim_innings ?? 1) >= 2) ||
-    (matchRow && matchRow.status === 'completed');
+      const i1Finished =
+        list.some(x => x.innings === 2) ||
+        (matchRow && (matchRow.sim_innings ?? 1) >= 2) ||
+        (matchRow && matchRow.status === 'completed');
 
-  for (let i = 0; i < list.length; i++) {
-    const b = list[i];
-    const next = list[i + 1] || null;
-    const extras = buildExtras(b, next, /*addInningsEnd*/ true, /*i1Finished*/ i1Finished);
-    htmls.push(comLine(b, extras));
-  }
-  into.innerHTML = htmls.reverse().join('');
-}
+      for (let i = 0; i < list.length; i++) {
+        const b = list[i];
+        const next = list[i + 1] || null;
+        const extras = buildExtras(b, next, /*addInningsEnd*/ true, /*i1Finished*/ i1Finished);
+        htmls.push(comLine(b, extras));
+      }
+      into.innerHTML = htmls.reverse().join('');
+    }
 
     // delayed rendering queue -> prepend to TOP
     function pushToQueue(ball) {
@@ -578,22 +580,6 @@ function renderCommentaryTop(list, into) {
       });
     }
 
-    function updateScorecardBlocks() {
-      if (!all.length) return;
-
-      i1.card.style.display = 'block';
-      i1.title.textContent = `Innings 1 – ${(names[homeTeam]||'Home')}`;
-      fillFullInnings(1, i1);
-
-      if (all.some(b=>b.innings===2)) {
-        i2.card.style.display = 'block';
-        i2.title.textContent = `Innings 2 – ${(names[awayTeam]||'Away')}`;
-        fillFullInnings(2, i2);
-      } else {
-        i2.card.style.display = 'none';
-      }
-    }
-
     function maybeShowSummary() {
       if (!matchRow || matchRow.status!=='completed') { liveSummary.style.display='none'; return; }
 
@@ -611,69 +597,75 @@ function renderCommentaryTop(list, into) {
     }
 
     /* Extras (optionally add innings-end notice) */
-function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = false) {
-  const extras = [];
+    function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = false) {
+      const extras = [];
 
-  const overStart = !prevBall || prevBall.innings !== b.innings || prevBall.over_number !== b.over_number;
-  if (overStart) {
-    const bow = nameWithBadges(b.bowler_id);
-    extras.push(`${bow} comes into the attack.`);
-  }
+      const overStart = !prevBall || prevBall.innings !== b.innings || prevBall.over_number !== b.over_number;
+      if (overStart) {
+        const bow = nameWithBadges(b.bowler_id);
+        extras.push(`${bow} comes into the attack.`);
+      }
 
-  // milestones (read-before, commit-after)
-  const prevRuns = liveBatRuns.get(b.striker_id) || 0;
-  const newRuns  = prevRuns + (b.runs_scored || 0);
-  if (newRuns >= 50 && prevRuns < 50 && newRuns < 100) {
-    extras.push(`${nameWithBadges(b.striker_id)} scores his FIFTY`);
-  } else if (newRuns >= 100 && prevRuns < 100) {
-    extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
-  }
+      // Explicit extra-type lines
+      const dt = (b.delivery_type||'legal').toLowerCase();
+      if (dt === 'wide')  extras.push(`Wide — +${b.extras||1}`);
+      if (dt === 'noball')extras.push(`No-ball — +${b.extras||1}`);
+      if (dt === 'bye' && (b.extras_detail?.byes)) extras.push(`Byes — +${b.extras_detail.byes}`);
 
-  if (b.wicket) {
-    const type = (b.dismissal_type || '').toLowerCase();
-    const bow  = nameWithBadges(b.bowler_id);
-    const fld  = b.fielder_id ? nameWithBadges(b.fielder_id) : "";
-    let disTxt = "out";
-    if (type === "bowled") disTxt = `b ${bow}`;
-    else if (type === "lbw") disTxt = `lbw b ${bow}`;
-    else if (type === "caught") {
-      if (b.fielder_id && b.bowler_id && b.fielder_id === b.bowler_id) disTxt = `c & b ${bow}`;
-      else if (b.fielder_id) disTxt = `c ${fld} b ${bow}`;
-      else disTxt = `c b ${bow}`;
-    } else if (type === "runout" || type === "run-out") {
-      disTxt = b.fielder_id ? `run out (${fld})` : `run out`;
+      // milestones (read-before, commit-after)
+      const prevRuns = liveBatRuns.get(b.striker_id) || 0;
+      const newRuns  = prevRuns + (b.runs_scored || 0);
+      if (newRuns >= 50 && prevRuns < 50 && newRuns < 100) {
+        extras.push(`${nameWithBadges(b.striker_id)} scores his FIFTY`);
+      } else if (newRuns >= 100 && prevRuns < 100) {
+        extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
+      }
+
+      if (b.wicket) {
+        const type = (b.dismissal_type || '').toLowerCase();
+        const bow  = nameWithBadges(b.bowler_id);
+        const fld  = b.fielder_id ? nameWithBadges(b.fielder_id) : "";
+        let disTxt = "out";
+        if (type === "bowled") disTxt = `b ${bow}`;
+        else if (type === "lbw") disTxt = `lbw b ${bow}`;
+        else if (type === "caught") {
+          if (b.fielder_id && b.bowler_id && b.fielder_id === b.bowler_id) disTxt = `c & b ${bow}`;
+          else if (b.fielder_id) disTxt = `c ${fld} b ${bow}`;
+          else disTxt = `c b ${bow}`;
+        } else if (type === "runout" || type === "run-out") {
+          disTxt = b.fielder_id ? `run out (${fld})` : `run out`;
+        }
+        const outName  = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
+        const ballsFor = all.concat([b]).filter(x => x.striker_id === (b.dismissed_batsman_id || b.striker_id)).filter(isLegal).length;
+        const runsFor  = newRuns;
+        extras.push(`${outName} ${disTxt} ${runsFor}(${ballsFor})`);
+
+        const nb = nextBall;
+        if (nb && nb.innings === b.innings) {
+          const newcomer = nb.striker_id !== b.striker_id && nb.striker_id !== (prevBall?.striker_id)
+            ? nb.striker_id : nb.non_striker_id;
+          if (newcomer) extras.push(`${nameWithBadges(newcomer)} comes in to the Crease.`);
+        }
+      }
+
+      // End of Innings 1 message (only when truly finished)
+      if (addInningsEnd && i1Finished) {
+        const nxt = nextBall;
+        if (b.innings === 1 && (!nxt || nxt.innings !== 1)) {
+          const t1 = totals(all.concat([b]), 1);
+          const chasingName = names[awayTeam] || 'Team B';
+          const need = t1.runs + 1;
+          extras.push(`End of First Innings`);
+          extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
+        }
+      }
+
+      liveBatRuns.set(b.striker_id, newRuns);
+      prevBall = b;
+      return extras;
     }
-    const outName  = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
-    const ballsFor = all.concat([b]).filter(x => x.striker_id === (b.dismissed_batsman_id || b.striker_id)).length;
-    const runsFor  = newRuns;
-    extras.push(`${outName} ${disTxt} ${runsFor}(${ballsFor})`);
 
-    const nb = nextBall;
-    if (nb && nb.innings === b.innings) {
-      const newcomer = nb.striker_id !== b.striker_id && nb.striker_id !== (prevBall?.striker_id)
-        ? nb.striker_id : nb.non_striker_id;
-      if (newcomer) extras.push(`${nameWithBadges(newcomer)} comes in to the Crease.`);
-    }
-  }
-
-  // Only add "End of First Innings / target" when Innings 1 is truly finished.
-  if (addInningsEnd && i1Finished) {
-    const nxt = nextBall;
-    if (b.innings === 1 && (!nxt || nxt.innings !== 1)) {
-      const t1 = totals(all.concat([b]), 1);
-      const chasingName = names[awayTeam] || 'Team B';
-      const need = t1.runs + 1;
-      extras.push(`End of First Innings`);
-      extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
-    }
-  }
-
-  liveBatRuns.set(b.striker_id, newRuns);
-  prevBall = b;
-  return extras;
-}
-
-    /* ---------- Data load (unchanged) ---------- */
+    /* ---------- Data load ---------- */
     async function loadMeta() {
       const { data: m } = await supabase.from('matches').select('*').eq('id', matchId).single();
       matchRow = m || null;
@@ -795,7 +787,8 @@ function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = fal
         .eq('match_id', matchId)
         .order('innings',{ascending:true})
         .order('over_number',{ascending:true})
-        .order('ball_in_over',{ascending:true});
+        .order('ball_in_over',{ascending:true})
+        .order('created_at',{ascending:true}); /* NEW tiebreaker */
 
       all = balls || [];
       liveBatRuns.clear(); prevBall=null;
