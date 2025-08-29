@@ -8,7 +8,7 @@
   <style>
     :root {
       --bg:#1e1b3a; --card:#2d2a4a; --muted:#444; --accent:#00e676;
-      --text:#fff; --text-dim:#cfd3ff;
+      --text:#fff; --text-dim:#cfd3ff; --link:#8affc3;
     }
     body { margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; }
     /* Top tabs under fixed top bar from shared-ui.js */
@@ -54,6 +54,9 @@
       padding:12px; border-radius:12px; background:rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.06); }
     .muted{ color:var(--text-dim); font-size:13px; }
     .btn{ background:var(--accent); color:#000; border:none; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; }
+    a.team-link{ color:var(--link); text-decoration:none; }
+    a.team-link:hover{ text-decoration:underline; }
+
     @media (max-width:900px){ .ratings{ grid-template-columns:repeat(2,1fr);} }
     @media (max-width:600px){
       .tabs{ grid-template-columns:1fr 1fr 1fr; }
@@ -63,9 +66,6 @@
   </style>
 </head>
 <body>
-  <!-- Top bar from shared-ui (shows viewer’s info if logged in). It won’t expose private actions for this page. -->
-  <div id="topbar-anchor"></div>
-
   <!-- Tabs -->
   <nav class="tabs">
     <button class="tab active" data-tab="profile">PROFILE</button>
@@ -231,24 +231,9 @@
       return "Beginner";
     }
 
-    function calculateAge(dobStr) {
-      if (!dobStr) return "–";
-      const dob = new Date(dobStr);
-      const t = new Date();
-      let age = t.getFullYear() - dob.getFullYear();
-      if (t.getMonth()<dob.getMonth() || (t.getMonth()===dob.getMonth() && t.getDate()<dob.getDate())) age--;
-      return `${age} yrs`;
-    }
-
     async function main() {
-      // Load viewer's top bar (no inbox badge call)
       const { data: { user: viewer } } = await supabase.auth.getUser().catch(()=>({data:{user:null}}));
-      loadSharedUI({
-        supabase: null, // disable inbox query to avoid errors
-        user_id: null,
-        manager_name: viewer?.email ? viewer.email.split('@')[0] : "Guest",
-        xp: 0, coins: 0, cash: 0
-      });
+      // Load a minimal top bar-like label inside the page title if desired (keeping it simple here)
 
       const urlTeamId = new URLSearchParams(location.search).get('team');
       let team = null;
@@ -321,18 +306,18 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${p.name}</td>
-          <td class="hide-sm">${fmt(p.age_years)}</td>
-          <td>${fmt(p.region)}</td>
-          <td><span class="chip">${fmt(p.role || (p.is_wk?'WK':''))}</span></td>
-          <td class="hide-sm">${fmt(p.form)}</td>
-          <td>${fmt(p.experience)}</td>
-          <td>${fmt(p.fitness)}</td>
-          <td>${fmt(p.skill1)}</td>
-          <td>${fmt(p.skill2)}</td>
-          <td class="hide-sm">${fmt(p.batting_style)}</td>
-          <td class="hide-sm">${fmt(p.bowling_style)}</td>
-          <td>₹${fmt(p.salary)}</td>
-          <td>₹${fmt(p.market_price)}</td>
+          <td class="hide-sm">${(p.age_years ?? '–')}</td>
+          <td>${(p.region ?? '–')}</td>
+          <td><span class="chip">${(p.role || (p.is_wk?'WK':'')) ?? '–'}</span></td>
+          <td class="hide-sm">${(p.form ?? '–')}</td>
+          <td>${(p.experience ?? '–')}</td>
+          <td>${(p.fitness ?? '–')}</td>
+          <td>${(p.skill1 ?? '–')}</td>
+          <td>${(p.skill2 ?? '–')}</td>
+          <td class="hide-sm">${(p.batting_style ?? '–')}</td>
+          <td class="hide-sm">${(p.bowling_style ?? '–')}</td>
+          <td>₹${(p.salary ?? '–')}</td>
+          <td>₹${(p.market_price ?? '–')}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -356,9 +341,10 @@
         .order('date', { ascending:false })
         .limit(20);
 
-      // Preload team names for display (simple cache)
+      // Preload team names cache
       const teamNameCache = new Map([[team.id, team.team_name]]);
       async function nameOf(id){
+        if (!id) return '—';
         if (teamNameCache.has(id)) return teamNameCache.get(id);
         const { data: t } = await supabase.from('teams').select('team_name').eq('id', id).single();
         const n = t?.team_name ?? '—';
@@ -376,7 +362,11 @@
           card.className = 'match-card';
           card.innerHTML = `
             <div>
-              <div><strong>${ht}</strong> vs <strong>${at}</strong></div>
+              <div>
+                <strong><a class="team-link" href="public-profile.html?team=${m.home_team_id}">${ht}</a></strong>
+                &nbsp;vs&nbsp;
+                <strong><a class="team-link" href="public-profile.html?team=${m.away_team_id}">${at}</a></strong>
+              </div>
               <div class="muted">${m.date} • ${m.start_time} • ${type === 'league' ? 'League' : 'Friendly'} • ${status}</div>
             </div>
             <div>
