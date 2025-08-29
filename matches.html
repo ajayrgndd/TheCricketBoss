@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="styles/global.css"/>
   <link rel="stylesheet" href="css/matches.css"/>
 
-  <!-- JS (keep your existing includes) -->
   <script type="module" src="js/smooth-ui.js"></script>
 
   <style>
@@ -66,6 +65,7 @@
 
     const $ = (id) => document.getElementById(id);
 
+    // ---------- Utilities ----------
     function formatDateTime(ts) {
       if (!ts) return "";
       const d = new Date(ts);
@@ -96,7 +96,7 @@
       return `<span class="chip ${cls}">${txt}</span>`;
     };
 
-    // ---------------- Robust helpers (with wicket backfill) ----------------
+    // ---------- Robust parsing (no wickets) ----------
     const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
     function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
 
@@ -107,159 +107,116 @@
       return String(o);
     };
 
-    function isWicketBall(d){
-      return !!(d?.wicket || d?.is_wicket || d?.dismissal || d?.out || d?.isOut || d?.w);
-    }
-
-    function countWicketsFromBBB(bbb, which){
+    // Sum runs from ball_by_ball for a given innings (very tolerant)
+    function runsFromBBB(bbb, which){
       if (!Array.isArray(bbb)) return null;
       const arr = bbb.filter(d => (d.inning ?? d.innings ?? 1) === which);
       if (!arr.length) return null;
-      return arr.reduce((n, d) => n + (isWicketBall(d) ? 1 : 0), 0);
+      return arr.reduce((sum, d) => {
+        // prefer a "total" per delivery, otherwise add batsman+extras, else generic runs field
+        const total = d.total ?? d.runs_total ?? d.score ?? null;
+        if (total != null) return sum + Number(total || 0);
+        const bats = Number(d.batsman_runs ?? d.runs_batsman ?? d.runs_bat ?? 0);
+        const exts = Number(d.extras ?? d.runs_extras ?? 0);
+        const r = d.runs ?? d.r ?? 0;
+        return sum + (Number.isFinite(bats+exts) ? (bats+exts) : Number(r) || 0);
+      }, 0);
     }
 
-    function inferOvers(totals, bbb, which=1){
-      if (!totals) return null;
-      const direct = totals.overs ?? totals.ov ?? totals.o ?? totals.over ?? totals.overs_f;
-      if (direct != null && direct !== '') return String(direct);
-
-      if (totals.balls != null) {
-        const balls = Number(totals.balls);
-        if (Number.isFinite(balls) && balls >= 0) {
-          const O = Math.floor(balls/6), B = balls%6;
-          return `${O}.${B}`;
-        }
-      }
-
-      if (Array.isArray(bbb) && bbb.length){
-        const filt = bbb.filter(d => (d.inning ?? d.innings ?? 1) === which);
-        const arr = filt.length ? filt : bbb;
-        const last = arr[arr.length-1];
-        if (last?.over != null) return ob(last.over, last.ball);
-        if (last?.o != null) return ob(last.o, last.b);
-        if (last?.over_ball != null) return String(last.over_ball);
-      }
+    function inferOversFromBBB(bbb, which){
+      if (!Array.isArray(bbb) || !bbb.length) return null;
+      const arr = bbb.filter(d => (d.inning ?? d.innings ?? 1) === which);
+      const list = arr.length ? arr : bbb;
+      const last = list[list.length-1];
+      if (last?.over != null) return ob(last.over, last.ball);
+      if (last?.o != null)    return ob(last.o, last.b);
+      if (last?.over_ball != null) return String(last.over_ball);
+      if (last?.ov != null)   return String(last.ov);
       return null;
     }
 
-    function extractCurrentTotals(result, homeId, awayId){
-      if (!result) return { home:null, away:null, bbb:null };
-      const bbb = result.ball_by_ball ?? result.bbb ?? null;
+    // Extract per-team runs & overs (no wickets). Tolerates many shapes.
+    function extractSimpleTotals(result, homeId, awayId){
+      const r = toJSON(result) || {};
+      const bbb = r.ball_by_ball ?? r.bbb ?? null;
 
-      const attach = (raw, which) => {
-        if (!raw) return null;
-        const overs = raw.overs ?? inferOvers(raw, bbb, which);
-        const provided = (raw.wickets ?? raw.wkts);
-        const wickets = (provided != null) ? provided : countWicketsFromBBB(bbb, which);
-        return {
-          runs: Number(raw.runs ?? raw.score ?? 0),
-          wickets: Number.isFinite(Number(wickets)) ? Number(wickets) : 0,
-          overs
-        };
+      const pick = (raw, which) => {
+        if (!raw) return { runs:null, overs:null };
+        // runs: prefer explicit, else compute from BBB
+        let runs = raw.runs ?? raw.score ?? null;
+        if (runs == null) runs = runsFromBBB(bbb, which);
+        // overs: prefer explicit, else compute from balls or BBB
+        let overs = raw.overs ?? raw.ov ?? raw.o ?? raw.over ?? raw.overs_f ?? null;
+        if (overs == null && raw.balls != null) {
+          const balls = Number(raw.balls);
+          if (Number.isFinite(balls) && balls >= 0) {
+            const O = Math.floor(balls/6), B = balls%6;
+            overs = `${O}.${B}`;
+          }
+        }
+        if (overs == null) overs = inferOversFromBBB(bbb, which);
+        return { runs: Number.isFinite(Number(runs)) ? Number(runs) : null, overs };
       };
 
-      if (Array.isArray(result.innings)) {
-        let home = null, away = null;
-        for (const [idx, inn] of result.innings.entries()) {
+      // innings array
+      if (Array.isArray(r.innings)) {
+        let home = {runs:null, overs:null}, away = {runs:null, overs:null};
+        r.innings.forEach((inn, idx) => {
           const tid = String(inn.team_id ?? inn.team ?? '');
-          const raw = inn.totals ?? { runs: inn.runs, wickets: inn.wickets ?? inn.wkts, overs: inn.overs };
-          const totals = attach(raw, idx+1);
+          const totals = pick(inn.totals ?? inn, idx+1);
           if (String(homeId) === tid) home = totals;
           else if (String(awayId) === tid) away = totals;
-        }
-        return { home, away, bbb };
+        });
+        return {home, away};
       }
 
-      if (result.home || result.away) {
-        const h = result.home ? attach({
-          runs: result.home.runs ?? result.home.score,
-          wickets: result.home.wickets ?? result.home.wkts,
-          overs: result.home.overs ?? result.home.ov ?? result.home.o
-        }, 1) : null;
-
-        const a = result.away ? attach({
-          runs: result.away.runs ?? result.away.score,
-          wickets: result.away.wickets ?? result.away.wkts,
-          overs: result.away.overs ?? result.away.ov ?? result.away.o
-        }, 2) : null;
-
-        return { home:h, away:a, bbb };
+      // home/away block
+      if (r.home || r.away) {
+        return {
+          home: pick(r.home, 1),
+          away: pick(r.away, 2)
+        };
       }
 
-      if (result.scoreboard && typeof result.scoreboard === 'object') {
-        const fix = (x, which) => x ? attach({
-          runs: x.runs ?? x.score,
-          wickets: x.wickets ?? x.wkts,
-          overs: x.overs ?? x.ov ?? x.o
-        }, which) : null;
-        return { home: fix(result.scoreboard[homeId],1), away: fix(result.scoreboard[awayId],2), bbb };
+      // scoreboard keyed object
+      if (r.scoreboard && typeof r.scoreboard === 'object') {
+        return {
+          home: pick(r.scoreboard[homeId], 1),
+          away: pick(r.scoreboard[awayId], 2)
+        };
       }
 
-      return { home:null, away:null, bbb };
+      return { home:{runs:null, overs:null}, away:{runs:null, overs:null} };
     }
 
-    function formatScore(t){
-      if (!t) return '—';
-      const r = t.runs ?? 0;
-      const w = t.wickets ?? 0;
-      const o = t.overs;
-      return `${r}/${w}${o!=null && o!=='' ? ` (${o})` : ''}`;
+    // "R (O)"
+    function formatScoreNoWk(t){
+      if (!t || t.runs == null) return '—';
+      return `${t.runs}${t.overs ? ` (${t.overs})` : ''}`;
     }
 
+    // Optional chase copy
     function buildChaseText(result){
-      if (!result) return '';
-      if (result.target != null && result.balls_left != null) {
-        const req = Number(result.target) - Number(result.current_runs ?? result.runs ?? 0);
-        const left = Number(result.balls_left);
+      const r = toJSON(result) || {};
+      if (r.target != null && r.balls_left != null) {
+        const req = Number(r.target) - Number(r.current_runs ?? r.runs ?? 0);
+        const left = Number(r.balls_left);
         if (Number.isFinite(req) && Number.isFinite(left))
           return `${Math.max(req,0)} runs required from ${Math.max(left,0)} balls`;
       }
-      if (Array.isArray(result.innings) && result.innings.length>=2) {
-        const t1 = result.innings[0]?.totals ?? result.innings[0];
-        const t2 = result.innings[1]?.totals ?? result.innings[1];
-        if (t1 && t2) {
-          const target = Number(t1.runs ?? 0) + 1;
-          const cur = Number(t2.runs ?? 0);
-          const overStr = t2.overs ?? inferOvers(t2, result.ball_by_ball ?? null, 2);
-          let ballsBowled = null;
-          if (overStr != null) {
-            const [ov, ball] = String(overStr).split('.').map(Number);
-            if (Number.isFinite(ov)) ballsBowled = ov*6 + (Number.isFinite(ball)?ball:0);
-          }
-          const limit = Number(result.overs_limit ?? result.max_overs ?? 20);
-          if (Number.isFinite(ballsBowled) && Number.isFinite(limit)) {
-            const left = Math.max(limit*6 - ballsBowled, 0);
-            const need = Math.max(target - cur, 0);
-            return `${need} runs required from ${left} balls`;
-          }
-        }
-      }
       return '';
     }
 
-    function detectResultText(m, result, homeName, awayName){
-      const txt = m.match_result || result?.result_text || result?.summary || result?.note;
-      if (txt) return txt;
-
-      const { home:h, away:a } = extractCurrentTotals(result, m.home_team_id, m.away_team_id);
-      if (h && a && (h.runs != null) && (a.runs != null)) {
-        if (h.runs === a.runs) return 'Match tied';
-        if (a.runs > h.runs) {
-          const wkLeft = 10 - Number(a.wickets ?? 0);
-          return `${awayName} won by ${wkLeft > 0 ? wkLeft : 1} wicket${wkLeft===1?'':'s'}`;
-        } else {
-          const margin = Number(h.runs) - Number(a.runs);
-          return `${homeName} won by ${margin} run${margin===1?'':'s'}`;
-        }
-      }
+    function completedResultLine(m, homeName, awayName){
+      // keep it extremely simple as requested
       if (m.winner_team_id) {
         const winner = (m.winner_team_id === m.home_team_id) ? homeName
                       : (m.winner_team_id === m.away_team_id) ? awayName : 'Winner';
-        return `${winner} won`;
+        return `${winner} won the match`;
       }
-      return '';
+      return 'Match completed';
     }
-    // ---------------- /helpers ----------------
+    // ---------- /parsing ----------
 
     function card(m){
       const homeLogo = m.home_logo || 'images/logo.png';
@@ -272,14 +229,14 @@
       const homeNameHtml = `<a href="public-profile.html?team=${m.home_team_id}">${homeName}</a>`;
       const awayNameHtml = `<a href="public-profile.html?team=${m.away_team_id}">${awayName}</a>`;
 
-      const res = toJSON(m.result) || {};
-      const { home:homeTotals, away:awayTotals } = extractCurrentTotals(res, m.home_team_id, m.away_team_id);
+      const { home:homeTotals, away:awayTotals } =
+        extractSimpleTotals(m.result, m.home_team_id, m.away_team_id);
 
-      const homeScore = (live || m.status==='completed') ? formatScore(homeTotals) : '—';
-      const awayScore = (live || m.status==='completed') ? formatScore(awayTotals) : '—';
+      const homeScore = (live || m.status==='completed') ? formatScoreNoWk(homeTotals) : '—';
+      const awayScore = (live || m.status==='completed') ? formatScoreNoWk(awayTotals) : '—';
 
-      const chaseText  = (live && res) ? buildChaseText(res) : '';
-      const resultText = (!live && m.status==='completed') ? detectResultText(m, res, homeName, awayName) : '';
+      const chaseText  = live ? buildChaseText(m.result) : '';
+      const resultText = (!live && m.status==='completed') ? completedResultLine(m, homeName, awayName) : '';
 
       const div = document.createElement('div');
       div.className = 'match-card';
@@ -307,7 +264,7 @@
         </div>
 
         ${live && chaseText ? `<div class="subscore">${chaseText}</div>` : ''}
-        ${(!live && m.status==='completed' && resultText) ? `<div class="subscore">${resultText}</div>` : ''}
+        ${(!live && m.status==='completed') ? `<div class="subscore">${resultText}</div>` : ''}
       `;
 
       if (live && m.status === 'running') {
