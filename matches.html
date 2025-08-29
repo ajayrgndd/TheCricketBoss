@@ -12,7 +12,6 @@
   <script type="module" src="js/smooth-ui.js"></script>
 
   <style>
-    /* badges & chips (your same look) */
     .match-card{background:#111;border-radius:12px;padding:12px;margin:14px 0;border:1px solid #222}
     .match-head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px}
     .badge{font-size:.7rem;padding:4px 8px;border-radius:999px;border:1px solid #333;letter-spacing:.02em}
@@ -37,7 +36,6 @@
   </style>
 </head>
 <body>
-  <!-- Top bar (smooth-ui.js will fill) -->
   <div id="top-bar"></div>
 
   <main>
@@ -51,16 +49,13 @@
     <div id="completed-matches" class="match-list"></div>
   </main>
 
-  <!-- Bottom nav (smooth-ui.js will fill) -->
   <div id="bottom-nav"></div>
 
-  <!-- Call smooth UI into #top-bar / #bottom-nav -->
   <script type="module">
     import { loadSmoothUI } from './js/smooth-ui.js';
     loadSmoothUI('top-bar', 'bottom-nav');
   </script>
 
-  <!-- Inline logic (uses RPC + realtime) -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -71,7 +66,6 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // "DD-MM-YYYY, HH:MM AM/PM"
     function formatDateTime(ts) {
       if (!ts) return "";
       const d = new Date(ts);
@@ -88,7 +82,6 @@
     const badge = (kind) =>
       `<span class="badge ${kind==='league'?'badge-league':'badge-friendly'}">${kind==='league'?'League':'Friendly'}</span>`;
 
-    // Frontend: LIVE at/after kickoff
     function isFrontEndLive(m) {
       if (m.status === 'completed' || m.status === 'cancelled') return false;
       const now = Date.now();
@@ -97,14 +90,13 @@
     }
 
     const statusChip = (m) => {
-      const s = m.status;
       const live = isFrontEndLive(m);
-      const cls = live ? 'chip-live' : (s === 'completed' ? 'chip-done' : 'chip-upcoming');
-      const txt = live ? 'LIVE' : (s === 'completed' ? 'Completed' : 'Scheduled');
+      const cls = live ? 'chip-live' : (m.status === 'completed' ? 'chip-done' : 'chip-upcoming');
+      const txt = live ? 'LIVE' : (m.status === 'completed' ? 'Completed' : 'Scheduled');
       return `<span class="chip ${cls}">${txt}</span>`;
     };
 
-    // ---------- Robust helpers ----------
+    // ---------------- Robust helpers (with wicket backfill) ----------------
     const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
     function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
 
@@ -115,7 +107,17 @@
       return String(o);
     };
 
-    // compute overs from many shapes (fields, balls, or ball_by_ball)
+    function isWicketBall(d){
+      return !!(d?.wicket || d?.is_wicket || d?.dismissal || d?.out || d?.isOut || d?.w);
+    }
+
+    function countWicketsFromBBB(bbb, which){
+      if (!Array.isArray(bbb)) return null;
+      const arr = bbb.filter(d => (d.inning ?? d.innings ?? 1) === which);
+      if (!arr.length) return null;
+      return arr.reduce((n, d) => n + (isWicketBall(d) ? 1 : 0), 0);
+    }
+
     function inferOvers(totals, bbb, which=1){
       if (!totals) return null;
       const direct = totals.overs ?? totals.ov ?? totals.o ?? totals.over ?? totals.overs_f;
@@ -144,15 +146,24 @@
       if (!result) return { home:null, away:null, bbb:null };
       const bbb = result.ball_by_ball ?? result.bbb ?? null;
 
+      const attach = (raw, which) => {
+        if (!raw) return null;
+        const overs = raw.overs ?? inferOvers(raw, bbb, which);
+        const provided = (raw.wickets ?? raw.wkts);
+        const wickets = (provided != null) ? provided : countWicketsFromBBB(bbb, which);
+        return {
+          runs: Number(raw.runs ?? raw.score ?? 0),
+          wickets: Number.isFinite(Number(wickets)) ? Number(wickets) : 0,
+          overs
+        };
+      };
+
       if (Array.isArray(result.innings)) {
         let home = null, away = null;
         for (const [idx, inn] of result.innings.entries()) {
           const tid = String(inn.team_id ?? inn.team ?? '');
-          const raw = inn.totals ?? {
-            runs: inn.runs, wickets: inn.wickets ?? inn.wkts, overs: inn.overs ?? null
-          };
-          const overs = raw.overs ?? inferOvers(raw, bbb, idx+1);
-          const totals = { ...raw, overs };
+          const raw = inn.totals ?? { runs: inn.runs, wickets: inn.wickets ?? inn.wkts, overs: inn.overs };
+          const totals = attach(raw, idx+1);
           if (String(homeId) === tid) home = totals;
           else if (String(awayId) === tid) away = totals;
         }
@@ -160,39 +171,39 @@
       }
 
       if (result.home || result.away) {
-        const h = result.home ? {
+        const h = result.home ? attach({
           runs: result.home.runs ?? result.home.score,
           wickets: result.home.wickets ?? result.home.wkts,
-          overs:  result.home.overs ?? result.home.ov ?? result.home.o ?? inferOvers(result.home, bbb, 1)
-        } : null;
-        const a = result.away ? {
+          overs: result.home.overs ?? result.home.ov ?? result.home.o
+        }, 1) : null;
+
+        const a = result.away ? attach({
           runs: result.away.runs ?? result.away.score,
           wickets: result.away.wickets ?? result.away.wkts,
-          overs:  result.away.overs ?? result.away.ov ?? result.away.o ?? inferOvers(result.away, bbb, 2)
-        } : null;
+          overs: result.away.overs ?? result.away.ov ?? result.away.o
+        }, 2) : null;
+
         return { home:h, away:a, bbb };
       }
 
       if (result.scoreboard && typeof result.scoreboard === 'object') {
-        const fix = (x, which) => x ? ({
+        const fix = (x, which) => x ? attach({
           runs: x.runs ?? x.score,
           wickets: x.wickets ?? x.wkts,
-          overs: x.overs ?? x.ov ?? x.o ?? inferOvers(x, bbb, which)
-        }) : null;
+          overs: x.overs ?? x.ov ?? x.o
+        }, which) : null;
         return { home: fix(result.scoreboard[homeId],1), away: fix(result.scoreboard[awayId],2), bbb };
       }
 
       return { home:null, away:null, bbb };
     }
 
-    function formatScore(totals){
-      if (!totals) return '—';
-      const r = totals.runs ?? totals.score;
-      const w = totals.wickets ?? totals.wkts ?? 0;
-      const o = totals.overs ?? inferOvers(totals, null, 1);
-      let s = (r == null) ? '—' : `${r}/${w ?? 0}`;
-      if (o != null && o !== '') s += ` (${o})`;
-      return s;
+    function formatScore(t){
+      if (!t) return '—';
+      const r = t.runs ?? 0;
+      const w = t.wickets ?? 0;
+      const o = t.overs;
+      return `${r}/${w}${o!=null && o!=='' ? ` (${o})` : ''}`;
     }
 
     function buildChaseText(result){
@@ -248,7 +259,7 @@
       }
       return '';
     }
-    // ---------- /helpers ----------
+    // ---------------- /helpers ----------------
 
     function card(m){
       const homeLogo = m.home_logo || 'images/logo.png';
@@ -311,7 +322,6 @@
       return div;
     }
 
-    // ---- Render lists & refresh ----
     async function renderFeed() {
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
       if (error) { console.error(error); return; }
@@ -340,11 +350,8 @@
       if (!user) { location.href = "login.html"; return; }
 
       await renderFeed();
-
-      // Soft auto-refresh every 10s for live score progression
       setInterval(renderFeed, 10000);
 
-      // Realtime: refresh when any of my team’s matches update (friendlies + fixtures)
       const { data: myTeam } = await supabase
         .from('teams').select('id').eq('owner_id', user.id).maybeSingle();
       if (myTeam?.id) {
