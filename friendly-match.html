@@ -397,13 +397,18 @@
       balls.filter(b=>b.innings===inn).forEach(b=>{
         const id=b.bowler_id; if(!id) return;
         const m = map[id] ||= {runs:0,balls:0,wkts:0};
+        // Runs conceded include all runs (incl. wides, no-balls, byes)
         m.runs += (b.runs_scored||0)+(b.extras||0);
+        // Balls bowled count only legal deliveries
         if (isLegal(b)) m.balls++;
-        if (b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout' && (b.dismissal_type||'').toLowerCase()!=='run-out') m.wkts++;
+        // Wickets credited to bowler exclude run-out
+        const t = (b.dismissal_type||'').toLowerCase();
+        if (b.wicket && t!=='runout' && t!=='run-out') m.wkts++;
       });
       return map;
     }
 
+    // Name + badges (shortened)
     function nameWithBadges(pid){
       const p = players[pid]; if(!p) return '—';
       const r = roles[p.team_id] || {};
@@ -414,6 +419,7 @@
       return `${nm}${tags.length?` (${tags.join(', ')})`:''}`;
     }
 
+    // Dismissal helpers
     function dismissalMap(balls, inn){
       const map={};
       balls.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id)
@@ -426,7 +432,24 @@
         });
       return map;
     }
+    function dismissText(pid, dm){
+      const d = dm[pid];
+      if(!d) return "not out";
+      const bowTxt = d.bowler ? nameWithBadges(d.bowler) : '';
+      const fldTxt = d.fielder ? nameWithBadges(d.fielder) : '';
+      const t = (d.type||'').toLowerCase();
+      if (t === 'bowled') return `b ${bowTxt}`;
+      if (t === 'lbw')    return `lbw b ${bowTxt}`;
+      if (t === 'caught') {
+        if (d.fielder && d.bowler && d.fielder === d.bowler) return `c & b ${bowTxt}`;
+        if (d.fielder) return `c ${fldTxt} b ${bowTxt}`;
+        return `c b ${bowTxt}`;
+      }
+      if (t === 'runout' || t==='run-out') return d.fielder ? `run out (${fldTxt})` : `run out`;
+      return bowTxt ? `b ${bowTxt}` : 'out';
+    }
 
+    // Commentary formatting
     function pillsFor(b) {
       const pills=[];
       if (b.wicket) pills.push(`<span class="pill pill-w">WICKET</span>`);
@@ -623,6 +646,25 @@
       });
     }
 
+    /* ✅ missing earlier — restores scorecard + auto refresh */
+    function updateScorecardBlocks() {
+      if (!all.length) return;
+
+      // Innings 1 (home)
+      i1.card.style.display = 'block';
+      i1.title.textContent = `Innings 1 – ${(names[homeTeam]||'Home')}`;
+      fillFullInnings(1, i1);
+
+      // Innings 2 (away) – show only when there are balls in inns 2
+      if (all.some(b => b.innings === 2)) {
+        i2.card.style.display = 'block';
+        i2.title.textContent = `Innings 2 – ${(names[awayTeam]||'Away')}`;
+        fillFullInnings(2, i2);
+      } else {
+        i2.card.style.display = 'none';
+      }
+    }
+
     function maybeShowSummary() {
       if (!matchRow || matchRow.status!=='completed') { liveSummary.style.display='none'; return; }
 
@@ -752,8 +794,6 @@
       function autoXI(teamId) {
         const list = poolFor(teamId);
         const isWK   = p => /wk/i.test(p.role || '');
-        the: {
-        }
         const isBAT  = p => /bat/i.test(p.role || '');
         const isAR   = p => /(all|ar)/i.test(p.role || '');
         const isBOWL = p => /bow/i.test(p.role || '');
