@@ -1,4 +1,4 @@
-<!-- ✅ myprofile.html – Fixed manager name + logo upload + logout -->
+<!-- ✅ myprofile.html – Profile + Ratings (OVR/Bat/Ball/WK) + fixes -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,48 +7,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles/global.css" />
   <style>
+    :root {
+      --bg: #1e1b3a;
+      --card: #2d2a4a;
+      --muted: #444;
+      --accent: #00e676;
+      --text: #fff;
+      --text-dim: #cfd3ff;
+    }
     body {
       margin: 0;
-      background: #1e1b3a;
-      color: white;
+      background: var(--bg);
+      color: var(--text);
       font-family: 'Segoe UI', sans-serif;
     }
+    .tabs {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      background: rgba(30,27,58,0.85);
+      backdrop-filter: blur(6px);
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .tab {
+      text-align: center;
+      background: var(--card);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-decoration: none;
+      font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .tab.active { outline: 2px solid var(--accent); color: #000; background: #8affc3; }
     .main {
       padding: 80px 16px 90px;
-      max-width: 700px;
+      max-width: 780px;
       margin: auto;
     }
     h2 {
       text-align: center;
-      margin-bottom: 20px;
+      margin: 12px 0 18px;
     }
     .section {
-      background: #2d2a4a;
+      background: var(--card);
       padding: 16px;
-      border-radius: 10px;
+      border-radius: 12px;
       margin-bottom: 20px;
+      border: 1px solid rgba(255,255,255,0.06);
     }
     .section h3 {
-      margin-top: 0;
-      border-bottom: 1px solid #444;
-      padding-bottom: 6px;
+      margin: 0 0 10px;
+      border-bottom: 1px solid var(--muted);
+      padding-bottom: 8px;
+      font-size: 18px;
     }
     .info-row {
       display: flex;
       justify-content: space-between;
       margin: 6px 0;
+      color: var(--text-dim);
     }
+    .info-row span:last-child { color: var(--text); }
     .progress-bar {
       height: 10px;
       background: #444;
       border-radius: 6px;
       overflow: hidden;
-      margin-top: 6px;
+      margin-top: 8px;
     }
     .progress-fill {
       height: 100%;
       width: 0%;
-      background: #00e676;
+      background: var(--accent);
       transition: width 0.5s ease;
     }
     #logoPreview {
@@ -58,38 +93,111 @@
       border-radius: 10px;
       border: none;
     }
-    #logoInput {
-      display: none;
-    }
+    #logoInput { display: none; }
     .btn {
-      background: #00e676;
+      background: var(--accent);
       color: #000;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 10px 16px;
       font-weight: bold;
       cursor: pointer;
       margin-top: 10px;
     }
-    .btn-block {
-      width: 100%;
-      margin-top: 14px;
+    .btn-block { width: 100%; margin-top: 14px; }
+    /* Ratings row */
+    .ratings {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .rating-card {
+      background: rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+    }
+    .rating-card img {
+      width: 28px;
+      height: 28px;
+      display: block;
+    }
+    .rating-value {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .rating-label {
+      font-size: 12px;
+      opacity: 0.9;
+      margin-top: 2px;
+      color: var(--text-dim);
+    }
+    @media (max-width: 520px) {
+      .ratings { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
 <body>
+  <!-- Tabs -->
+  <nav class="tabs">
+    <a class="tab active" href="myprofile.html">PROFILE</a>
+    <a class="tab" href="team.html">PLAYERS</a>
+    <a class="tab" href="league.html">LEAGUE</a>
+  </nav>
+
   <div class="main">
     <h2>👤 MANAGER PROFILE</h2>
 
     <div class="section" id="profileSection">
       <h3>Profile Info</h3>
-      <div class="info-row"><span>Manager:</span> <span id="managerName">–</span></div>
+      <div class="info-row"><span>Manager:</span> <span id="profileManagerName">–</span></div>
       <div class="info-row"><span>Team:</span> <span id="teamName">–</span></div>
       <div class="info-row"><span>Region:</span> <span id="region">–</span></div>
       <div class="info-row"><span>Age:</span> <span id="age">–</span></div>
       <div class="info-row"><span>Level:</span> <span id="level">–</span></div>
       <div class="info-row"><span>XP:</span> <span id="xpValue">–</span></div>
       <div class="progress-bar"><div id="xpBar" class="progress-fill"></div></div>
+    </div>
+
+    <!-- Ratings -->
+    <div class="section" id="ratingsSection">
+      <h3>Team Ratings</h3>
+      <div class="ratings">
+        <div class="rating-card">
+          <img src="assets/rating/ovr.png" alt="OVR" />
+          <div>
+            <div class="rating-value" id="ovrValue">–</div>
+            <div class="rating-label">Overall (Top 11 avg)</div>
+          </div>
+        </div>
+        <div class="rating-card">
+          <img src="assets/rating/bat.png" alt="Bat" />
+          <div>
+            <div class="rating-value" id="batValue">–</div>
+            <div class="rating-label">Batting (Top 6 avg)</div>
+          </div>
+        </div>
+        <div class="rating-card">
+          <img src="assets/rating/ball.png" alt="Ball" />
+          <div>
+            <div class="rating-value" id="ballValue">–</div>
+            <div class="rating-label">Bowling (Top 6 avg)</div>
+          </div>
+        </div>
+        <div class="rating-card">
+          <img src="assets/rating/wk.png" alt="WK" />
+          <div>
+            <div class="rating-value" id="wkValue">–</div>
+            <div class="rating-label">Wicketkeeping (Top WK)</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="section">
@@ -103,8 +211,8 @@
       <h3>Activity Snapshot</h3>
       <div class="info-row"><span>Last Login:</span> <span id="lastLogin">–</span></div>
       <div class="info-row"><span>Last Scout:</span> <span id="lastScout">–</span></div>
-      <div class="info-row"><span>Matches Played:</span> <span id="matchesPlayed">–</span></div>
-      <div class="info-row"><span>Matches Won:</span> <span id="matchesWon">–</span></div>
+      <div class="info-row"><span>Matches Played (Friendlies):</span> <span id="matchesPlayed">–</span></div>
+      <div class="info-row"><span>Matches Won (Friendlies):</span> <span id="matchesWon">–</span></div>
       <div class="info-row"><span>Avg Squad Age:</span> <span id="avgAge">–</span></div>
       <div class="info-row"><span>Total Team Value:</span> <span id="teamValue">–</span></div>
     </div>
@@ -141,60 +249,193 @@
       return "Beginner";
     }
 
+    const toNum = (v) => (v == null ? 0 : Number(v));
+
+    function calculateAge(dobStr) {
+      if (!dobStr) return "–";
+      const dob = new Date(dobStr);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      if (
+        today.getMonth() < dob.getMonth() ||
+        (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())
+      ) age--;
+      return `${age} yrs`;
+    }
+
+    function pickByLineupOrAuto(allPlayers, lineup) {
+      // Returns selected groups needed for Bat/Ball/WK calcs + XI for OVR
+      const byId = new Map(allPlayers.map(p => [p.id, p]));
+      let xi = [];
+
+      if (lineup && Array.isArray(lineup.playing_xi) && lineup.playing_xi.length) {
+        xi = lineup.playing_xi.map(id => byId.get(id)).filter(Boolean);
+      } else {
+        // Auto-pick XI by combined score (bat+ball+wk), top 11
+        const sorted = [...allPlayers].sort((a,b) =>
+          (toNum(b.batting)+toNum(b.bowling)+toNum(b.keeping)) -
+          (toNum(a.batting)+toNum(a.bowling)+toNum(a.keeping))
+        );
+        xi = sorted.slice(0, Math.min(11, sorted.length));
+      }
+
+      // Helper sorted copies
+      const sortBy = (arr, key) => [...arr].sort((a,b) => toNum(b[key]) - toNum(a[key]));
+
+      // WK: prefer lineup.keeper if present; else best keeping in XI; else best in squad.
+      let wk = null;
+      if (lineup && lineup.keeper) {
+        wk = byId.get(lineup.keeper) || null;
+      }
+      if (!wk) {
+        wk = sortBy(xi.length ? xi : allPlayers, 'keeping')[0] || null;
+      }
+
+      // All-Rounder: choose player with best (bat+ball), exclude chosen WK for AR slot
+      const poolForAR = (xi.length ? xi : allPlayers).filter(p => !wk || p.id !== wk.id);
+      let ar = null;
+      if (poolForAR.length) {
+        ar = [...poolForAR].sort((a,b) =>
+          (toNum(b.batting)+toNum(b.bowling)) - (toNum(a.batting)+toNum(a.bowling))
+        )[0];
+      }
+
+      // Batters: top 4 by batting, exclude the chosen WK from batter pool (WK bat counted separately)
+      const batters = sortBy(xi.length ? xi : allPlayers, 'batting')
+        .filter(p => !wk || p.id !== wk.id)
+        .slice(0, 4);
+
+      // Bowlers: top 5 by bowling, exclude WK and AR from bowler pool
+      const bowlers = sortBy(xi.length ? xi : allPlayers, 'bowling')
+        .filter(p => (!wk || p.id !== wk.id) && (!ar || p.id !== ar.id))
+        .slice(0, 5);
+
+      return { xi, wk, ar, batters, bowlers };
+    }
+
+    function computeRatings({ xi, wk, ar, batters, bowlers }) {
+      // Bat: (Top4 batsmen batting + WK batting + AR batting) / 6
+      const batSum =
+        batters.reduce((s,p)=> s + toNum(p.batting), 0) +
+        (wk ? toNum(wk.batting) : 0) +
+        (ar ? toNum(ar.batting) : 0);
+      const batAvg = (batters.length + (wk?1:0) + (ar?1:0)) ? (batSum / 6) : 0;
+
+      // Ball: (Top5 bowlers bowling + AR bowling) / 6
+      const ballSum =
+        bowlers.reduce((s,p)=> s + toNum(p.bowling), 0) +
+        (ar ? toNum(ar.bowling) : 0);
+      const ballAvg = (bowlers.length + (ar?1:0)) ? (ballSum / 6) : 0;
+
+      // WK: best keeping (chosen WK)
+      const wkVal = wk ? toNum(wk.keeping) : 0;
+
+      // OVR: for Top 11 (XI) — for each player, (bat+ball+wk)/3, then average over XI
+      let ovr = 0;
+      if (xi && xi.length) {
+        const per = xi.map(p => (toNum(p.batting)+toNum(p.bowling)+toNum(p.keeping)) / 3);
+        ovr = per.reduce((s,v)=>s+v,0) / xi.length;
+      }
+
+      return {
+        bat: batAvg,
+        ball: ballAvg,
+        wk: wkVal,
+        ovr: (batAvg + ballAvg + wkVal) / 3, // As per instruction: sum of bat/ball/wk divided by 3
+        // If you prefer XI-based OVR above instead, swap to: ovrXI: ovr
+        ovrXI: ovr
+      };
+    }
+
+    function fmt(val) {
+      if (Number.isNaN(val)) return "–";
+      return (Math.round(val * 10) / 10).toFixed(1);
+    }
+
     async function main() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return location.href = "login.html";
 
-      const { data: profile } = await supabase
+      // Profile
+      const { data: profile, error: pErr } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", user.id).single();
+      if (pErr) {
+        console.error("Profile fetch error:", pErr);
+        return;
+      }
 
-      const { data: team } = await supabase
+      // Team
+      const { data: team, error: tErr } = await supabase
         .from("teams")
         .select("*")
         .eq("owner_id", user.id).single();
+      if (tErr) {
+        console.error("Team fetch error:", tErr);
+        return;
+      }
 
-      const { data: players } = await supabase
+      // Players for team
+      const { data: players, error: plErr } = await supabase
         .from("players")
-        .select("age_years, market_price")
+        .select("id, batting, bowling, keeping, is_wk, age_years, market_price")
         .eq("team_id", team.id);
+      if (plErr) console.error("Players fetch error:", plErr);
 
-      const { data: matches } = await supabase
+      // Friendlies (matches table)
+      const { data: matches, error: mErr } = await supabase
         .from("matches")
-        .select("result, home_team_id, away_team_id")
+        .select("winner_team_id, home_team_id, away_team_id")
         .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`);
+      if (mErr) console.error("Matches fetch error:", mErr);
 
+      // Lineup (optional)
+      const { data: lineup, error: lErr } = await supabase
+        .from("lineups")
+        .select("playing_xi, batting_order, bowling_order, captain, keeper, team_id")
+        .eq("team_id", team.id)
+        .single();
+      if (lErr && lErr.code !== 'PGRST116') {
+        // PGRST116 = row not found; ignore
+        console.warn("Lineup fetch note:", lErr.message);
+      }
+
+      // Top bar (pass supabase + user_id so inbox badge works)
       loadSharedUI({
+        supabase,
+        user_id: user.id,
         manager_name: profile.manager_name,
         xp: profile.xp,
         coins: profile.coins,
         cash: profile.cash,
       });
 
-      document.getElementById("managerName").textContent = profile.manager_name || "–";
-      document.getElementById("teamName").textContent = profile.team_name;
-      document.getElementById("region").textContent = profile.region;
+      // Fill Profile Info
+      document.getElementById("profileManagerName").textContent = profile.manager_name || "–";
+      document.getElementById("teamName").textContent = profile.team_name || team.team_name || "–";
+      document.getElementById("region").textContent = profile.region || team.region || "–";
       document.getElementById("age").textContent = calculateAge(profile.dob);
-      document.getElementById("level").textContent = getManagerLevel(profile.xp);
-      document.getElementById("xpValue").textContent = `${profile.xp} XP`;
+      document.getElementById("level").textContent = getManagerLevel(profile.xp || 0);
+      document.getElementById("xpValue").textContent = `${profile.xp || 0} XP`;
 
       const levels = {
         Beginner: 0, Expert: 250, Professional: 750, Master: 1750,
         Supreme: 3500, "World Class": 5500, Ultimate: 8500, "The Boss": 13500
       };
-      const nextLvlXP = Object.values(levels).find(x => x > profile.xp) || 13500;
-      const prevLvlXP = Object.values(levels).reverse().find(x => x <= profile.xp) || 0;
-      const pct = Math.round(((profile.xp - prevLvlXP) / (nextLvlXP - prevLvlXP)) * 100);
+      const nextLvlXP = Object.values(levels).find(x => x > (profile.xp || 0)) ?? 13500;
+      const prevLvlXP = [...Object.values(levels)].reverse().find(x => x <= (profile.xp || 0)) ?? 0;
+      const pct = Math.max(0, Math.min(100, Math.round((((profile.xp || 0) - prevLvlXP) / (nextLvlXP - prevLvlXP)) * 100)));
       document.getElementById("xpBar").style.width = `${pct}%`;
 
+      // Logo
       const logoImg = document.getElementById("logoPreview");
       logoImg.src = team.logo_url || "assets/default-logo.png";
 
       document.getElementById("logoInput").addEventListener("change", async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const path = `${team.id}/${file.name}`;
+        const path = `${team.id}/${Date.now()}-${file.name}`;
 
         const { error: uploadError } = await supabase.storage
           .from("team-logos")
@@ -214,38 +455,51 @@
           return;
         }
 
-        await supabase
+        const { error: updErr } = await supabase
           .from("teams")
           .update({ logo_url: publicUrl })
           .eq("id", team.id);
 
+        if (updErr) {
+          console.error("❌ Teams update error:", updErr.message);
+          return;
+        }
+
         logoImg.src = publicUrl;
       });
 
-      document.getElementById("lastLogin").textContent = profile.last_xp_login_date || "—";
-      document.getElementById("lastScout").textContent = profile.last_scout_date || "—";
+      // Activity Snapshot
+      document.getElementById("lastLogin").textContent =
+        profile.last_xp_login_date || "—";
+
+      // Schema note: you have last_scouted / last_scouted_date
+      document.getElementById("lastScout").textContent =
+        profile.last_scouted_date || profile.last_scouted || "—";
+
       document.getElementById("matchesPlayed").textContent = matches?.length ?? 0;
-      document.getElementById("matchesWon").textContent = matches?.filter(m => m.result === team.id).length ?? 0;
+      document.getElementById("matchesWon").textContent =
+        matches?.filter(m => m.winner_team_id === team.id).length ?? 0;
 
       if (players?.length) {
         const avgAge = players.reduce((acc, p) => acc + (p.age_years || 0), 0) / players.length;
-        document.getElementById("avgAge").textContent = avgAge.toFixed(1) + " yrs";
+        document.getElementById("avgAge").textContent =
+          isFinite(avgAge) ? (avgAge.toFixed(1) + " yrs") : "–";
       }
 
       const marketValue = players?.reduce((acc, p) => acc + (p.market_price || 0), 0) || 0;
-      const totalValue = marketValue + (team.cash || 0) + (profile.coins * 10) + (profile.xp * 0.25);
+      const totalValue = marketValue + (toNum(team.cash) || 0) + (toNum(profile.coins) * 10) + (toNum(profile.xp) * 0.25);
       document.getElementById("teamValue").textContent = `₹${Math.round(totalValue).toLocaleString()}`;
-    }
 
-    function calculateAge(dobStr) {
-      const dob = new Date(dobStr);
-      const today = new Date();
-      let age = today.getFullYear() - dob.getFullYear();
-      if (
-        today.getMonth() < dob.getMonth() ||
-        (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())
-      ) age--;
-      return `${age} yrs`;
+      // ===== Ratings (OVR / Bat / Ball / WK) =====
+      const selection = pickByLineupOrAuto(players || [], lineup || null);
+      const rates = computeRatings(selection);
+
+      // Show: per your rule, OVR = (Bat + Ball + WK) / 3
+      document.getElementById("ovrValue").textContent = fmt(rates.ovr);
+      document.getElementById("batValue").textContent = fmt(rates.bat);
+      document.getElementById("ballValue").textContent = fmt(rates.ball);
+      document.getElementById("wkValue").textContent = fmt(rates.wk);
+      // If you ever want XI-based OVR instead, swap to: fmt(rates.ovrXI)
     }
 
     main();
