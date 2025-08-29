@@ -295,24 +295,25 @@
         const el = document.createElement('div');
         el.className = 'pcard';
         el.innerHTML = `
-          <div class="title">
-            <span>${p.name}</span>
-            <span class="pill">${fmt(p.role || (p.is_wk?'WK':''))}</span>
-            <span class="pill">Age ${age}</span>
-          </div>
-          <div class="meta">${fmt(p.region)}</div>
-          <div class="kv">
-            <div class="row"><span>Form</span><span>${fmt(p.form)}</span></div>
-            <div class="row"><span>XP</span><span>${fmt(p.experience)}</span></div>
-            <div class="row"><span>Fitness</span><span>${fmt(p.fitness)}</span></div>
-            <div class="row"><span>Skill 1</span><span>${fmt(p.skill1)}</span></div>
-            <div class="row"><span>Skill 2</span><span>${fmt(p.skill2)}</span></div>
-            <div class="row"><span>Bat Style</span><span>${fmt(p.batting_style)}</span></div>
-            <div class="row"><span>Bowl Style</span><span>${fmt(p.bowling_style)}</span></div>
-            <div class="row"><span>Salary</span><span>${p.salary!=null?`₹${Number(p.salary).toLocaleString()}`:'–'}</span></div>
-            <div class="row"><span>Market Value</span><span>${p.market_price!=null?`₹${Number(p.market_price).toLocaleString()}`:'–'}</span></div>
-          </div>
-        `;
+  <div class="title">
+    <span>${p.name}</span>
+    <span class="pill">${fmt(p.role || (p.is_wk?'WK':''))}</span>
+    <span class="pill">Age ${age}</span>
+  </div>
+  <div class="meta">${fmt(p.region)}</div>
+  <div class="kv">
+    <div class="row"><span class="label">Form:</span><span>${fmt(p.form)}</span></div>
+    <div class="row"><span class="label">XP:</span><span>${fmt(p.experience)}</span></div>
+    <div class="row"><span class="label">Fitness:</span><span>${fmt(p.fitness)}</span></div>
+    <div class="row"><span class="label">Skill 1:</span><span>${fmt(p.skill1)}</span></div>
+    <div class="row"><span class="label">Skill 2:</span><span>${fmt(p.skill2)}</span></div>
+    <div class="row"><span class="label">Bat Style:</span><span>${fmt(p.batting_style)}</span></div>
+    <div class="row"><span class="label">Bowl Style:</span><span>${fmt(p.bowling_style)}</span></div>
+    <div class="row"><span class="label">Salary:</span><span>${p.salary!=null?`₹${Number(p.salary).toLocaleString()}`:'–'}</span></div>
+    <div class="row"><span class="label">Market:</span><span>${p.market_price!=null?`₹${Number(p.market_price).toLocaleString()}`:'–'}</span></div>
+  </div>
+`;
+
         grid.appendChild(el);
       });
 
