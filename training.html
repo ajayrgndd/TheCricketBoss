@@ -93,6 +93,8 @@
   <script type="module">
     import { loadSmoothUI } from './js/smooth-ui.js';
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+    /* ⬇️ NEW: salary + market calc (smooth per point; or your tiered util if you keep the old file) */
+    import { calculateWeeklySalary, calculateMarketValue } from './js/utils/salary.js';
 
     const SUPABASE_URL = 'https://iukofcmatlfhfwcechdq.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE';
@@ -263,8 +265,9 @@
 
       startStatusLoop();
 
+      /* ⬇️ include form & experience for salary.js */
       const { data, error } = await supabase.from('players')
-        .select('id, team_id, name, role, batting, bowling, keeping, age_years, age_days, image_url, is_wk, last_trained_week_anchor, last_trained_type, team_name, manager_name, skill_level')
+        .select('id, team_id, name, role, form, experience, batting, bowling, keeping, age_years, age_days, image_url, is_wk, last_trained_week_anchor, last_trained_type, team_name, manager_name, skill_level, salary, market_price')
         .eq('team_id', teamId).order('name', { ascending:true });
       if (error) { console.error(error); toast('Players load failed'); return; }
       players = data || [];
@@ -368,7 +371,6 @@
       let levelUpXpTotal = 0; 
       const resultLines = [];
 
-      // Per-skill tier change detection + XP (with Skill Type label)
       function reportSkillUpgrade(label, beforeVal, afterVal, playerName, roleText){
         const before = getSkillLevel(beforeVal);
         const after  = getSkillLevel(afterVal);
@@ -403,8 +405,24 @@
           }
         }
 
+        /* ⬇️ NEW: recompute econ based on updated skills (uses salary.js) */
+        const calcInput = {
+          ...p,
+          batting: newBat,
+          bowling: newBow,
+          keeping: newKeep,
+          experience: Number.isFinite(p.experience) ? p.experience : 0,
+          form: p.form || 'Average',
+          age_years: p.age_years || 0
+        };
+        const newSalary = calculateWeeklySalary(calcInput);
+        const newMarket = calculateMarketValue(calcInput);
+
         updates.push({
-          id: p.id, batting:newBat, bowling:newBow, keeping:newKeep,
+          id: p.id,
+          batting:newBat, bowling:newBow, keeping:newKeep,
+          salary: newSalary,                 /* save salary */
+          market_price: newMarket,           /* save market */
           last_trained_week_anchor: weekAnchor,
           last_trained_session_at: now,
           last_trained_type: sessionType,
@@ -416,6 +434,7 @@
       for (const u of updates){
         const { error } = await supabase.from('players').update({
           batting:u.batting, bowling:u.bowling, keeping:u.keeping,
+          salary:u.salary, market_price:u.market_price,  /* persist econ */
           last_trained_week_anchor:u.last_trained_week_anchor,
           last_trained_session_at:u.last_trained_session_at,
           last_trained_type:u.last_trained_type,
@@ -471,8 +490,9 @@
       }
 
       {
+        /* keep form & experience in reload too */
         const { data, error } = await supabase.from('players')
-          .select('id, team_id, name, role, batting, bowling, keeping, age_years, age_days, image_url, is_wk, last_trained_week_anchor, last_trained_type, team_name, manager_name, skill_level')
+          .select('id, team_id, name, role, form, experience, batting, bowling, keeping, age_years, age_days, image_url, is_wk, last_trained_week_anchor, last_trained_type, team_name, manager_name, skill_level, salary, market_price')
           .eq('team_id', teamId).order('name', { ascending:true });
         if (!error) players = data || [];
       }
