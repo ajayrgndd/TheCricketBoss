@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Public Match Score – TheCricketBoss</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles/global.css" />
+  <style>
+    :root { --bg:#1e1b3a; --card:#2d2a4a; --muted:#444; --accent:#00e676; --text:#fff; --text-dim:#cfd3ff; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; }
+
+    .tabs {
+      position: sticky; top:60px; z-index:5;
+      display: grid; grid-template-columns: 1fr 1fr; gap:8px;
+      background: rgba(30,27,58,.95); backdrop-filter: blur(6px);
+      padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.06);
+      margin-bottom: 16px;
+    }
+    .tab { text-align:center; background:var(--card); color:var(--text);
+      border-radius:10px; padding:10px 6px; font-weight:600;
+      border:1px solid rgba(255,255,255,.08); cursor:pointer; }
+    .tab.active { outline:2px solid var(--accent); color:#000; background:#8affc3; }
+
+    .main { padding:20px 16px 90px; max-width:1100px; margin:auto; }
+    h2 { text-align:center; margin:20px 0 16px; }
+    .muted { color:var(--text-dim); font-size:13px; }
+
+    .hdr { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:8px; }
+    .tag { background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); padding:4px 8px; border-radius:999px; font-size:12px; }
+
+    .section { background:var(--card); padding:16px; border-radius:12px; margin-bottom:20px; border:1px solid rgba(255,255,255,.06); }
+    .section h3 { margin:0 0 10px; border-bottom:1px solid var(--muted); padding-bottom:8px; font-size:18px; }
+
+    /* Scoreboard layout */
+    .teamscore-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width: 900px){ .teamscore-grid { grid-template-columns:1fr; } }
+    .teamscore {
+      background:rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.06);
+      border-radius:12px; padding:12px;
+    }
+    .teamscore .head {
+      display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:8px;
+    }
+    .teamscore .name { font-size:18px; font-weight:800; }
+    .teamscore .score { font-size:18px; font-weight:800; }
+    .teamscore .sub { font-size:12px; color:var(--text-dim); }
+
+    table.clean { width:100%; border-collapse:separate; border-spacing:0; }
+    table.clean th, table.clean td { padding:8px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; font-size:14px; }
+    table.clean th { color:var(--text-dim); font-weight:600; }
+    table.clean tr:last-child td { border-bottom:none; }
+
+    .lineup-wrap { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .lineup { background:rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:10px; }
+    .lineup h4 { margin:0 0 8px; font-size:15px; }
+    .lineup ul { margin:0; padding:0; list-style:none; }
+    .lineup li { padding:4px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:14px; }
+    .lineup li:last-child{ border:none; }
+  </style>
+</head>
+<body>
+  <!-- Tabs -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="scoreboard">SCOREBOARD</button>
+    <button class="tab" data-tab="lineup">LINEUP</button>
+  </nav>
+
+  <div class="main">
+    <h2 id="matchTitle">Match</h2>
+    <div class="hdr">
+      <span class="tag" id="metaType">–</span>
+      <span class="tag" id="metaDate">–</span>
+      <span class="tag" id="metaTime">–</span>
+      <span class="tag" id="metaStatus">–</span>
+      <span class="tag" id="metaToss" style="display:none"></span>
+      <span class="tag" id="metaResult" style="display:none"></span>
+    </div>
+
+    <!-- SCOREBOARD TAB -->
+    <section class="tab-pane" id="pane-scoreboard">
+      <div class="section">
+        <h3>Scoreboard</h3>
+        <div id="scoreboardContent">
+          <p class="muted">Loading...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- LINEUP TAB -->
+    <section class="tab-pane" id="pane-lineup" style="display:none">
+      <div class="section">
+        <h3>Playing XI</h3>
+        <div class="lineup-wrap">
+          <div class="lineup">
+            <h4 id="homeTeamName">Home Team</h4>
+            <ul id="homeLineup"></ul>
+          </div>
+          <div class="lineup">
+            <h4 id="awayTeamName">Away Team</h4>
+            <ul id="awayLineup"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        const name = btn.dataset.tab;
+        document.querySelectorAll('.tab-pane').forEach(p=> p.style.display = (p.id === `pane-${name}`) ? '' : 'none');
+      });
+    });
+
+    const params = new URLSearchParams(location.search);
+    const type = params.get('type') === 'league' ? 'league' : 'friendly';
+    const matchId = params.get('id');
+
+    const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
+    function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
+    const fmt = (v)=> (v==null || v==='') ? '—' : v;
+
+    async function teamName(id) {
+      if (!id) return "—";
+      const { data } = await supabase.from('teams').select('team_name').eq('id', id).single();
+      return data?.team_name ?? "—";
+    }
+
+    function renderInningsCard(container, teamLabel, totals, battingRows, bowlingRows) {
+      const wrap = document.createElement('div');
+      wrap.className = 'teamscore';
+
+      // Totals
+      const scoreTxt = totals
+        ? `${fmt(totals.runs)}/${fmt(totals.wickets)}${totals.overs != null ? ' ('+totals.overs+')' : ''}`
+        : '—';
+
+      wrap.innerHTML = `
+        <div class="head">
+          <div class="name">${teamLabel}</div>
+          <div class="score">${scoreTxt}</div>
+        </div>
+        <div class="sub">${fmt(totals?.summary || '')}</div>
+        <div style="margin-top:10px">
+          <div style="font-weight:700;margin-bottom:6px">Batting</div>
+          <table class="clean">
+            <thead><tr>
+              <th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th><th class="hide-sm">Dismissal</th>
+            </tr></thead>
+            <tbody>${(battingRows||[]).map(b=>`
+              <tr>
+                <td>${fmt(b.name)}</td>
+                <td>${fmt(b.runs)}</td>
+                <td>${fmt(b.balls)}</td>
+                <td>${fmt(b.fours ?? b["4s"])}</td>
+                <td>${fmt(b.sixes ?? b["6s"])}</td>
+                <td>${fmt(b.sr ?? b.strike_rate)}</td>
+                <td class="hide-sm">${fmt(b.out || b.dismissal)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:14px">
+          <div style="font-weight:700;margin-bottom:6px">Bowling</div>
+          <table class="clean">
+            <thead><tr>
+              <th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th class="hide-sm">Eco</th>
+            </tr></thead>
+            <tbody>${(bowlingRows||[]).map(b=>`
+              <tr>
+                <td>${fmt(b.name)}</td>
+                <td>${fmt(b.overs)}</td>
+                <td>${fmt(b.maidens ?? b.m)}</td>
+                <td>${fmt(b.runs)}</td>
+                <td>${fmt(b.wkts ?? b.wickets)}</td>
+                <td class="hide-sm">${fmt(b.econ ?? b.economy)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      container.appendChild(wrap);
+    }
+
+    function normalizeResult(result, homeId, awayId, teamNames) {
+      // Support several shapes; produce a normalized structure:
+      // { innings: [{team_id, totals:{runs,wickets,overs,summary}, batting:[...], bowling:[...]}], meta:{toss, note, winner_team_id} }
+      const R = { innings: [], meta: {} };
+      if (!result) return R;
+
+      // Common shape A: result.innings = [{team_id, totals, batting, bowling}]
+      if (Array.isArray(result.innings)) {
+        for (const inn of result.innings) {
+          R.innings.push({
+            team_id: inn.team_id ?? inn.team ?? null,
+            totals: {
+              runs: inn.runs ?? inn.totals?.runs,
+              wickets: inn.wkts ?? inn.wickets ?? inn.totals?.wickets,
+              overs: inn.overs ?? inn.totals?.overs,
+              summary: inn.summary ?? inn.totals?.summary
+            },
+            batting: inn.batting ?? inn.scorecard?.batting ?? [],
+            bowling: inn.bowling ?? inn.scorecard?.bowling ?? []
+          });
+        }
+      }
+      // Shape B: result.home / result.away blocks
+      else if (result.home || result.away) {
+        if (result.home) {
+          R.innings.push({
+            team_id: homeId,
+            totals: {
+              runs: result.home.runs, wickets: result.home.wickets, overs: result.home.overs,
+              summary: result.home.summary
+            },
+            batting: result.home.batting, bowling: result.home.bowling
+          });
+        }
+        if (result.away) {
+          R.innings.push({
+            team_id: awayId,
+            totals: {
+              runs: result.away.runs, wickets: result.away.wickets, overs: result.away.overs,
+              summary: result.away.summary
+            },
+            batting: result.away.batting, bowling: result.away.bowling
+          });
+        }
+      }
+      // Shape C: result.scoreboard = { <teamId> : {totals, batting, bowling} }
+      else if (result.scoreboard && typeof result.scoreboard === 'object') {
+        for (const [tid, v] of Object.entries(result.scoreboard)) {
+          R.innings.push({
+            team_id: tid,
+            totals: {
+              runs: v.runs ?? v.totals?.runs,
+              wickets: v.wkts ?? v.wickets ?? v.totals?.wickets,
+              overs: v.overs ?? v.totals?.overs,
+              summary: v.summary ?? v.totals?.summary
+            },
+            batting: v.batting ?? v.scorecard?.batting ?? [],
+            bowling: v.bowling ?? v.scorecard?.bowling ?? []
+          });
+        }
+      }
+
+      // Meta
+      R.meta.toss = result.toss ?? result.toss_won_by ?? null;
+      R.meta.note = result.note ?? result.notes ?? null;
+      R.meta.winner_team_id = result.winner_team_id ?? result.winner ?? null;
+      R.meta.result_text = result.result_text ?? result.result ?? null;
+
+      // Fill team names map for Shape C if keys are names
+      if (R.innings.length && !R.innings[0].team_id) {
+        // Might be keyed by names; resolve by comparing to known names
+        const byName = {};
+        for (const inn of R.innings) {
+          const name = inn.totals?.summary?.split(' ')[0]; // best-effort
+          if (name) byName[name] = inn;
+        }
+      }
+      return R;
+    }
+
+    async function render() {
+      if (!matchId) {
+        document.getElementById('scoreboardContent').innerHTML = '<p class="muted">Invalid match ID</p>';
+        return;
+      }
+
+      // Fetch match
+      const table = (type === 'league') ? 'fixtures' : 'matches';
+      const { data: match } = await supabase.from(table).select('*').eq('id', matchId).maybeSingle();
+      if (!match) {
+        document.getElementById('scoreboardContent').innerHTML = '<p class="muted">Match not found.</p>';
+        return;
+      }
+
+      const htName = await teamName(match.home_team_id);
+      const atName = await teamName(match.away_team_id);
+
+      // Header & meta
+      document.getElementById('matchTitle').textContent = `${htName} vs ${atName}`;
+      document.getElementById('metaType').textContent = type === 'league' ? 'League' : 'Friendly';
+      document.getElementById('metaDate').textContent = match.date || '—';
+      document.getElementById('metaTime').textContent = match.start_time || '—';
+      document.getElementById('metaStatus').textContent = match.status || 'scheduled';
+
+      if (match.winner_team_id || match.match_result) {
+        const el = document.getElementById('metaResult');
+        el.style.display = 'inline-block';
+        el.textContent = match.winner_team_id
+          ? (match.winner_team_id === match.home_team_id ? `${htName} won` : `${atName} won`)
+          : (match.match_result || 'Result');
+      }
+
+      // Parse & normalize result
+      const raw = toJSON(match.result);
+      const normalized = normalizeResult(raw || {}, match.home_team_id, match.away_team_id, {});
+
+      if (normalized.meta.toss) {
+        const tossEl = document.getElementById('metaToss');
+        tossEl.style.display = 'inline-block';
+        tossEl.textContent = `Toss: ${normalized.meta.toss}`;
+      }
+
+      const sb = document.getElementById('scoreboardContent');
+
+      // If we got innings with any totals, render cards; else fallback to pretty JSON.
+      const hasAnyTotals = normalized.innings.some(x => x.totals && (x.totals.runs != null || x.totals.overs != null || x.totals.wickets != null));
+
+      if (normalized.innings.length && hasAnyTotals) {
+        const grid = document.createElement('div');
+        grid.className = 'teamscore-grid';
+
+        for (const inn of normalized.innings) {
+          const label = (inn.team_id === match.home_team_id) ? htName
+                       : (inn.team_id === match.away_team_id) ? atName
+                       : 'Team';
+          renderInningsCard(grid, label, inn.totals, inn.batting, inn.bowling);
+        }
+
+        sb.innerHTML = '';
+        sb.appendChild(grid);
+
+        if (normalized.meta.note) {
+          const p = document.createElement('p');
+          p.className = 'muted';
+          p.style.marginTop = '8px';
+          p.textContent = normalized.meta.note;
+          sb.appendChild(p);
+        }
+      } else {
+        // Fallback pretty JSON
+        sb.innerHTML = `
+          <p class="muted">Detailed formatted scoreboard not available for this match schema.</p>
+          <pre style="background:rgba(0,0,0,.2);padding:10px;border-radius:6px;overflow:auto;">${JSON.stringify(raw ?? match.result ?? {}, null, 2)}</pre>
+        `;
+      }
+
+      // LINEUPS
+      document.getElementById('homeTeamName').textContent = htName;
+      document.getElementById('awayTeamName').textContent = atName;
+
+      const { data: homeLineup } = await supabase.from('lineups').select('playing_xi').eq('team_id', match.home_team_id).maybeSingle();
+      const { data: awayLineup } = await supabase.from('lineups').select('playing_xi').eq('team_id', match.away_team_id).maybeSingle();
+
+      async function renderLineup(lineup, elId) {
+        const ul = document.getElementById(elId);
+        ul.innerHTML = '';
+        if (!lineup || !lineup.playing_xi) {
+          ul.innerHTML = '<li class="muted">Lineup not set</li>';
+          return;
+        }
+        for (const pid of lineup.playing_xi) {
+          const { data: p } = await supabase.from('players').select('name,role').eq('id', pid).maybeSingle();
+          if (p) {
+            const li = document.createElement('li');
+            li.textContent = `${p.name} ${p.role ? '('+p.role+')' : ''}`;
+            ul.appendChild(li);
+          }
+        }
+      }
+      await renderLineup(homeLineup, 'homeLineup');
+      await renderLineup(awayLineup, 'awayLineup');
+    }
+
+    render();
+  </script>
+</body>
+</html>
