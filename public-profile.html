@@ -9,11 +9,13 @@
     :root {
       --bg:#1e1b3a; --card:#2d2a4a; --muted:#444; --accent:#00e676;
       --text:#fff; --text-dim:#cfd3ff; --link:#8affc3;
+      --topbar-h: 60px; /* fallback height for sticky tabs */
     }
     body { margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; }
-    /* Top tabs under fixed top bar from shared-ui.js */
+
+    /* Tabs sit under the fixed top bar injected by shared-ui.js */
     .tabs{
-      position:sticky; top:60px; z-index:5;
+      position:sticky; top:var(--topbar-h); z-index:5;
       display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
       background:rgba(30,27,58,.95); backdrop-filter:blur(6px);
       padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.06);
@@ -23,6 +25,7 @@
       border-radius:10px; padding:10px 6px; text-decoration:none; font-weight:600;
       border:1px solid rgba(255,255,255,.08); cursor:pointer; }
     .tab.active{ outline:2px solid var(--accent); color:#000; background:#8affc3; }
+
     .main{ padding:20px 16px 90px; max-width:900px; margin:auto; }
     h2{ text-align:center; margin:20px 0 16px; }
 
@@ -167,11 +170,6 @@
     // ---- UI helpers
     const qs = (s, el=document)=> el.querySelector(s);
     const qsa = (s, el=document)=> [...el.querySelectorAll(s)];
-    const fmt = (v) => {
-      if (v == null || Number.isNaN(v)) return "–";
-      if (typeof v === 'number') return v.toLocaleString();
-      return v;
-    };
     const toNum = (v) => (v == null ? 0 : Number(v));
 
     // Tabs
@@ -184,7 +182,7 @@
       });
     });
 
-    // Ratings selection logic (lineup-first)
+    // Ratings helpers
     function pickByLineupOrAuto(allPlayers, lineup) {
       const byId = new Map(allPlayers.map(p => [p.id, p]));
       let xi = [];
@@ -211,15 +209,15 @@
       return { xi, wk, ar, batters, bowlers };
     }
     function computeRatings({ xi, wk, ar, batters, bowlers }) {
-      const batSum = batters.reduce((s,p)=> s+toNum(p.batting),0) + (wk?toNum(wk.batting):0) + (ar?toNum(ar.batting):0);
+      const toN = toNum;
+      const batSum = batters.reduce((s,p)=> s+toN(p.batting),0) + (wk?toN(wk.batting):0) + (ar?toN(ar.batting):0);
       const batAvg = (batters.length + (wk?1:0) + (ar?1:0)) ? (batSum/6) : 0;
-      const ballSum = bowlers.reduce((s,p)=> s+toNum(p.bowling),0) + (ar?toNum(ar.bowling):0);
+      const ballSum = bowlers.reduce((s,p)=> s+toN(p.bowling),0) + (ar?toN(ar.bowling):0);
       const ballAvg = (bowlers.length + (ar?1:0)) ? (ballSum/6) : 0;
-      const wkVal = wk ? toNum(wk.keeping) : 0;
+      const wkVal = wk ? toN(wk.keeping) : 0;
       return { bat:batAvg, ball:ballAvg, wk:wkVal, ovr:(batAvg+ballAvg+wkVal)/3 };
     }
     const round1 = (x)=> (Math.round(x*10)/10).toFixed(1);
-
     function getManagerLevel(xp) {
       if (xp >= 13500) return "The Boss";
       if (xp >= 8500) return "Ultimate";
@@ -232,9 +230,32 @@
     }
 
     async function main() {
+      // 1) Mount the shared top bar with the VIEWER's info
       const { data: { user: viewer } } = await supabase.auth.getUser().catch(()=>({data:{user:null}}));
-      // Load a minimal top bar-like label inside the page title if desired (keeping it simple here)
+      if (viewer) {
+        try {
+          const { data: myProfile } = await supabase
+            .from('profiles')
+            .select('manager_name,xp,coins,cash')
+            .eq('user_id', viewer.id)
+            .maybeSingle();
 
+          // Mount the topbar/bottom-nav
+          await loadSharedUI({
+            supabase,
+            manager_name: myProfile?.manager_name ?? 'Manager',
+            xp: myProfile?.xp ?? 0,
+            coins: myProfile?.coins ?? 0,
+            cash: myProfile?.cash ?? 0,
+            user_id: viewer.id
+          });
+        } catch (e) {
+          // Even if this fails, rest of page works
+          console.warn('Topbar load skipped:', e?.message || e);
+        }
+      }
+
+      // 2) Resolve which TEAM to show (URL ?team=… or viewer’s team)
       const urlTeamId = new URLSearchParams(location.search).get('team');
       let team = null;
 
@@ -246,11 +267,12 @@
         team = t;
       }
       if (!team) {
-        qs('.main').innerHTML = `<div class="section"><h3>Team not found</h3><p class="muted">Provide ?team=&lt;TEAM_ID&gt; in the URL.</p></div>`;
+        document.querySelector('.main').innerHTML =
+          `<div class="section"><h3>Team not found</h3><p class="muted">Provide ?team=&lt;TEAM_ID&gt; in the URL.</p></div>`;
         return;
       }
 
-      // Profile row by team_id
+      // 3) Load profile by team_id (public being viewed)
       const { data: profile } = await supabase.from('profiles').select('*').eq('team_id', team.id).maybeSingle();
 
       // League info (optional)
@@ -262,7 +284,7 @@
         leagueName = team.tier;
       }
 
-      // Players (need hidden skill fields for rating calc, but we won't display them)
+      // Players (hidden skills in UI)
       const { data: players } = await supabase
         .from('players')
         .select('id,name,role,form,experience,fitness,age_years,region,skill1,skill2,batting_style,bowling_style,salary,market_price,batting,bowling,keeping')
@@ -275,32 +297,33 @@
         .eq('team_id', team.id)
         .maybeSingle();
 
-      // Fill PROFILE tab
-      qs('#pageTitle').textContent = '👥 PUBLIC TEAM PROFILE';
-      qs('#mgrName').textContent = profile?.manager_name ?? team.manager_name ?? '–';
-      qs('#teamName').textContent = profile?.team_name ?? team.team_name ?? '–';
-      qs('#region').textContent = profile?.region ?? team.region ?? '–';
-      qs('#leagueInfo').textContent = leagueName;
+      // PROFILE tab fill
+      document.getElementById('pageTitle').textContent = '👥 PUBLIC TEAM PROFILE';
+      document.getElementById('mgrName').textContent = profile?.manager_name ?? team.manager_name ?? '–';
+      document.getElementById('teamName').textContent = profile?.team_name ?? team.team_name ?? '–';
+      document.getElementById('region').textContent = profile?.region ?? team.region ?? '–';
+      document.getElementById('leagueInfo').textContent = leagueName;
+
       const xp = profile?.xp ?? 0;
-      qs('#level').textContent = getManagerLevel(xp);
-      qs('#xpValue').textContent = `${xp} XP`;
-      // XP bar
+      document.getElementById('level').textContent = getManagerLevel(xp);
+      document.getElementById('xpValue').textContent = `${xp} XP`;
+
       const levels = { Beginner:0, Expert:250, Professional:750, Master:1750, Supreme:3500, "World Class":5500, Ultimate:8500, "The Boss":13500 };
       const nextLvlXP = Object.values(levels).find(x => x > xp) ?? 13500;
       const prevLvlXP = [...Object.values(levels)].reverse().find(x => x <= xp) ?? 0;
       const pct = Math.max(0, Math.min(100, Math.round(((xp - prevLvlXP)/(nextLvlXP - prevLvlXP))*100)));
-      qs('#xpBar').style.width = pct + '%';
+      document.getElementById('xpBar').style.width = pct + '%';
 
-      // Ratings (aggregate only)
+      // Ratings
       const selection = pickByLineupOrAuto(players||[], lineup||null);
       const r = computeRatings(selection);
-      qs('#ovrValue').textContent = round1(r.ovr);
-      qs('#batValue').textContent = round1(r.bat);
-      qs('#ballValue').textContent = round1(r.ball);
-      qs('#wkValue').textContent = round1(r.wk);
+      document.getElementById('ovrValue').textContent  = round1(r.ovr);
+      document.getElementById('batValue').textContent  = round1(r.bat);
+      document.getElementById('ballValue').textContent = round1(r.ball);
+      document.getElementById('wkValue').textContent   = round1(r.wk);
 
-      // PLAYERS (public-safe fields only)
-      const tbody = qs('#playersBody');
+      // PLAYERS table (public-safe)
+      const tbody = document.getElementById('playersBody');
       tbody.innerHTML = '';
       (players||[]).forEach(p=>{
         const tr = document.createElement('tr');
@@ -322,10 +345,9 @@
         tbody.appendChild(tr);
       });
 
-      // MATCHES (League: fixtures; Friendlies: matches)
+      // MATCHES (League fixtures & Friendlies)
       const teamId = team.id;
 
-      // League fixtures finished or scheduled recent (limit 20)
       const { data: fixtures } = await supabase
         .from('fixtures')
         .select('id,date,start_time,home_team_id,away_team_id,winner_team_id,status')
@@ -333,7 +355,6 @@
         .order('date', { ascending:false })
         .limit(20);
 
-      // Friendlies
       const { data: friendlies } = await supabase
         .from('matches')
         .select('id,date,start_time,home_team_id,away_team_id,winner_team_id,status')
@@ -341,7 +362,6 @@
         .order('date', { ascending:false })
         .limit(20);
 
-      // Preload team names cache
       const teamNameCache = new Map([[team.id, team.team_name]]);
       async function nameOf(id){
         if (!id) return '—';
@@ -356,8 +376,8 @@
         for (const m of (list||[])) {
           const ht = await nameOf(m.home_team_id);
           const at = await nameOf(m.away_team_id);
-          const isDone = !!m.winner_team_id || m.status === 'finished';
-          const status = isDone ? (m.winner_team_id === teamId ? 'Won' : (m.winner_team_id ? 'Lost' : 'Result')) : 'Scheduled';
+          const isDone = !!m.winner_team_id || m.status === 'finished' || m.status === 'completed';
+          const status = isDone ? 'Completed' : 'Scheduled';
           const card = document.createElement('div');
           card.className = 'match-card';
           card.innerHTML = `
@@ -377,8 +397,8 @@
         }
       }
 
-      await renderMatchList(fixtures, qs('#leagueList'), 'league');
-      await renderMatchList(friendlies, qs('#friendlyList'), 'friendly');
+      await renderMatchList(fixtures, document.getElementById('leagueList'), 'league');
+      await renderMatchList(friendlies, document.getElementById('friendlyList'), 'friendly');
     }
 
     main();
