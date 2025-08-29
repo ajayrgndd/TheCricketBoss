@@ -35,27 +35,26 @@
     .progress-bar{ height:10px; background:#444; border-radius:6px; overflow:hidden; margin-top:8px }
     .progress-fill{ height:100%; width:0%; background:var(--accent); transition:width .5s ease }
 
-    /* Ratings */
-    .ratings{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px }
+    /* Team Ratings – 2x2 grid */
+    .ratings{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px }
     .rating-card{ background:rgba(0,0,0,.15); border:1px solid var(--stroke); border-radius:12px;
       padding:12px; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:10px }
     .rating-card img{ width:28px; height:28px; display:block }
     .rating-value{ font-size:20px; font-weight:800; line-height:1.1 }
     .rating-label{ font-size:12px; opacity:.9; margin-top:2px; color:var(--text-dim) }
 
-    /* Players grid (compact like training cards) */
+    /* Players grid (no photo) */
     .players-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
     @media (max-width:680px){ .players-grid{ grid-template-columns:1fr } }
 
     .pcard{
-      display:grid; grid-template-columns:64px 1fr; gap:12px;
+      display:block;
       padding:12px; border-radius:12px; background:rgba(0,0,0,.15); border:1px solid var(--stroke)
     }
-    .avatar{ width:64px; height:64px; border-radius:10px; object-fit:cover; background:#0b0b0b; border:1px solid #1f2937 }
-    .title{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:800 }
+    .title{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:800; margin-bottom:4px }
     .pill{ font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.08); color:var(--text-dim); border:1px solid var(--stroke) }
-    .meta{ font-size:12px; color:var(--text-dim); margin-top:2px }
-    .kv{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:8px }
+    .meta{ font-size:12px; color:var(--text-dim); margin-bottom:6px }
+    .kv{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px }
     .row{ font-size:13px; display:flex; justify-content:space-between; gap:8px }
     .row span:first-child{ color:var(--text-dim) }
 
@@ -115,7 +114,7 @@
       </div>
     </section>
 
-    <!-- PLAYERS TAB – GRID -->
+    <!-- PLAYERS TAB – GRID (no photos) -->
     <section class="tab-pane" id="pane-players" style="display:none">
       <div class="section">
         <h3>Players</h3>
@@ -146,9 +145,10 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    const qs = (s, el=document)=> el.querySelector(s);
+    const qs  = (s, el=document)=> el.querySelector(s);
     const qsa = (s, el=document)=> [...el.querySelectorAll(s)];
     const toNum = (v)=> (v==null || v==='') ? 0 : Number(v);
+    const r1 = (x)=> (Math.round(x*10)/10).toFixed(1);
 
     /* Tabs */
     qsa('.tab').forEach(btn=>{
@@ -160,7 +160,7 @@
       });
     });
 
-    /* Ratings helpers (uses lineup first; otherwise auto) */
+    /* Ratings helpers (lineup first, then best-XI) */
     function pickByLineupOrAuto(allPlayers, lineup){
       const byId = new Map(allPlayers.map(p=>[p.id,p]));
       let pool = [];
@@ -194,8 +194,6 @@
       const wkVal = sel.wk ? toNum(sel.wk.keeping) : 0;
       return { bat:batAvg, ball:ballAvg, wk:wkVal, ovr:(batAvg+ballAvg+wkVal)/3 };
     }
-    const r1 = (x)=> (Math.round(x*10)/10).toFixed(1);
-
     function getManagerLevel(xp){
       if (xp >= 13500) return "The Boss";
       if (xp >= 8500) return "Ultimate";
@@ -232,7 +230,7 @@
       const teamName = team.team_name || 'TEAM';
       qs('#pageTitle').textContent = `👥 ${teamName}'s Profile`;
 
-      /* Robust profile (team_id -> owner_id -> team_name) */
+      /* Robust profile */
       let profile = null;
       { const { data } = await supabase.from('profiles').select('*').eq('team_id', team.id).maybeSingle(); profile = data||null; }
       if (!profile && team.owner_id){
@@ -249,13 +247,13 @@
         if (lg) leagueName = `${lg.name} (${lg.tier})`;
       }else if (team.tier){ leagueName = team.tier; }
 
-      /* Players – include skills for rating, image for grid */
+      /* Players – include skills for rating */
       const { data: players } = await supabase
         .from('players')
-        .select('id,name,role,form,experience,fitness,age_years,region,skill1,skill2,batting_style,bowling_style,salary,market_price,image_url,batting,bowling,keeping')
+        .select('id,name,role,form,experience,fitness,age_years,region,skill1,skill2,batting_style,bowling_style,salary,market_price,batting,bowling,keeping')
         .eq('team_id', team.id);
 
-      /* Lineup for rating selection */
+      /* Lineup for ratings */
       const { data: lineup } = await supabase
         .from('lineups')
         .select('playing_xi,keeper,captain,team_id')
@@ -277,7 +275,7 @@
       const pct = Math.max(0, Math.min(100, Math.round(((xp-prevLvlXP)/(nextLvlXP-prevLvlXP))*100)));
       qs('#xpBar').style.width = pct + '%';
 
-      /* RATINGS (fixed) */
+      /* RATINGS (2x2, computed from lineup/best-XI) */
       if (players?.length){
         const selection = pickByLineupOrAuto(players, lineup||null);
         const ratings = computeRatings(selection);
@@ -289,42 +287,36 @@
         qs('#ovrValue').textContent = qs('#batValue').textContent = qs('#ballValue').textContent = qs('#wkValue').textContent = '–';
       }
 
-      /* PLAYERS GRID render (public-safe fields only) */
+      /* PLAYERS GRID (no image) */
       const grid = qs('#playersGrid'); grid.innerHTML = '';
       const fmt = (v)=> (v==null || v==='') ? '–' : v;
-
       (players||[]).forEach(p=>{
         const age = (p.age_years!=null) ? `${p.age_years} yrs` : '–';
-        const img = p.image_url || 'assets/player-placeholder.png';
-
         const el = document.createElement('div');
         el.className = 'pcard';
         el.innerHTML = `
-          <img class="avatar" src="${img}" alt="${p.name}">
-          <div>
-            <div class="title">
-              <span>${p.name}</span>
-              <span class="pill">${fmt(p.role || (p.is_wk?'WK':''))}</span>
-              <span class="pill">Age ${age}</span>
-            </div>
-            <div class="meta">${fmt(p.region)}</div>
-            <div class="kv">
-              <div class="row"><span>Form</span><span>${fmt(p.form)}</span></div>
-              <div class="row"><span>XP</span><span>${fmt(p.experience)}</span></div>
-              <div class="row"><span>Fitness</span><span>${fmt(p.fitness)}</span></div>
-              <div class="row"><span>Skill 1</span><span>${fmt(p.skill1)}</span></div>
-              <div class="row"><span>Skill 2</span><span>${fmt(p.skill2)}</span></div>
-              <div class="row"><span>Bat Style</span><span>${fmt(p.batting_style)}</span></div>
-              <div class="row"><span>Bowl Style</span><span>${fmt(p.bowling_style)}</span></div>
-              <div class="row"><span>Salary</span><span>${p.salary!=null?`₹${Number(p.salary).toLocaleString()}`:'–'}</span></div>
-              <div class="row"><span>Market Value</span><span>${p.market_price!=null?`₹${Number(p.market_price).toLocaleString()}`:'–'}</span></div>
-            </div>
+          <div class="title">
+            <span>${p.name}</span>
+            <span class="pill">${fmt(p.role || (p.is_wk?'WK':''))}</span>
+            <span class="pill">Age ${age}</span>
+          </div>
+          <div class="meta">${fmt(p.region)}</div>
+          <div class="kv">
+            <div class="row"><span>Form</span><span>${fmt(p.form)}</span></div>
+            <div class="row"><span>XP</span><span>${fmt(p.experience)}</span></div>
+            <div class="row"><span>Fitness</span><span>${fmt(p.fitness)}</span></div>
+            <div class="row"><span>Skill 1</span><span>${fmt(p.skill1)}</span></div>
+            <div class="row"><span>Skill 2</span><span>${fmt(p.skill2)}</span></div>
+            <div class="row"><span>Bat Style</span><span>${fmt(p.batting_style)}</span></div>
+            <div class="row"><span>Bowl Style</span><span>${fmt(p.bowling_style)}</span></div>
+            <div class="row"><span>Salary</span><span>${p.salary!=null?`₹${Number(p.salary).toLocaleString()}`:'–'}</span></div>
+            <div class="row"><span>Market Value</span><span>${p.market_price!=null?`₹${Number(p.market_price).toLocaleString()}`:'–'}</span></div>
           </div>
         `;
         grid.appendChild(el);
       });
 
-      /* MATCHES list (unchanged) */
+      /* MATCHES (unchanged) */
       const teamId = team.id;
       const { data: fixtures } = await supabase
         .from('fixtures')
