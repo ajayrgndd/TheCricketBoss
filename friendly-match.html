@@ -25,7 +25,7 @@
     /* Cards / tables */
     .card{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin:10px 0}
     table{width:100%;border-collapse:collapse}
-    th,td{border:1px solid #2a344a;padding:8px;text-align:center}
+    th,td{border:1px solid #2a344a;padding:8px;text-align:center;vertical-align:top}
     th{background:#1a2236}
     .muted{opacity:.75}
 
@@ -61,6 +61,12 @@
     .tag{font-size:.75rem;border:1px solid #2a344a;border-radius:6px;padding:2px 6px;margin-left:6px}
     .row-ctrls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .spacer{flex:1}
+
+    /* ===== Skill bar ===== */
+    .skillbar{display:flex;gap:2px;margin-top:4px}
+    .skillbar .seg{width:6px;height:10px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+    .namecell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+    .nm{line-height:1.1}
   </style>
 </head>
 <body>
@@ -321,6 +327,42 @@
       return pool[h % pool.length];
     }
 
+    /* ======= skill bar helpers ======= */
+    const PALETTE = [
+      "#f8f532","#f3e61c","#e9d60e","#d4cf10","#b0d022",
+      "#7ec14a","#49a769","#2f9ea6","#1d78c6","#1850a1",
+      "#1a2f7a","#5d2f7a","#a9483c","#cc1f1f"
+    ]; // yellow->green->blue->orange->red
+
+    function boostMap(){
+      const s = matchRow?.sim_state || {};
+      return s.player_boosts || s.boosts || {}; // flexible
+    }
+
+    function skillScore(pid, kind){
+      const p = players[pid]; if(!p) return 0;
+      let base = 0;
+      if (kind==='bat') base = Number(p.batting)||0;
+      else if (kind==='bowl') base = Number(p.bowling)||0;
+      else base = Math.max(Number(p.batting)||0, Number(p.bowling)||0);
+      const b = Number(boostMap()[pid])||0;
+      return Math.max(0, base + b);
+    }
+
+    function segmentsFor(score){
+      const maxScore = 100; // tune if your skill scale differs
+      const frac = Math.max(0, Math.min(1, score / maxScore));
+      let n = Math.round(frac * PALETTE.length);
+      return Math.max(1, Math.min(PALETTE.length, n));
+    }
+
+    function colorBarHTML(pid, kind){
+      const segs = segmentsFor(skillScore(pid, kind));
+      const blocks = PALETTE.slice(0, segs)
+        .map(c=>`<span class="seg" style="background:${c}"></span>`).join("");
+      return `<div class="skillbar" title="Skill+Boost: ${skillScore(pid,kind).toFixed(1)}">${blocks}</div>`;
+    }
+
     /* ===== EXTRAS-AWARE AGGREGATES ===== */
     function isLegal(b){
       const t = (b.delivery_type||'legal').toLowerCase();
@@ -355,17 +397,13 @@
       balls.filter(b=>b.innings===inn).forEach(b=>{
         const id=b.bowler_id; if(!id) return;
         const m = map[id] ||= {runs:0,balls:0,wkts:0};
-        // Runs conceded include ALL deliveries (wides, no-balls, byes)
         m.runs += (b.runs_scored||0)+(b.extras||0);
-        // Balls bowled count only legal deliveries
         if (isLegal(b)) m.balls++;
-        // Wickets (bowler's) exclude run-out
         if (b.wicket && (b.dismissal_type||'').toLowerCase()!=='runout' && (b.dismissal_type||'').toLowerCase()!=='run-out') m.wkts++;
       });
       return map;
     }
 
-    // Name + badges (now shortened)
     function nameWithBadges(pid){
       const p = players[pid]; if(!p) return '—';
       const r = roles[p.team_id] || {};
@@ -376,7 +414,6 @@
       return `${nm}${tags.length?` (${tags.join(', ')})`:''}`;
     }
 
-    // Dismissal lookup per batsman (by innings)
     function dismissalMap(balls, inn){
       const map={};
       balls.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id)
@@ -390,7 +427,6 @@
       return map;
     }
 
-    // Commentary formatting
     function pillsFor(b) {
       const pills=[];
       if (b.wicket) pills.push(`<span class="pill pill-w">WICKET</span>`);
@@ -410,7 +446,6 @@
     function sanitizeText(t){ return String(t||"").replace(/^\s*runs?\s*:?\s*/i,"").trim(); }
     function lineText(b) {
       if (b.commentary && b.commentary.trim()) return sanitizeText(b.commentary);
-      // Extra-only rows: say what happened explicitly
       const dt = (b.delivery_type||'legal').toLowerCase();
       if (dt === 'wide')  return "Wide — +1 run";
       if (dt === 'noball')return "No-ball — +1 run";
@@ -439,7 +474,6 @@
         </div>`;
     }
 
-    /* build thread in order; latest on TOP */
     function renderCommentaryTop(list, into) {
       const htmls = [];
       prevBall = null;
@@ -478,24 +512,33 @@
       }
     }
 
-    function rowBatMini(pid, stat, star=false) {
+    /* ===== rows with skill bars ===== */
+    function nameCell(pid, star, kind){
       const nm = nameWithBadges(pid);
+      return `<div class="namecell">
+                <div class="nm">${nm}${star?' ★':''}</div>
+                ${colorBarHTML(pid, kind)}
+              </div>`;
+    }
+
+    function rowBatMini(pid, stat, star=false) {
+      const nmCell = nameCell(pid, star, 'bat');
       const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
-      return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
+      return `<tr><td style="text-align:left">${nmCell}</td>
                 <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
     }
     function rowBowl(pid, stat, star=false) {
-      const nm = nameWithBadges(pid);
+      const nmCell = nameCell(pid, star, 'bowl');
       const ov = `${Math.floor(stat.balls/6)}.${stat.balls%6}`;
       const eco = stat.balls ? (stat.runs/(stat.balls/6)).toFixed(1) : "0.0";
-      return `<tr><td style="text-align:left">${nm}${star?' ★':''}</td>
+      return `<tr><td style="text-align:left">${nmCell}</td>
                 <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
     }
     function rowBatFull(pid, stat, dm) {
-      const nm = nameWithBadges(pid);
+      const nmCell = nameCell(pid, false, 'bat');
       const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
       const dis = dismissText(pid, dm);
-      return `<tr><td style="text-align:left">${nm}</td>
+      return `<tr><td style="text-align:left">${nmCell}</td>
               <td style="text-align:left">${dis}</td>
               <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
     }
@@ -596,7 +639,6 @@
       `;
     }
 
-    /* Extras (optionally add innings-end notice) */
     function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = false) {
       const extras = [];
 
@@ -606,13 +648,11 @@
         extras.push(`${bow} comes into the attack.`);
       }
 
-      // Explicit extra-type lines
       const dt = (b.delivery_type||'legal').toLowerCase();
       if (dt === 'wide')  extras.push(`Wide — +${b.extras||1}`);
       if (dt === 'noball')extras.push(`No-ball — +${b.extras||1}`);
       if (dt === 'bye' && (b.extras_detail?.byes)) extras.push(`Byes — +${b.extras_detail.byes}`);
 
-      // milestones (read-before, commit-after)
       const prevRuns = liveBatRuns.get(b.striker_id) || 0;
       const newRuns  = prevRuns + (b.runs_scored || 0);
       if (newRuns >= 50 && prevRuns < 50 && newRuns < 100) {
@@ -648,7 +688,6 @@
         }
       }
 
-      // End of Innings 1 message (only when truly finished)
       if (addInningsEnd && i1Finished) {
         const nxt = nextBall;
         if (b.innings === 1 && (!nxt || nxt.innings !== 1)) {
@@ -713,6 +752,8 @@
       function autoXI(teamId) {
         const list = poolFor(teamId);
         const isWK   = p => /wk/i.test(p.role || '');
+        the: {
+        }
         const isBAT  = p => /bat/i.test(p.role || '');
         const isAR   = p => /(all|ar)/i.test(p.role || '');
         const isBOWL = p => /bow/i.test(p.role || '');
@@ -788,12 +829,11 @@
         .order('innings',{ascending:true})
         .order('over_number',{ascending:true})
         .order('ball_in_over',{ascending:true})
-        .order('created_at',{ascending:true}); /* NEW tiebreaker */
+        .order('created_at',{ascending:true});
 
       all = balls || [];
       liveBatRuns.clear(); prevBall=null;
 
-      // latest on TOP
       renderCommentaryTop(all, liveFeed);
       renderCommentaryTop(all, commFeed);
 
@@ -815,7 +855,6 @@
         .subscribe();
     }
 
-    // Auto / manual refresh
     function applyAuto(ms){
       if (autoTimer) { clearInterval(autoTimer); autoTimer=null; }
       const n = parseInt(ms,10)||0;
