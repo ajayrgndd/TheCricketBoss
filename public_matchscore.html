@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    :root { --bg:#1e1b3a; --card:#2d2a4a; --muted:#444; --accent:#00e676; --text:#fff; --text-dim:#cfd3ff; }
+    :root { --bg:#1e1b3a; --card:#2d2a4a; --muted:#444; --accent:#00e676; --text:#fff; --text-dim:#cfd3ff; --link:#8affc3; }
     body { margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; }
 
     .tabs {
@@ -24,6 +24,8 @@
     .main { padding:20px 16px 90px; max-width:1100px; margin:auto; }
     h2 { text-align:center; margin:20px 0 16px; }
     .muted { color:var(--text-dim); font-size:13px; }
+    a.team-link { color: var(--link); text-decoration: none; }
+    a.team-link:hover { text-decoration: underline; }
 
     .hdr { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:8px; }
     .tag { background: rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); padding:4px 8px; border-radius:999px; font-size:12px; }
@@ -130,24 +132,24 @@
     function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
     const fmt = (v)=> (v==null || v==='') ? '—' : v;
 
-    async function teamName(id) {
-      if (!id) return "—";
+    async function teamInfo(id) {
+      if (!id) return { name: "—", link: "#" };
       const { data } = await supabase.from('teams').select('team_name').eq('id', id).single();
-      return data?.team_name ?? "—";
+      const name = data?.team_name ?? "—";
+      return { name, link: `public-profile.html?team=${id}` };
     }
 
-    function renderInningsCard(container, teamLabel, totals, battingRows, bowlingRows) {
+    function renderInningsCard(container, teamLabelHTML, totals, battingRows, bowlingRows) {
       const wrap = document.createElement('div');
       wrap.className = 'teamscore';
 
-      // Totals
       const scoreTxt = totals
         ? `${fmt(totals.runs)}/${fmt(totals.wickets)}${totals.overs != null ? ' ('+totals.overs+')' : ''}`
         : '—';
 
       wrap.innerHTML = `
         <div class="head">
-          <div class="name">${teamLabel}</div>
+          <div class="name">${teamLabelHTML}</div>
           <div class="score">${scoreTxt}</div>
         </div>
         <div class="sub">${fmt(totals?.summary || '')}</div>
@@ -193,13 +195,10 @@
       container.appendChild(wrap);
     }
 
-    function normalizeResult(result, homeId, awayId, teamNames) {
-      // Support several shapes; produce a normalized structure:
-      // { innings: [{team_id, totals:{runs,wickets,overs,summary}, batting:[...], bowling:[...]}], meta:{toss, note, winner_team_id} }
+    function normalizeResult(result, homeId, awayId) {
       const R = { innings: [], meta: {} };
       if (!result) return R;
 
-      // Common shape A: result.innings = [{team_id, totals, batting, bowling}]
       if (Array.isArray(result.innings)) {
         for (const inn of result.innings) {
           R.innings.push({
@@ -214,32 +213,22 @@
             bowling: inn.bowling ?? inn.scorecard?.bowling ?? []
           });
         }
-      }
-      // Shape B: result.home / result.away blocks
-      else if (result.home || result.away) {
+      } else if (result.home || result.away) {
         if (result.home) {
           R.innings.push({
             team_id: homeId,
-            totals: {
-              runs: result.home.runs, wickets: result.home.wickets, overs: result.home.overs,
-              summary: result.home.summary
-            },
+            totals: { runs: result.home.runs, wickets: result.home.wickets, overs: result.home.overs, summary: result.home.summary },
             batting: result.home.batting, bowling: result.home.bowling
           });
         }
         if (result.away) {
           R.innings.push({
             team_id: awayId,
-            totals: {
-              runs: result.away.runs, wickets: result.away.wickets, overs: result.away.overs,
-              summary: result.away.summary
-            },
+            totals: { runs: result.away.runs, wickets: result.away.wickets, overs: result.away.overs, summary: result.away.summary },
             batting: result.away.batting, bowling: result.away.bowling
           });
         }
-      }
-      // Shape C: result.scoreboard = { <teamId> : {totals, batting, bowling} }
-      else if (result.scoreboard && typeof result.scoreboard === 'object') {
+      } else if (result.scoreboard && typeof result.scoreboard === 'object') {
         for (const [tid, v] of Object.entries(result.scoreboard)) {
           R.innings.push({
             team_id: tid,
@@ -255,21 +244,11 @@
         }
       }
 
-      // Meta
       R.meta.toss = result.toss ?? result.toss_won_by ?? null;
       R.meta.note = result.note ?? result.notes ?? null;
       R.meta.winner_team_id = result.winner_team_id ?? result.winner ?? null;
       R.meta.result_text = result.result_text ?? result.result ?? null;
 
-      // Fill team names map for Shape C if keys are names
-      if (R.innings.length && !R.innings[0].team_id) {
-        // Might be keyed by names; resolve by comparing to known names
-        const byName = {};
-        for (const inn of R.innings) {
-          const name = inn.totals?.summary?.split(' ')[0]; // best-effort
-          if (name) byName[name] = inn;
-        }
-      }
       return R;
     }
 
@@ -279,7 +258,6 @@
         return;
       }
 
-      // Fetch match
       const table = (type === 'league') ? 'fixtures' : 'matches';
       const { data: match } = await supabase.from(table).select('*').eq('id', matchId).maybeSingle();
       if (!match) {
@@ -287,11 +265,12 @@
         return;
       }
 
-      const htName = await teamName(match.home_team_id);
-      const atName = await teamName(match.away_team_id);
+      const home = await teamInfo(match.home_team_id);
+      const away = await teamInfo(match.away_team_id);
 
       // Header & meta
-      document.getElementById('matchTitle').textContent = `${htName} vs ${atName}`;
+      document.getElementById('matchTitle').innerHTML =
+        `<a class="team-link" href="${home.link}">${home.name}</a> vs <a class="team-link" href="${away.link}">${away.name}</a>`;
       document.getElementById('metaType').textContent = type === 'league' ? 'League' : 'Friendly';
       document.getElementById('metaDate').textContent = match.date || '—';
       document.getElementById('metaTime').textContent = match.start_time || '—';
@@ -301,13 +280,13 @@
         const el = document.getElementById('metaResult');
         el.style.display = 'inline-block';
         el.textContent = match.winner_team_id
-          ? (match.winner_team_id === match.home_team_id ? `${htName} won` : `${atName} won`)
+          ? (match.winner_team_id === match.home_team_id ? `${home.name} won` : `${away.name} won`)
           : (match.match_result || 'Result');
       }
 
       // Parse & normalize result
       const raw = toJSON(match.result);
-      const normalized = normalizeResult(raw || {}, match.home_team_id, match.away_team_id, {});
+      const normalized = normalizeResult(raw || {}, match.home_team_id, match.away_team_id);
 
       if (normalized.meta.toss) {
         const tossEl = document.getElementById('metaToss');
@@ -316,8 +295,6 @@
       }
 
       const sb = document.getElementById('scoreboardContent');
-
-      // If we got innings with any totals, render cards; else fallback to pretty JSON.
       const hasAnyTotals = normalized.innings.some(x => x.totals && (x.totals.runs != null || x.totals.overs != null || x.totals.wickets != null));
 
       if (normalized.innings.length && hasAnyTotals) {
@@ -325,10 +302,13 @@
         grid.className = 'teamscore-grid';
 
         for (const inn of normalized.innings) {
-          const label = (inn.team_id === match.home_team_id) ? htName
-                       : (inn.team_id === match.away_team_id) ? atName
-                       : 'Team';
-          renderInningsCard(grid, label, inn.totals, inn.batting, inn.bowling);
+          const labelHTML =
+            (inn.team_id === String(match.home_team_id) || inn.team_id === match.home_team_id)
+              ? `<a class="team-link" href="${home.link}">${home.name}</a>`
+              : (inn.team_id === String(match.away_team_id) || inn.team_id === match.away_team_id)
+              ? `<a class="team-link" href="${away.link}">${away.name}</a>`
+              : 'Team';
+        renderInningsCard(grid, labelHTML, inn.totals, inn.batting, inn.bowling);
         }
 
         sb.innerHTML = '';
@@ -342,16 +322,15 @@
           sb.appendChild(p);
         }
       } else {
-        // Fallback pretty JSON
         sb.innerHTML = `
           <p class="muted">Detailed formatted scoreboard not available for this match schema.</p>
           <pre style="background:rgba(0,0,0,.2);padding:10px;border-radius:6px;overflow:auto;">${JSON.stringify(raw ?? match.result ?? {}, null, 2)}</pre>
         `;
       }
 
-      // LINEUPS
-      document.getElementById('homeTeamName').textContent = htName;
-      document.getElementById('awayTeamName').textContent = atName;
+      // LINEUPS (titles clickable)
+      document.getElementById('homeTeamName').innerHTML = `<a class="team-link" href="${home.link}">${home.name}</a>`;
+      document.getElementById('awayTeamName').innerHTML = `<a class="team-link" href="${away.link}">${away.name}</a>`;
 
       const { data: homeLineup } = await supabase.from('lineups').select('playing_xi').eq('team_id', match.home_team_id).maybeSingle();
       const { data: awayLineup } = await supabase.from('lineups').select('playing_xi').eq('team_id', match.away_team_id).maybeSingle();
