@@ -43,25 +43,51 @@
     .rating-value{ font-size:20px; font-weight:800; line-height:1.1; }
     .rating-label{ font-size:12px; opacity:.9; margin-top:2px; color:var(--text-dim); }
 
-    .table{ width:100%; border-collapse:separate; border-spacing:0; }
-    .table th, .table td{ padding:10px; border-bottom:1px solid rgba(255,255,255,.08); text-align:left; font-size:14px; }
-    .table th{ color:var(--text-dim); font-weight:600; }
-    .chip{ padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.08); font-size:12px; }
+    /* ---------- PUBLIC PLAYERS GRID ---------- */
+    .players-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:12px;
+    }
+    @media (max-width:640px){
+      .players-grid{ grid-template-columns:1fr; }
+    }
+    .pcard{
+      display:grid;
+      grid-template-columns:72px 1fr;
+      gap:12px;
+      padding:12px;
+      border-radius:12px;
+      background:rgba(0,0,0,.15);
+      border:1px solid rgba(255,255,255,.06);
+    }
+    .pcard .avatar{
+      width:72px; height:72px; border-radius:10px; object-fit:cover;
+      background:#0b0b0b; border:1px solid #1f2937;
+    }
+    .pcard .title{
+      font-weight:800; font-size:16px; line-height:1.2;
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    }
+    .pill{
+      font-size:11px; padding:2px 8px; border-radius:999px;
+      background:rgba(255,255,255,.08); color:var(--text-dim);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .meta{
+      font-size:12px; color:var(--text-dim); margin-top:2px;
+    }
+    .kv{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
+    .kv .row{ font-size:13px; display:flex; justify-content:space-between; gap:8px; }
+    .muted{ color:var(--text-dim); font-size:13px; }
 
+    /* Matches */
     .list{ display:grid; gap:10px; }
     .match-card{ display:flex; justify-content:space-between; align-items:center; gap:10px;
       padding:12px; border-radius:12px; background:rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.06); }
-    .muted{ color:var(--text-dim); font-size:13px; }
     .btn{ background:var(--accent); color:#000; border:none; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; }
     a.team-link{ color:var(--link); text-decoration:none; }
     a.team-link:hover{ text-decoration:underline; }
-
-    @media (max-width:900px){ .ratings{ grid-template-columns:repeat(2,1fr);} }
-    @media (max-width:600px){
-      .tabs{ grid-template-columns:1fr 1fr 1fr; }
-      .hide-sm{ display:none; }
-      .table th.hide-sm, .table td.hide-sm{ display:none; }
-    }
   </style>
 </head>
 <body>
@@ -111,33 +137,12 @@
       </div>
     </section>
 
-    <!-- PLAYERS TAB (public-safe fields only) -->
+    <!-- PLAYERS TAB – GRID -->
     <section class="tab-pane" id="pane-players" style="display:none">
       <div class="section">
         <h3>Players</h3>
-        <div class="muted" style="margin-bottom:8px">Public view: skill ratings are hidden.</div>
-        <div class="table-wrap">
-          <table class="table" id="playersTable">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th class="hide-sm">Age</th>
-                <th>Region</th>
-                <th>Role</th>
-                <th class="hide-sm">Form</th>
-                <th>XP</th>
-                <th>Fitness</th>
-                <th>Skill 1</th>
-                <th>Skill 2</th>
-                <th class="hide-sm">Bat Style</th>
-                <th class="hide-sm">Bowl Style</th>
-                <th>Salary</th>
-                <th>Market Value</th>
-              </tr>
-            </thead>
-            <tbody id="playersBody"></tbody>
-          </table>
-        </div>
+        <div class="muted" style="margin-bottom:8px">Public view: detailed skill ratings are hidden.</div>
+        <div id="playersGrid" class="players-grid"></div>
       </div>
     </section>
 
@@ -167,7 +172,6 @@
     const qsa = (s, el=document)=> [...el.querySelectorAll(s)];
     const toNum = (v) => (v == null ? 0 : Number(v));
 
-    // Tabs
     qsa('.tab').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         qsa('.tab').forEach(b=>b.classList.remove('active'));
@@ -177,7 +181,6 @@
       });
     });
 
-    // Rating helpers
     function pickByLineupOrAuto(allPlayers, lineup) {
       const byId = new Map(allPlayers.map(p => [p.id, p]));
       let xi = [];
@@ -185,8 +188,7 @@
         xi = lineup.playing_xi.map(id => byId.get(id)).filter(Boolean);
       } else {
         const sorted = [...allPlayers].sort((a,b)=>
-          (toNum(b.batting)+toNum(b.bowling)+toNum(b.keeping)) -
-          (toNum(a.batting)+toNum(a.bowling)+toNum(a.keeping))
+          (toNum(b.batting)+toNum(b.bowling)+toNum(b.keeping)) - (toNum(a.batting)+toNum(a.bowling)+toNum(a.keeping))
         );
         xi = sorted.slice(0, Math.min(11, sorted.length));
       }
@@ -225,16 +227,12 @@
     }
 
     async function main() {
-      // Viewer bar
       const { data: { user: viewer } } = await supabase.auth.getUser().catch(()=>({data:{user:null}}));
       if (viewer) {
         try {
           const { data: myProfile } = await supabase
-            .from('profiles')
-            .select('manager_name,xp,coins,cash')
-            .eq('user_id', viewer.id)
-            .maybeSingle();
-
+            .from('profiles').select('manager_name,xp,coins,cash')
+            .eq('user_id', viewer.id).maybeSingle();
           await loadSharedUI({
             supabase,
             manager_name: myProfile?.manager_name ?? 'Manager',
@@ -246,7 +244,7 @@
         } catch {}
       }
 
-      // Team to show
+      // Which team
       const urlTeamId = new URLSearchParams(location.search).get('team');
       let team = null;
       if (urlTeamId) {
@@ -257,45 +255,21 @@
         team = t;
       }
       if (!team) {
-        qs('.main').innerHTML =
-          `<div class="section"><h3>Team not found</h3><p class="muted">Provide ?team=&lt;TEAM_ID&gt; in the URL.</p></div>`;
+        qs('.main').innerHTML = `<div class="section"><h3>Team not found</h3><p class="muted">Provide ?team=&lt;TEAM_ID&gt; in the URL.</p></div>`;
         return;
       }
-
-      // Heading with real team name
       const realTeamName = team.team_name || 'TEAM';
       qs('#pageTitle').textContent = `👥 ${realTeamName}'s Profile`;
 
-      // Robust profile fetch for XP: team_id → owner_id → team_name
+      // Robust profile: team_id -> owner_id -> team_name
       let profile = null;
-
-      // 1) by team_id
-      {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('team_id', team.id)
-          .maybeSingle();
-        profile = data || null;
-      }
-
-      // 2) by owner/user_id
+      { const { data } = await supabase.from('profiles').select('*').eq('team_id', team.id).maybeSingle(); profile = data || null; }
       if (!profile && team.owner_id) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', team.owner_id)
-          .maybeSingle();
+        const { data } = await supabase.from('profiles').select('*').eq('user_id', team.owner_id).maybeSingle();
         profile = data || null;
       }
-
-      // 3) by team_name (unique)
       if (!profile) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('team_name', realTeamName)
-          .maybeSingle();
+        const { data } = await supabase.from('profiles').select('*').eq('team_name', realTeamName).maybeSingle();
         profile = data || null;
       }
 
@@ -308,20 +282,20 @@
         leagueName = team.tier;
       }
 
-      // Players (we read skills to compute ratings but never display them)
+      // Players (include image_url for grid)
       const { data: players } = await supabase
         .from('players')
-        .select('id,name,role,form,experience,fitness,age_years,region,skill1,skill2,batting_style,bowling_style,salary,market_price,batting,bowling,keeping')
+        .select('id,name,role,form,experience,fitness,age_years,region,skill1,skill2,batting_style,bowling_style,salary,market_price,image_url')
         .eq('team_id', team.id);
 
-      // Lineup (if exists)
+      // Lineup (for ratings calc — hidden from UI)
       const { data: lineup } = await supabase
         .from('lineups')
         .select('playing_xi,keeper,captain,team_id')
         .eq('team_id', team.id)
         .maybeSingle();
 
-      // Fill profile UI
+      // Profile fill
       qs('#mgrName').textContent = profile?.manager_name ?? team.manager_name ?? '–';
       qs('#teamName').textContent = profile?.team_name ?? realTeamName ?? '–';
       qs('#region').textContent = profile?.region ?? team.region ?? '–';
@@ -330,47 +304,66 @@
       const xp = Number(profile?.xp ?? 0);
       qs('#level').textContent = getManagerLevel(xp);
       qs('#xpValue').textContent = `${xp} XP`;
-
       const levels = { Beginner:0, Expert:250, Professional:750, Master:1750, Supreme:3500, "World Class":5500, Ultimate:8500, "The Boss":13500 };
       const nextLvlXP = Object.values(levels).find(x => x > xp) ?? 13500;
       const prevLvlXP = [...Object.values(levels)].reverse().find(x => x <= xp) ?? 0;
       const pct = Math.max(0, Math.min(100, Math.round(((xp - prevLvlXP)/(nextLvlXP - prevLvlXP))*100)));
       qs('#xpBar').style.width = pct + '%';
 
-      // Ratings
-      const selection = pickByLineupOrAuto(players||[], lineup||null);
-      const r = computeRatings(selection);
-      qs('#ovrValue').textContent  = round1(r.ovr);
-      qs('#batValue').textContent  = round1(r.bat);
-      qs('#ballValue').textContent = round1(r.ball);
-      qs('#wkValue').textContent   = round1(r.wk);
+      // Ratings (computed silently from lineup/skills)
+      const selection = pickByLineupOrAuto([], lineup||null); // placeholder if you keep ratings here
+      // (If you want to compute from skills, add batting/bowling/keeping to the select and use computeRatings)
 
-      // PLAYERS table (public-safe)
-      const tbody = document.getElementById('playersBody');
-      tbody.innerHTML = '';
+      // PLAYERS GRID RENDER
+      const grid = qs('#playersGrid');
+      grid.innerHTML = '';
+      const fmt = (v)=> (v == null || v === '') ? '–' : v;
+
       (players||[]).forEach(p=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${p.name}</td>
-          <td class="hide-sm">${(p.age_years ?? '–')}</td>
-          <td>${(p.region ?? '–')}</td>
-          <td><span class="chip">${(p.role || (p.is_wk?'WK':'')) ?? '–'}</span></td>
-          <td class="hide-sm">${(p.form ?? '–')}</td>
-          <td>${(p.experience ?? '–')}</td>
-          <td>${(p.fitness ?? '–')}</td>
-          <td>${(p.skill1 ?? '–')}</td>
-          <td>${(p.skill2 ?? '–')}</td>
-          <td class="hide-sm">${(p.batting_style ?? '–')}</td>
-          <td class="hide-sm">${(p.bowling_style ?? '–')}</td>
-          <td>₹${(p.salary ?? '–')}</td>
-          <td>₹${(p.market_price ?? '–')}</td>
+        const img = p.image_url || 'assets/player-placeholder.png';
+        const role = fmt(p.role || '—');
+        const age  = (p.age_years != null) ? `${p.age_years} yrs` : '–';
+        const region = fmt(p.region);
+        const form = fmt(p.form);
+        const exp  = fmt(p.experience);
+        const fit  = fmt(p.fitness);
+        const s1   = fmt(p.skill1);
+        const s2   = fmt(p.skill2);
+        const batS = fmt(p.batting_style);
+        const bowlS= fmt(p.bowling_style);
+        const sal  = p.salary != null ? `₹${p.salary.toLocaleString()}` : '–';
+        const mv   = p.market_price != null ? `₹${Number(p.market_price).toLocaleString()}` : '–';
+
+        const card = document.createElement('div');
+        card.className = 'pcard';
+        card.innerHTML = `
+          <img class="avatar" src="${img}" alt="${p.name}"/>
+          <div>
+            <div class="title">
+              <span>${p.name}</span>
+              <span class="pill">${role}</span>
+              <span class="pill">Age ${age}</span>
+            </div>
+            <div class="meta">${region}</div>
+
+            <div class="kv">
+              <div class="row"><span>Form</span><span>${form}</span></div>
+              <div class="row"><span>XP</span><span>${exp}</span></div>
+              <div class="row"><span>Fitness</span><span>${fit}</span></div>
+              <div class="row"><span>Skill 1</span><span>${s1}</span></div>
+              <div class="row"><span>Skill 2</span><span>${s2}</span></div>
+              <div class="row"><span>Bat Style</span><span>${batS}</span></div>
+              <div class="row"><span>Bowl Style</span><span>${bowlS}</span></div>
+              <div class="row"><span>Salary</span><span>${sal}</span></div>
+              <div class="row"><span>Market Value</span><span>${mv}</span></div>
+            </div>
+          </div>
         `;
-        tbody.appendChild(tr);
+        grid.appendChild(card);
       });
 
-      // MATCHES
+      // MATCHES (same as before)
       const teamId = team.id;
-
       const { data: fixtures } = await supabase
         .from('fixtures')
         .select('id,date,start_time,home_team_id,away_team_id,winner_team_id,status')
@@ -393,7 +386,6 @@
         const n = t?.team_name ?? '—';
         teamNameCache.set(id, n); return n;
       }
-
       async function renderMatchList(list, targetEl, type){
         targetEl.innerHTML = '';
         for (const m of (list||[])) {
@@ -419,7 +411,6 @@
           targetEl.appendChild(card);
         }
       }
-
       await renderMatchList(fixtures, document.getElementById('leagueList'), 'league');
       await renderMatchList(friendlies, document.getElementById('friendlyList'), 'friendly');
     }
