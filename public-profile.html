@@ -6,88 +6,66 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    :root {
+    :root{
       --bg:#1e1b3a; --card:#2d2a4a; --muted:#444; --accent:#00e676;
-      --text:#fff; --text-dim:#cfd3ff; --link:#8affc3;
-      --topbar-h: 60px;
+      --text:#fff; --text-dim:#cfd3ff; --link:#8affc3; --topbar-h:60px;
+      --stroke: rgba(255,255,255,.08);
     }
-    body { margin:0; background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; }
+    body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif}
 
+    /* Tabs under the fixed top bar */
     .tabs{
       position:sticky; top:var(--topbar-h); z-index:5;
-      display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
+      display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
       background:rgba(30,27,58,.95); backdrop-filter:blur(6px);
-      padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.06);
-      margin-bottom:16px;
+      padding:8px 12px; border-bottom:1px solid var(--stroke); margin-bottom:16px;
     }
-    .tab{ text-align:center; background:var(--card); color:var(--text);
-      border-radius:10px; padding:10px 6px; font-weight:600;
-      border:1px solid rgba(255,255,255,.08); cursor:pointer; }
-    .tab.active{ outline:2px solid var(--accent); color:#000; background:#8affc3; }
+    .tab{ text-align:center; background:var(--card); color:var(--text); border-radius:10px;
+      padding:10px 6px; font-weight:600; border:1px solid var(--stroke); cursor:pointer }
+    .tab.active{ outline:2px solid var(--accent); color:#000; background:#8affc3 }
 
-    .main{ padding:20px 16px 90px; max-width:900px; margin:auto; }
-    h2{ text-align:center; margin:20px 0 16px; }
+    .main{ padding:20px 16px 90px; max-width:900px; margin:auto }
+    h2{ text-align:center; margin:20px 0 16px }
 
     .section{ background:var(--card); padding:16px; border-radius:12px; margin-bottom:20px;
-      border:1px solid rgba(255,255,255,.06); }
-    .section h3{ margin:0 0 10px; border-bottom:1px solid var(--muted); padding-bottom:8px; font-size:18px; }
-    .info-row{ display:flex; justify-content:space-between; margin:6px 0; color:var(--text-dim); }
-    .info-row span:last-child{ color:var(--text); }
-    .progress-bar{ height:10px; background:#444; border-radius:6px; overflow:hidden; margin-top:8px; }
-    .progress-fill{ height:100%; width:0%; background:var(--accent); transition:width .5s ease; }
+      border:1px solid var(--stroke) }
+    .section h3{ margin:0 0 10px; border-bottom:1px solid var(--muted); padding-bottom:8px; font-size:18px }
+    .info-row{ display:flex; justify-content:space-between; margin:6px 0; color:var(--text-dim) }
+    .info-row span:last-child{ color:var(--text) }
+    .progress-bar{ height:10px; background:#444; border-radius:6px; overflow:hidden; margin-top:8px }
+    .progress-fill{ height:100%; width:0%; background:var(--accent); transition:width .5s ease }
 
-    .ratings{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-    .rating-card{ background:rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.06);
-      border-radius:12px; padding:12px; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:10px; }
-    .rating-card img{ width:28px; height:28px; display:block; }
-    .rating-value{ font-size:20px; font-weight:800; line-height:1.1; }
-    .rating-label{ font-size:12px; opacity:.9; margin-top:2px; color:var(--text-dim); }
+    /* Ratings */
+    .ratings{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px }
+    .rating-card{ background:rgba(0,0,0,.15); border:1px solid var(--stroke); border-radius:12px;
+      padding:12px; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:10px }
+    .rating-card img{ width:28px; height:28px; display:block }
+    .rating-value{ font-size:20px; font-weight:800; line-height:1.1 }
+    .rating-label{ font-size:12px; opacity:.9; margin-top:2px; color:var(--text-dim) }
 
-    /* ---------- PUBLIC PLAYERS GRID ---------- */
-    .players-grid{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0,1fr));
-      gap:12px;
-    }
-    @media (max-width:640px){
-      .players-grid{ grid-template-columns:1fr; }
-    }
+    /* Players grid (compact like training cards) */
+    .players-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px }
+    @media (max-width:680px){ .players-grid{ grid-template-columns:1fr } }
+
     .pcard{
-      display:grid;
-      grid-template-columns:72px 1fr;
-      gap:12px;
-      padding:12px;
-      border-radius:12px;
-      background:rgba(0,0,0,.15);
-      border:1px solid rgba(255,255,255,.06);
+      display:grid; grid-template-columns:64px 1fr; gap:12px;
+      padding:12px; border-radius:12px; background:rgba(0,0,0,.15); border:1px solid var(--stroke)
     }
-    .pcard .avatar{
-      width:72px; height:72px; border-radius:10px; object-fit:cover;
-      background:#0b0b0b; border:1px solid #1f2937;
-    }
-    .pcard .title{
-      font-weight:800; font-size:16px; line-height:1.2;
-      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-    }
-    .pill{
-      font-size:11px; padding:2px 8px; border-radius:999px;
-      background:rgba(255,255,255,.08); color:var(--text-dim);
-      border:1px solid rgba(255,255,255,.08);
-    }
-    .meta{
-      font-size:12px; color:var(--text-dim); margin-top:2px;
-    }
-    .kv{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
-    .kv .row{ font-size:13px; display:flex; justify-content:space-between; gap:8px; }
-    .muted{ color:var(--text-dim); font-size:13px; }
+    .avatar{ width:64px; height:64px; border-radius:10px; object-fit:cover; background:#0b0b0b; border:1px solid #1f2937 }
+    .title{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:800 }
+    .pill{ font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.08); color:var(--text-dim); border:1px solid var(--stroke) }
+    .meta{ font-size:12px; color:var(--text-dim); margin-top:2px }
+    .kv{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-top:8px }
+    .row{ font-size:13px; display:flex; justify-content:space-between; gap:8px }
+    .row span:first-child{ color:var(--text-dim) }
 
     /* Matches */
-    .list{ display:grid; gap:10px; }
+    .list{ display:grid; gap:10px }
     .match-card{ display:flex; justify-content:space-between; align-items:center; gap:10px;
-      padding:12px; border-radius:12px; background:rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.06); }
-    .btn{ background:var(--accent); color:#000; border:none; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; }
-    a.team-link{ color:var(--link); text-decoration:none; }
-    a.team-link:hover{ text-decoration:underline; }
+      padding:12px; border-radius:12px; background:rgba(0,0,0,.15); border:1px solid var(--stroke) }
+    .btn{ background:var(--accent); color:#000; border:none; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer }
+    .muted{ color:var(--text-dim); font-size:13px }
+    a.team-link{ color:var(--link); text-decoration:none } a.team-link:hover{ text-decoration:underline }
   </style>
 </head>
 <body>
@@ -170,8 +148,9 @@
 
     const qs = (s, el=document)=> el.querySelector(s);
     const qsa = (s, el=document)=> [...el.querySelectorAll(s)];
-    const toNum = (v) => (v == null ? 0 : Number(v));
+    const toNum = (v)=> (v==null || v==='') ? 0 : Number(v);
 
+    /* Tabs */
     qsa('.tab').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         qsa('.tab').forEach(b=>b.classList.remove('active'));
@@ -181,41 +160,43 @@
       });
     });
 
-    function pickByLineupOrAuto(allPlayers, lineup) {
-      const byId = new Map(allPlayers.map(p => [p.id, p]));
-      let xi = [];
-      if (lineup && Array.isArray(lineup.playing_xi) && lineup.playing_xi.length) {
-        xi = lineup.playing_xi.map(id => byId.get(id)).filter(Boolean);
-      } else {
-        const sorted = [...allPlayers].sort((a,b)=>
-          (toNum(b.batting)+toNum(b.bowling)+toNum(b.keeping)) - (toNum(a.batting)+toNum(a.bowling)+toNum(a.keeping))
-        );
-        xi = sorted.slice(0, Math.min(11, sorted.length));
+    /* Ratings helpers (uses lineup first; otherwise auto) */
+    function pickByLineupOrAuto(allPlayers, lineup){
+      const byId = new Map(allPlayers.map(p=>[p.id,p]));
+      let pool = [];
+      if (lineup?.playing_xi?.length){
+        pool = lineup.playing_xi.map(id=>byId.get(id)).filter(Boolean);
+      }else{
+        pool = [...allPlayers].sort((a,b)=>
+          (toNum(b.batting)+toNum(b.bowling)+toNum(b.keeping)) -
+          (toNum(a.batting)+toNum(a.bowling)+toNum(a.keeping))
+        ).slice(0, Math.min(11, allPlayers.length));
       }
-      const sortBy = (arr,key)=> [...arr].sort((a,b)=> toNum(b[key])-toNum(a[key]));
+      const sortBy = (arr,key)=> [...arr].sort((a,b)=>toNum(b[key])-toNum(a[key]));
       let wk = null;
-      if (lineup && lineup.keeper) wk = byId.get(lineup.keeper) || null;
-      if (!wk) wk = sortBy(xi.length?xi:allPlayers,'keeping')[0]||null;
-      const poolForAR = (xi.length?xi:allPlayers).filter(p => !wk || p.id !== wk.id);
+      if (lineup?.keeper) wk = byId.get(lineup.keeper) || null;
+      if (!wk) wk = sortBy(pool.length?pool:allPlayers,'keeping')[0] || null;
+
+      const poolNoWK = (pool.length?pool:allPlayers).filter(p=>!wk || p.id !== wk.id);
       let ar = null;
-      if (poolForAR.length) {
-        ar = [...poolForAR].sort((a,b)=> (toNum(b.batting)+toNum(b.bowling)) - (toNum(a.batting)+toNum(a.bowling)))[0];
+      if (poolNoWK.length){
+        ar = [...poolNoWK].sort((a,b)=> (toNum(b.batting)+toNum(b.bowling)) - (toNum(a.batting)+toNum(a.bowling)))[0];
       }
-      const batters = sortBy(xi.length?xi:allPlayers,'batting').filter(p=> !wk || p.id!==wk.id).slice(0,4);
-      const bowlers = sortBy(xi.length?xi:allPlayers,'bowling').filter(p=> (!wk || p.id!==wk.id) && (!ar || p.id!==ar.id)).slice(0,5);
-      return { xi, wk, ar, batters, bowlers };
+      const batters = sortBy(pool.length?pool:allPlayers,'batting').filter(p=>!wk || p.id!==wk.id).slice(0,4);
+      const bowlers = sortBy(pool.length?pool:allPlayers,'bowling').filter(p=>(!wk || p.id!==wk.id) && (!ar || p.id!==ar.id)).slice(0,5);
+      return { wk, ar, batters, bowlers };
     }
-    function computeRatings({ xi, wk, ar, batters, bowlers }) {
-      const toN = toNum;
-      const batSum = batters.reduce((s,p)=> s+toN(p.batting),0) + (wk?toN(wk.batting):0) + (ar?toN(ar.batting):0);
-      const batAvg = (batters.length + (wk?1:0) + (ar?1:0)) ? (batSum/6) : 0;
-      const ballSum = bowlers.reduce((s,p)=> s+toN(p.bowling),0) + (ar?toN(ar.bowling):0);
-      const ballAvg = (bowlers.length + (ar?1:0)) ? (ballSum/6) : 0;
-      const wkVal = wk ? toN(wk.keeping) : 0;
+    function computeRatings(sel){
+      const batSum = sel.batters.reduce((s,p)=>s+toNum(p.batting),0) + (sel.wk?toNum(sel.wk.batting):0) + (sel.ar?toNum(sel.ar.batting):0);
+      const batAvg = (sel.batters.length + (sel.wk?1:0) + (sel.ar?1:0)) ? batSum/6 : 0;
+      const ballSum = sel.bowlers.reduce((s,p)=>s+toNum(p.bowling),0) + (sel.ar?toNum(sel.ar.bowling):0);
+      const ballAvg = (sel.bowlers.length + (sel.ar?1:0)) ? ballSum/6 : 0;
+      const wkVal = sel.wk ? toNum(sel.wk.keeping) : 0;
       return { bat:batAvg, ball:ballAvg, wk:wkVal, ovr:(batAvg+ballAvg+wkVal)/3 };
     }
-    const round1 = (x)=> (Math.round(x*10)/10).toFixed(1);
-    function getManagerLevel(xp) {
+    const r1 = (x)=> (Math.round(x*10)/10).toFixed(1);
+
+    function getManagerLevel(xp){
       if (xp >= 13500) return "The Boss";
       if (xp >= 8500) return "Ultimate";
       if (xp >= 5500) return "World Class";
@@ -226,193 +207,168 @@
       return "Beginner";
     }
 
-    async function main() {
-      const { data: { user: viewer } } = await supabase.auth.getUser().catch(()=>({data:{user:null}}));
-      if (viewer) {
-        try {
-          const { data: myProfile } = await supabase
-            .from('profiles').select('manager_name,xp,coins,cash')
-            .eq('user_id', viewer.id).maybeSingle();
-          await loadSharedUI({
-            supabase,
-            manager_name: myProfile?.manager_name ?? 'Manager',
-            xp: myProfile?.xp ?? 0,
-            coins: myProfile?.coins ?? 0,
-            cash: myProfile?.cash ?? 0,
-            user_id: viewer.id
-          });
-        } catch {}
+    async function main(){
+      /* Viewer topbar */
+      const { data:{ user:viewer } } = await supabase.auth.getUser().catch(()=>({data:{user:null}}));
+      if (viewer){
+        try{
+          const { data: my } = await supabase.from('profiles').select('manager_name,xp,coins,cash').eq('user_id', viewer.id).maybeSingle();
+          await loadSharedUI({ supabase, manager_name: my?.manager_name ?? 'Manager', xp: my?.xp ?? 0, coins: my?.coins ?? 0, cash: my?.cash ?? 0, user_id: viewer.id });
+        }catch{}
       }
 
-      // Which team
+      /* Which team to show */
       const urlTeamId = new URLSearchParams(location.search).get('team');
       let team = null;
-      if (urlTeamId) {
-        const { data: t } = await supabase.from('teams').select('*').eq('id', urlTeamId).single();
-        team = t;
-      } else if (viewer) {
-        const { data: t } = await supabase.from('teams').select('*').eq('owner_id', viewer.id).single();
-        team = t;
+      if (urlTeamId){
+        const { data:t } = await supabase.from('teams').select('*').eq('id', urlTeamId).single(); team = t;
+      }else if (viewer){
+        const { data:t } = await supabase.from('teams').select('*').eq('owner_id', viewer.id).single(); team = t;
       }
-      if (!team) {
+      if (!team){
         qs('.main').innerHTML = `<div class="section"><h3>Team not found</h3><p class="muted">Provide ?team=&lt;TEAM_ID&gt; in the URL.</p></div>`;
         return;
       }
-      const realTeamName = team.team_name || 'TEAM';
-      qs('#pageTitle').textContent = `👥 ${realTeamName}'s Profile`;
+      const teamName = team.team_name || 'TEAM';
+      qs('#pageTitle').textContent = `👥 ${teamName}'s Profile`;
 
-      // Robust profile: team_id -> owner_id -> team_name
+      /* Robust profile (team_id -> owner_id -> team_name) */
       let profile = null;
-      { const { data } = await supabase.from('profiles').select('*').eq('team_id', team.id).maybeSingle(); profile = data || null; }
-      if (!profile && team.owner_id) {
-        const { data } = await supabase.from('profiles').select('*').eq('user_id', team.owner_id).maybeSingle();
-        profile = data || null;
+      { const { data } = await supabase.from('profiles').select('*').eq('team_id', team.id).maybeSingle(); profile = data||null; }
+      if (!profile && team.owner_id){
+        const { data } = await supabase.from('profiles').select('*').eq('user_id', team.owner_id).maybeSingle(); profile = data||null;
       }
-      if (!profile) {
-        const { data } = await supabase.from('profiles').select('*').eq('team_name', realTeamName).maybeSingle();
-        profile = data || null;
+      if (!profile){
+        const { data } = await supabase.from('profiles').select('*').eq('team_name', teamName).maybeSingle(); profile = data||null;
       }
 
-      // League info
-      let leagueName = "—";
-      if (team.league_id) {
-        const { data: league } = await supabase.from('leagues').select('name,tier').eq('id', team.league_id).single();
-        if (league) leagueName = `${league.name} (${league.tier})`;
-      } else if (team.tier) {
-        leagueName = team.tier;
-      }
+      /* League info */
+      let leagueName = '—';
+      if (team.league_id){
+        const { data:lg } = await supabase.from('leagues').select('name,tier').eq('id', team.league_id).single();
+        if (lg) leagueName = `${lg.name} (${lg.tier})`;
+      }else if (team.tier){ leagueName = team.tier; }
 
-      // Players (include image_url for grid)
+      /* Players – include skills for rating, image for grid */
       const { data: players } = await supabase
         .from('players')
-        .select('id,name,role,form,experience,fitness,age_years,region,skill1,skill2,batting_style,bowling_style,salary,market_price,image_url')
+        .select('id,name,role,form,experience,fitness,age_years,region,skill1,skill2,batting_style,bowling_style,salary,market_price,image_url,batting,bowling,keeping')
         .eq('team_id', team.id);
 
-      // Lineup (for ratings calc — hidden from UI)
+      /* Lineup for rating selection */
       const { data: lineup } = await supabase
         .from('lineups')
         .select('playing_xi,keeper,captain,team_id')
         .eq('team_id', team.id)
         .maybeSingle();
 
-      // Profile fill
-      qs('#mgrName').textContent = profile?.manager_name ?? team.manager_name ?? '–';
-      qs('#teamName').textContent = profile?.team_name ?? realTeamName ?? '–';
-      qs('#region').textContent = profile?.region ?? team.region ?? '–';
+      /* PROFILE fill */
+      qs('#mgrName').textContent  = profile?.manager_name ?? team.manager_name ?? '–';
+      qs('#teamName').textContent = profile?.team_name ?? teamName ?? '–';
+      qs('#region').textContent   = profile?.region ?? team.region ?? '–';
       qs('#leagueInfo').textContent = leagueName;
 
       const xp = Number(profile?.xp ?? 0);
       qs('#level').textContent = getManagerLevel(xp);
       qs('#xpValue').textContent = `${xp} XP`;
       const levels = { Beginner:0, Expert:250, Professional:750, Master:1750, Supreme:3500, "World Class":5500, Ultimate:8500, "The Boss":13500 };
-      const nextLvlXP = Object.values(levels).find(x => x > xp) ?? 13500;
-      const prevLvlXP = [...Object.values(levels)].reverse().find(x => x <= xp) ?? 0;
-      const pct = Math.max(0, Math.min(100, Math.round(((xp - prevLvlXP)/(nextLvlXP - prevLvlXP))*100)));
+      const nextLvlXP = Object.values(levels).find(x=>x>xp) ?? 13500;
+      const prevLvlXP = [...Object.values(levels)].reverse().find(x=>x<=xp) ?? 0;
+      const pct = Math.max(0, Math.min(100, Math.round(((xp-prevLvlXP)/(nextLvlXP-prevLvlXP))*100)));
       qs('#xpBar').style.width = pct + '%';
 
-      // Ratings (computed silently from lineup/skills)
-      const selection = pickByLineupOrAuto([], lineup||null); // placeholder if you keep ratings here
-      // (If you want to compute from skills, add batting/bowling/keeping to the select and use computeRatings)
+      /* RATINGS (fixed) */
+      if (players?.length){
+        const selection = pickByLineupOrAuto(players, lineup||null);
+        const ratings = computeRatings(selection);
+        qs('#ovrValue').textContent  = r1(ratings.ovr);
+        qs('#batValue').textContent  = r1(ratings.bat);
+        qs('#ballValue').textContent = r1(ratings.ball);
+        qs('#wkValue').textContent   = r1(ratings.wk);
+      }else{
+        qs('#ovrValue').textContent = qs('#batValue').textContent = qs('#ballValue').textContent = qs('#wkValue').textContent = '–';
+      }
 
-      // PLAYERS GRID RENDER
-      const grid = qs('#playersGrid');
-      grid.innerHTML = '';
-      const fmt = (v)=> (v == null || v === '') ? '–' : v;
+      /* PLAYERS GRID render (public-safe fields only) */
+      const grid = qs('#playersGrid'); grid.innerHTML = '';
+      const fmt = (v)=> (v==null || v==='') ? '–' : v;
 
       (players||[]).forEach(p=>{
+        const age = (p.age_years!=null) ? `${p.age_years} yrs` : '–';
         const img = p.image_url || 'assets/player-placeholder.png';
-        const role = fmt(p.role || '—');
-        const age  = (p.age_years != null) ? `${p.age_years} yrs` : '–';
-        const region = fmt(p.region);
-        const form = fmt(p.form);
-        const exp  = fmt(p.experience);
-        const fit  = fmt(p.fitness);
-        const s1   = fmt(p.skill1);
-        const s2   = fmt(p.skill2);
-        const batS = fmt(p.batting_style);
-        const bowlS= fmt(p.bowling_style);
-        const sal  = p.salary != null ? `₹${p.salary.toLocaleString()}` : '–';
-        const mv   = p.market_price != null ? `₹${Number(p.market_price).toLocaleString()}` : '–';
 
-        const card = document.createElement('div');
-        card.className = 'pcard';
-        card.innerHTML = `
-          <img class="avatar" src="${img}" alt="${p.name}"/>
+        const el = document.createElement('div');
+        el.className = 'pcard';
+        el.innerHTML = `
+          <img class="avatar" src="${img}" alt="${p.name}">
           <div>
             <div class="title">
               <span>${p.name}</span>
-              <span class="pill">${role}</span>
+              <span class="pill">${fmt(p.role || (p.is_wk?'WK':''))}</span>
               <span class="pill">Age ${age}</span>
             </div>
-            <div class="meta">${region}</div>
-
+            <div class="meta">${fmt(p.region)}</div>
             <div class="kv">
-              <div class="row"><span>Form</span><span>${form}</span></div>
-              <div class="row"><span>XP</span><span>${exp}</span></div>
-              <div class="row"><span>Fitness</span><span>${fit}</span></div>
-              <div class="row"><span>Skill 1</span><span>${s1}</span></div>
-              <div class="row"><span>Skill 2</span><span>${s2}</span></div>
-              <div class="row"><span>Bat Style</span><span>${batS}</span></div>
-              <div class="row"><span>Bowl Style</span><span>${bowlS}</span></div>
-              <div class="row"><span>Salary</span><span>${sal}</span></div>
-              <div class="row"><span>Market Value</span><span>${mv}</span></div>
+              <div class="row"><span>Form</span><span>${fmt(p.form)}</span></div>
+              <div class="row"><span>XP</span><span>${fmt(p.experience)}</span></div>
+              <div class="row"><span>Fitness</span><span>${fmt(p.fitness)}</span></div>
+              <div class="row"><span>Skill 1</span><span>${fmt(p.skill1)}</span></div>
+              <div class="row"><span>Skill 2</span><span>${fmt(p.skill2)}</span></div>
+              <div class="row"><span>Bat Style</span><span>${fmt(p.batting_style)}</span></div>
+              <div class="row"><span>Bowl Style</span><span>${fmt(p.bowling_style)}</span></div>
+              <div class="row"><span>Salary</span><span>${p.salary!=null?`₹${Number(p.salary).toLocaleString()}`:'–'}</span></div>
+              <div class="row"><span>Market Value</span><span>${p.market_price!=null?`₹${Number(p.market_price).toLocaleString()}`:'–'}</span></div>
             </div>
           </div>
         `;
-        grid.appendChild(card);
+        grid.appendChild(el);
       });
 
-      // MATCHES (same as before)
+      /* MATCHES list (unchanged) */
       const teamId = team.id;
       const { data: fixtures } = await supabase
         .from('fixtures')
         .select('id,date,start_time,home_team_id,away_team_id,winner_team_id,status')
         .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-        .order('date', { ascending:false })
-        .limit(20);
+        .order('date',{ascending:false}).limit(20);
 
       const { data: friendlies } = await supabase
         .from('matches')
         .select('id,date,start_time,home_team_id,away_team_id,winner_team_id,status')
         .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-        .order('date', { ascending:false })
-        .limit(20);
+        .order('date',{ascending:false}).limit(20);
 
-      const teamNameCache = new Map([[team.id, realTeamName]]);
-      async function nameOf(id){
+      const cache = new Map([[team.id, teamName]]);
+      async function teamNameOf(id){
         if (!id) return '—';
-        if (teamNameCache.has(id)) return teamNameCache.get(id);
-        const { data: t } = await supabase.from('teams').select('team_name').eq('id', id).single();
-        const n = t?.team_name ?? '—';
-        teamNameCache.set(id, n); return n;
+        if (cache.has(id)) return cache.get(id);
+        const { data:t } = await supabase.from('teams').select('team_name').eq('id', id).single();
+        const name = t?.team_name ?? '—'; cache.set(id, name); return name;
       }
-      async function renderMatchList(list, targetEl, type){
-        targetEl.innerHTML = '';
-        for (const m of (list||[])) {
-          const ht = await nameOf(m.home_team_id);
-          const at = await nameOf(m.away_team_id);
-          const isDone = !!m.winner_team_id || m.status === 'finished' || m.status === 'completed';
+      async function renderMatchList(list, target, kind){
+        target.innerHTML = '';
+        for (const m of (list||[])){
+          const ht = await teamNameOf(m.home_team_id);
+          const at = await teamNameOf(m.away_team_id);
+          const isDone = !!m.winner_team_id || m.status==='finished' || m.status==='completed';
           const status = isDone ? 'Completed' : 'Scheduled';
-          const card = document.createElement('div');
-          card.className = 'match-card';
-          card.innerHTML = `
+          const div = document.createElement('div'); div.className='match-card';
+          div.innerHTML = `
             <div>
               <div>
                 <strong><a class="team-link" href="public-profile.html?team=${m.home_team_id}">${ht}</a></strong>
                 &nbsp;vs&nbsp;
                 <strong><a class="team-link" href="public-profile.html?team=${m.away_team_id}">${at}</a></strong>
               </div>
-              <div class="muted">${m.date} • ${m.start_time} • ${type === 'league' ? 'League' : 'Friendly'} • ${status}</div>
+              <div class="muted">${m.date} • ${m.start_time} • ${kind==='league'?'League':'Friendly'} • ${status}</div>
             </div>
-            <div>
-              <a class="btn" href="public_matchscore.html?type=${type}&id=${m.id}">View Scoreboard</a>
-            </div>
+            <div><a class="btn" href="public_matchscore.html?type=${kind}&id=${m.id}">View Scoreboard</a></div>
           `;
-          targetEl.appendChild(card);
+          target.appendChild(div);
         }
       }
-      await renderMatchList(fixtures, document.getElementById('leagueList'), 'league');
-      await renderMatchList(friendlies, document.getElementById('friendlyList'), 'friendly');
+      await renderMatchList(fixtures, qs('#leagueList'), 'league');
+      await renderMatchList(friendlies, qs('#friendlyList'), 'friendly');
     }
 
     main();
