@@ -468,17 +468,26 @@
     };
     function sanitizeText(t){ return String(t||"").replace(/^\s*runs?\s*:?\s*/i,"").trim(); }
     function lineText(b) {
-      if (b.commentary && b.commentary.trim()) return sanitizeText(b.commentary);
-      const dt = (b.delivery_type||'legal').toLowerCase();
-      if (dt === 'wide')  return "Wide — +1 run";
-      if (dt === 'noball')return "No-ball — +1 run";
-      if (dt === 'bye')   return `Byes — +${(b.extras_detail?.byes)||1}`;
-      if (b.wicket) return sanitizeText(pickStable(VARIANTS.W, b, "W"));
-      const runs = Math.min(6, Math.max(0, b.runs_scored||0));
-      const pool = VARIANTS[runs] || ["Runs added."];
-      return sanitizeText(pickStable(pool, b, "R"));
-    }
+  if (b.commentary && b.commentary.trim()) return sanitizeText(b.commentary);
 
+  const dt = (b.delivery_type||'legal').toLowerCase();
+  if (dt === 'wide')  return "Wide — +1 run";
+  if (dt === 'noball')return "No-ball — +1 run";
+  if (dt === 'bye')   return `Byes — +${(b.extras_detail?.byes)||1}`;
+
+  if (b.wicket) {
+    const t = (b.dismissal_type||"").toLowerCase();
+    if (t === "bowled") return "Bowled him!";
+    if (t === "lbw")    return "LBW given!";
+    if (t === "caught") return "Edged and taken!";
+    if (t === "runout" || t==="run-out") return "Run out!";
+    return "Wicket!";
+  }
+
+  const runs = Math.min(6, Math.max(0, b.runs_scored||0));
+  const pool = VARIANTS[runs] || ["Runs added."];
+  return sanitizeText(pickStable(pool, b, "R"));
+}
     function comLine(b, extra=[]) {
       const bow = nameWithBadges(b.bowler_id);
       const bat = nameWithBadges(b.striker_id);
