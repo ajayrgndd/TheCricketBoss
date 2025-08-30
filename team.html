@@ -6,9 +6,7 @@
   <title>Your Team – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -57,6 +55,11 @@
       cursor: pointer;
     }
 
+    .default-lineup-action button[disabled] {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
     .player-card {
       background: #2d2a4a;
       border-radius: 12px;
@@ -75,26 +78,10 @@
       border: 2px solid #00e676;
     }
 
-    .player-meta {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .player-meta strong {
-      font-size: 18px;
-      color: #fff;
-    }
-
-    .sub {
-      font-size: 13px;
-      color: #ccc;
-    }
-
-    .salary-market {
-      font-size: 13px;
-      margin: 6px 0;
-    }
+    .player-meta { flex: 1; display: flex; flex-direction: column; }
+    .player-meta strong { font-size: 18px; color: #fff; }
+    .sub { font-size: 13px; color: #ccc; }
+    .salary-market { font-size: 13px; margin: 6px 0; }
 
     .bar-label {
       font-size: 13px;
@@ -110,7 +97,6 @@
       overflow: hidden;
       position: relative;
     }
-
     .bar::before {
       content: '';
       position: absolute;
@@ -134,12 +120,7 @@
       cursor: pointer;
     }
 
-    .skills {
-      display: flex;
-      gap: 8px;
-      margin: 8px 0 6px;
-    }
-
+    .skills { display: flex; gap: 8px; margin: 8px 0 6px; }
     .skill-slot {
       width: 34px;
       height: 34px;
@@ -154,45 +135,24 @@
     }
 
     @media (max-width: 600px) {
-      .player-card {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .player-meta {
-        width: 100%;
-      }
-
-      .player-card img {
-        height: 90px;
-      }
-
-      .filter-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .sell-btn {
-        top: 8px;
-        right: 10px;
-        padding: 3px 8px;
-        font-size: 11px;
-      }
+      .player-card { flex-direction: column; align-items: flex-start; }
+      .player-meta { width: 100%; }
+      .player-card img { height: 90px; }
+      .filter-bar { flex-direction: column; align-items: stretch; }
+      .sell-btn { top: 8px; right: 10px; padding: 3px 8px; font-size: 11px; }
     }
   </style>
 </head>
 <body>
   <div class="main">
-  <h2 style="padding: 0 16px;">Your Team</h2>
+    <h2 style="padding: 0 16px;">Your Team</h2>
 
-  <!-- ✅ Default lineup button wrapped in <a> with id for disabling -->
-  <div class="default-lineup-action" style="text-align:center; margin: 16px 16px 0;">
-    <a id="default-lineup-link" href="team-lineup.html?mode=default">
-      <button id="default-lineup-btn">
-        🛡️ Set Default Lineup
-      </button>
-    </a>
-  </div>
+    <div class="default-lineup-action">
+      <a id="default-lineup-link" href="team-lineup.html?mode=default">
+        <button id="default-lineup-btn">🛡️ Set Default Lineup</button>
+      </a>
+      <div id="lineup-status" style="margin-top:8px; font-size:14px; color:#ccc;"></div>
+    </div>
 
     <div class="filter-bar">
       <select id="roleFilter">
@@ -217,156 +177,160 @@
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) window.location.href = "login.html";
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return window.location.href = "login.html";
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
 
-    if (!profile || !profile.manager_name?.trim()) {
-      window.location.href = "profile-setup.html";
-    }
-
-    loadSharedUI({
-      manager_name: profile.manager_name,
-      xp: profile.xp,
-      coins: profile.coins,
-      cash: profile.cash
-    });
-
-    const { data: team } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("owner_id", user.id)
-      .single();
-
-    const { data: players } = await supabase
-      .from("players")
-      .select("*")
-      .eq("team_id", team.id);
-
-    const container = document.getElementById("teamContainer");
-    const searchInput = document.getElementById("searchInput");
-    const roleFilter = document.getElementById("roleFilter");
-
-    // ✅ Check running matches
-    async function checkRunningMatch(teamId) {
-      const { data: running1 } = await supabase.from("matches")
-        .select("id")
-        .or(`and(status.eq.running,home_team_id.eq.${teamId}),and(status.eq.running,away_team_id.eq.${teamId})`)
-        .limit(1);
-
-      const { data: running2 } = await supabase.from("fixtures")
-        .select("id")
-        .or(`and(status.eq.running,home_team_id.eq.${teamId}),and(status.eq.running,away_team_id.eq.${teamId})`)
-        .limit(1);
-
-      return (running1 && running1.length > 0) || (running2 && running2.length > 0);
-    }
-
-    // ✅ Disable default lineup button if match running
-    if (await checkRunningMatch(team.id)) {
-      const btn = document.getElementById("default-lineup-btn");
-      btn.disabled = true;
-      btn.innerText = "⛔ Lineup locked (Match running)";
-      btn.style.backgroundColor = "#aaa";
-      btn.style.cursor = "not-allowed";
-
-      const link = document.getElementById("default-lineup-link");
-      if (link) link.removeAttribute("href");
-    }
-
-    // --- render players (unchanged) ---
-    function getSkillLevel(value) {
-      if (value >= 101) return "The Boss";
-      if (value >= 81) return "Titan";
-      if (value >= 61) return "World Class";
-      if (value >= 51) return "Supreme";
-      if (value >= 41) return "National";
-      if (value >= 31) return "Professional";
-      if (value >= 21) return "Domestic";
-      if (value >= 11) return "Trainee";
-      return "Newbie";
-    }
-
-    function getFitnessLevel(value) {
-      if (value >= 96) return "Excellent";
-      if (value >= 71) return "Good";
-      if (value >= 51) return "Average";
-      return "Poor";
-    }
-
-    function renderPlayers(filtered) {
-      container.innerHTML = "";
-      for (const p of filtered) {
-        const div = document.createElement("div");
-        div.className = "player-card";
-        div.innerHTML = `
-          <button class="sell-btn">SELL</button>
-          <img src="${p.image_url}" alt="${p.role}" />
-          <div class="player-meta">
-            <strong>${p.name}</strong>
-            <div class="sub">Role: ${p.role} | Region: ${p.region}</div>
-            <div class="sub">Style: ${p.batting_style || "–"} | ${p.bowling_style || "–"}</div>
-            <div class="sub">Age: ${p.age_years}y ${p.age_days}d</div>
-            <div class="sub">Form: ${p.form} | Fitness: ${getFitnessLevel(p.fitness)}</div>
-            <div class="salary-market">Salary: ₹${p.salary?.toLocaleString() || 0} | Market: ₹${p.market_price?.toLocaleString() || 0}</div>
-
-            <div class="skills">
-              <div class="skill-slot" title="Skill 1">${p.skill1 || '🔒'}</div>
-              <div class="skill-slot" title="Skill 2">${p.skill2 || '🔒'}</div>
-            </div>
-
-            <div class="bar-label">
-              <span>Batting</span>
-              <span>${getSkillLevel(p.batting)}</span>
-            </div>
-            <div class="bar" style="--value:${p.batting}"></div>
-
-            <div class="bar-label">
-              <span>Bowling</span>
-              <span>${getSkillLevel(p.bowling)}</span>
-            </div>
-            <div class="bar" style="--value:${p.bowling}"></div>
-
-            ${p.keeping > 0 ? `
-              <div class="bar-label">
-                <span>Keeping</span>
-                <span>${getSkillLevel(p.keeping)}</span>
-              </div>
-              <div class="bar" style="--value:${p.keeping}"></div>
-            ` : ''}
-
-            <div class="bar-label">
-              <span>Experience</span>
-              <span>${getSkillLevel(p.experience)}</span>
-            </div>
-            <div class="bar" style="--value:${p.experience}"></div>
-          </div>
-        `;
-        container.appendChild(div);
+      if (!profile || !profile.manager_name?.trim()) {
+        return window.location.href = "profile-setup.html";
       }
-    }
 
-    function applyFilters() {
-      const nameQuery = searchInput.value.trim().toLowerCase();
-      const role = roleFilter.value;
-
-      const filtered = players.filter(p => {
-        const matchesRole = role ? p.role === role : true;
-        const matchesName = p.name.toLowerCase().includes(nameQuery);
-        return matchesRole && matchesName;
+      loadSharedUI({
+        manager_name: profile.manager_name,
+        xp: profile.xp,
+        coins: profile.coins,
+        cash: profile.cash
       });
 
-      renderPlayers(filtered);
-    }
+      const { data: team } = await supabase
+        .from("teams")
+        .select("*")
+        .eq("owner_id", user.id)
+        .single();
 
-    searchInput.addEventListener("input", applyFilters);
-    roleFilter.addEventListener("change", applyFilters);
-    renderPlayers(players);
+      const teamId = team.id;
+
+      // ✅ Running match check
+      async function checkRunningMatch(teamId) {
+        const { data: running1 } = await supabase.from("matches")
+          .select("id")
+          .or(`and(status.eq.running,home_team_id.eq.${teamId}),and(status.eq.running,away_team_id.eq.${teamId})`)
+          .limit(1);
+
+        const { data: running2 } = await supabase.from("fixtures")
+          .select("id")
+          .or(`and(status.eq.running,home_team_id.eq.${teamId}),and(status.eq.running,away_team_id.eq.${teamId})`)
+          .limit(1);
+
+        return (running1 && running1.length > 0) || (running2 && running2.length > 0);
+      }
+
+      // ✅ Disable button if locked
+      if (await checkRunningMatch(teamId)) {
+        const btn = document.getElementById("default-lineup-btn");
+        btn.disabled = true;
+        btn.innerText = "⛔ Lineup locked (Match running)";
+        btn.style.backgroundColor = "#aaa";
+        btn.style.cursor = "not-allowed";
+
+        document.getElementById("default-lineup-link").removeAttribute("href");
+        document.getElementById("lineup-status").innerText = "🔒 Match running – Default lineup disabled";
+      }
+
+      // Fetch and render players
+      const { data: players } = await supabase
+        .from("players")
+        .select("*")
+        .eq("team_id", teamId);
+
+      const container = document.getElementById("teamContainer");
+      const searchInput = document.getElementById("searchInput");
+      const roleFilter = document.getElementById("roleFilter");
+
+      function getSkillLevel(value) {
+        if (value >= 101) return "The Boss";
+        if (value >= 81) return "Titan";
+        if (value >= 61) return "World Class";
+        if (value >= 51) return "Supreme";
+        if (value >= 41) return "National";
+        if (value >= 31) return "Professional";
+        if (value >= 21) return "Domestic";
+        if (value >= 11) return "Trainee";
+        return "Newbie";
+      }
+
+      function getFitnessLevel(value) {
+        if (value >= 96) return "Excellent";
+        if (value >= 71) return "Good";
+        if (value >= 51) return "Average";
+        return "Poor";
+      }
+
+      function renderPlayers(filtered) {
+        container.innerHTML = "";
+        for (const p of filtered) {
+          const div = document.createElement("div");
+          div.className = "player-card";
+          div.innerHTML = `
+            <button class="sell-btn">SELL</button>
+            <img src="${p.image_url}" alt="${p.role}" />
+            <div class="player-meta">
+              <strong>${p.name}</strong>
+              <div class="sub">Role: ${p.role} | Region: ${p.region}</div>
+              <div class="sub">Style: ${p.batting_style || "–"} | ${p.bowling_style || "–"}</div>
+              <div class="sub">Age: ${p.age_years}y ${p.age_days}d</div>
+              <div class="sub">Form: ${p.form} | Fitness: ${getFitnessLevel(p.fitness)}</div>
+              <div class="salary-market">Salary: ₹${p.salary?.toLocaleString() || 0} | Market: ₹${p.market_price?.toLocaleString() || 0}</div>
+
+              <div class="skills">
+                <div class="skill-slot" title="Skill 1">${p.skill1 || '🔒'}</div>
+                <div class="skill-slot" title="Skill 2">${p.skill2 || '🔒'}</div>
+              </div>
+
+              <div class="bar-label">
+                <span>Batting</span>
+                <span>${getSkillLevel(p.batting)}</span>
+              </div>
+              <div class="bar" style="--value:${p.batting}"></div>
+
+              <div class="bar-label">
+                <span>Bowling</span>
+                <span>${getSkillLevel(p.bowling)}</span>
+              </div>
+              <div class="bar" style="--value:${p.bowling}"></div>
+
+              ${p.keeping > 0 ? `
+                <div class="bar-label">
+                  <span>Keeping</span>
+                  <span>${getSkillLevel(p.keeping)}</span>
+                </div>
+                <div class="bar" style="--value:${p.keeping}"></div>
+              ` : ''}
+
+              <div class="bar-label">
+                <span>Experience</span>
+                <span>${getSkillLevel(p.experience)}</span>
+              </div>
+              <div class="bar" style="--value:${p.experience}"></div>
+            </div>
+          `;
+          container.appendChild(div);
+        }
+      }
+
+      function applyFilters() {
+        const nameQuery = searchInput.value.trim().toLowerCase();
+        const role = roleFilter.value;
+
+        const filtered = players.filter(p => {
+          const matchesRole = role ? p.role === role : true;
+          const matchesName = p.name.toLowerCase().includes(nameQuery);
+          return matchesRole && matchesName;
+        });
+
+        renderPlayers(filtered);
+      }
+
+      searchInput.addEventListener("input", applyFilters);
+      roleFilter.addEventListener("change", applyFilters);
+      renderPlayers(players);
+    })();
   </script>
 </body>
 </html>
