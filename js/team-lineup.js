@@ -51,19 +51,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // ✅ Check running matches
 async function checkRunningMatch(teamId) {
-  const { data: running1 } = await supabase.from("matches")
+  // Check friendly matches
+  const { data: running1, error: err1 } = await supabase.from("matches")
     .select("id")
-    .eq("status", "running")
-    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .or(`and(status.eq.running,home_team_id.eq.${teamId}),and(status.eq.running,away_team_id.eq.${teamId})`)
     .limit(1);
 
-  const { data: running2 } = await supabase.from("fixtures")
+  if (err1) {
+    console.error("Error checking matches:", err1.message);
+  }
+
+  // Check league fixtures
+  const { data: running2, error: err2 } = await supabase.from("fixtures")
     .select("id")
-    .eq("status", "running")
-    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .or(`and(status.eq.running,home_team_id.eq.${teamId}),and(status.eq.running,away_team_id.eq.${teamId})`)
     .limit(1);
 
-  // ✅ Correct check: only count if data exists AND length > 0
+  if (err2) {
+    console.error("Error checking fixtures:", err2.message);
+  }
+
   return (running1 && running1.length > 0) || (running2 && running2.length > 0);
 }
 
