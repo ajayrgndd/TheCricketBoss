@@ -53,16 +53,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function checkRunningMatch(teamId) {
   const { data: running1 } = await supabase.from("matches")
     .select("id")
-    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
     .eq("status", "running")
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
     .limit(1);
 
   const { data: running2 } = await supabase.from("fixtures")
     .select("id")
-    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
     .eq("status", "running")
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
     .limit(1);
 
+  // ✅ Correct check: only count if data exists AND length > 0
   return (running1 && running1.length > 0) || (running2 && running2.length > 0);
 }
 
