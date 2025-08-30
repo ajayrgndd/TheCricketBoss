@@ -49,30 +49,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupDragAndDrop();
 });
 
-// ✅ Check running matches
+// ✅ Check running matches for team
 async function checkRunningMatch(teamId) {
-  // Check friendly matches
-  const { data: running1, error: err1 } = await supabase.from("matches")
+  const { data: running1 } = await supabase.from("matches")
     .select("id")
     .or(`and(status.eq.running,home_team_id.eq.${teamId}),and(status.eq.running,away_team_id.eq.${teamId})`)
     .limit(1);
 
-  if (err1) {
-    console.error("Error checking matches:", err1.message);
-  }
-
-  // Check league fixtures
-  const { data: running2, error: err2 } = await supabase.from("fixtures")
+  const { data: running2 } = await supabase.from("fixtures")
     .select("id")
     .or(`and(status.eq.running,home_team_id.eq.${teamId}),and(status.eq.running,away_team_id.eq.${teamId})`)
     .limit(1);
-
-  if (err2) {
-    console.error("Error checking fixtures:", err2.message);
-  }
 
   return (running1 && running1.length > 0) || (running2 && running2.length > 0);
 }
+
+if (await checkRunningMatch(team.id)) {
+  const btn = document.getElementById("default-lineup-btn");
+  btn.disabled = true;
+  btn.innerText = "⛔ Lineup locked (Match running)";
+  btn.style.backgroundColor = "#aaa";
+  btn.style.cursor = "not-allowed";
+
+  // also disable link navigation
+  btn.closest("a").removeAttribute("href");
+}
+
 
 // 🧠 Lineup Rendering
 function renderLineup(players, lineup) {
