@@ -666,21 +666,33 @@
     }
 
     function maybeShowSummary() {
-      if (!matchRow || matchRow.status!=='completed') { liveSummary.style.display='none'; return; }
+  if (!matchRow || matchRow.status!=='completed') { 
+    liveSummary.style.display='none'; 
+    return; 
+  }
 
-      const t1 = totals(all,1);
-      const t2 = totals(all,2);
-      const winnerId = matchRow.winner_team_id;
-      const winName = names[winnerId] || 'Winner';
+  const t1 = totals(all,1);
+  const t2 = totals(all,2);
+  const winnerId = matchRow.winner_team_id;
 
-      liveSummary.style.display='block';
-      liveSummary.innerHTML = `
-        <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">${winName} won the match</div>
-        <div>${names[homeTeam]||'Home'}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
-        <div>${names[awayTeam]||'Away'}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
-      `;
-    }
+  liveSummary.style.display='block';
 
+  if (!winnerId) {
+    // tie
+    liveSummary.innerHTML = `
+      <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">Match tied</div>
+      <div>${names[homeTeam]||'Home'}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+      <div>${names[awayTeam]||'Away'}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+    `;
+  } else {
+    const winName = names[winnerId] || 'Winner';
+    liveSummary.innerHTML = `
+      <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">${winName} won the match</div>
+      <div>${names[homeTeam]||'Home'}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+      <div>${names[awayTeam]||'Away'}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+    `;
+  }
+}
     function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = false) {
       const extras = [];
 
