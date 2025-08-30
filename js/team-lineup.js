@@ -28,32 +28,82 @@ document.addEventListener("DOMContentLoaded", async () => {
   const team = await supabase.from("teams").select("*").eq("owner_id", userId).single();
   teamId = team.data.id;
 
-  // ✅ Disable lineup if match running
+  // ✅ If match already running → lock immediately
   if (await checkRunningMatch(teamId)) {
-    locked = true;
-    document.getElementById("lineup-status").innerText = "🔒 Match running – lineup locked";
-    document.getElementById("save-lineup-btn").disabled = true;
-    document.getElementById("reset-lineup-btn").disabled = true;
-    document.getElementById("save-lineup-btn").style.backgroundColor = "#aaa";
-    document.getElementById("reset-lineup-btn").style.backgroundColor = "#aaa";
+    lockLineup("🔒 Match running – lineup locked");
+  } else {
+    // ✅ Otherwise calculate next lock time (2 mins before match start)
+    const lockTimeIST = await getLineupLockTime(teamId);
+    if (lockTimeIST) {
+      setupCountdown(lockTimeIST);
+    }
   }
 
   const players = await supabase.from("players").select("*").eq("team_id", teamId).then(r => r.data || []);
   savedLineup = await supabase.from("lineups").select("*").eq("team_id", teamId).maybeSingle().then(r => r.data || null);
 
-  const now = new Date();
-  const lockTime = new Date();
-  lockTime.setHours(20, 0, 0, 0); // 8 PM IST
-  if (now >= lockTime) locked = true;
-
   renderLineup(players, savedLineup);
   setupSave();
   setupReset(players);
-  setupCountdown(lockTime);
   setupDragAndDrop();
 });
 
-// ✅ Check running matches
+/* -------------------------------------------------------------------------- */
+/* 🔐 Lock Helpers                                                            */
+/* -------------------------------------------------------------------------- */
+
+function toIST(date) {
+  const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+  return new Date(utc + 5.5 * 60 * 60000);
+}
+
+async function getNextMatchTime(teamId) {
+  // Friendly matches
+  const { data: friendly } = await supabase.from("matches")
+    .select("start_time,status")
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .order("start_time", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (friendly && friendly.status === "scheduled") {
+    return new Date(friendly.start_time);
+  }
+
+  // League fixtures
+  const { data: fixture } = await supabase.from("fixtures")
+    .select("date,start_time,status")
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .order("date", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (fixture && fixture.status === "scheduled") {
+    // Combine date + time into one Date object
+    return new Date(`${fixture.date}T${fixture.start_time}`);
+  }
+
+  return null;
+}
+
+async function getLineupLockTime(teamId) {
+  const matchTimeUTC = await getNextMatchTime(teamId);
+  if (!matchTimeUTC) return null;
+
+  const istMatchTime = toIST(matchTimeUTC);
+  istMatchTime.setMinutes(istMatchTime.getMinutes() - 2); // subtract 2 minutes
+  return istMatchTime;
+}
+
+function lockLineup(msg) {
+  locked = true;
+  document.getElementById("lineup-status").innerText = msg;
+  document.getElementById("save-lineup-btn").disabled = true;
+  document.getElementById("reset-lineup-btn").disabled = true;
+  document.getElementById("save-lineup-btn").style.backgroundColor = "#aaa";
+  document.getElementById("reset-lineup-btn").style.backgroundColor = "#aaa";
+}
+
 async function checkRunningMatch(teamId) {
   const { data: running1 } = await supabase.from("matches")
     .select("id")
@@ -68,7 +118,10 @@ async function checkRunningMatch(teamId) {
   return (running1 && running1.length > 0) || (running2 && running2.length > 0);
 }
 
-// 🧠 Lineup Rendering
+/* -------------------------------------------------------------------------- */
+/* 🧠 Lineup Rendering + Interactions                                         */
+/* -------------------------------------------------------------------------- */
+
 function renderLineup(players, lineup) {
   const xi = lineup?.playing_xi || players.slice(0, 11).map(p => p.id);
   const idMap = Object.fromEntries(players.map(p => [p.id, p]));
@@ -285,7 +338,10 @@ function updateOverBoxes() {
   document.getElementById("overs-count").innerText = `${overAssignments.filter(Boolean).length}/20 overs set`;
 }
 
-// 💾 Save
+/* -------------------------------------------------------------------------- */
+/* 💾 Save + Reset                                                            */
+/* -------------------------------------------------------------------------- */
+
 function setupSave() {
   document.getElementById("save-lineup-btn").onclick = async () => {
     if (locked) return alert("🔒 Lineup is locked.");
@@ -315,7 +371,6 @@ function setupSave() {
   };
 }
 
-// ♻️ Reset
 function setupReset(players) {
   document.getElementById("reset-lineup-btn").onclick = () => {
     if (locked) return alert("🔒 Lineup is locked.");
@@ -324,18 +379,21 @@ function setupReset(players) {
   };
 }
 
-// 🔒 Countdown
+/* -------------------------------------------------------------------------- */
+/* ⏱️ Countdown                                                               */
+/* -------------------------------------------------------------------------- */
+
 function setupCountdown(lockTime) {
   const status = document.getElementById("lineup-status");
   const tick = () => {
     const now = new Date();
     if (now >= lockTime) {
-      locked = true;
-      status.innerText = "🔒 Lineup Locked (time)";
+      lockLineup("🔒 Lineup Locked (time)");
       clearInterval(timer);
     } else {
-      const mins = Math.floor((lockTime - now) / 60000) % 60;
-      const hrs = Math.floor((lockTime - now) / 3600000);
+      const diff = lockTime - now;
+      const mins = Math.floor(diff / 60000) % 60;
+      const hrs = Math.floor(diff / 3600000);
       status.innerText = `🔓 Lineup locks in ${hrs}h ${mins}m`;
     }
   };
