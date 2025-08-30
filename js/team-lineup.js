@@ -32,6 +32,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (await checkRunningMatch(teamId)) {
     locked = true;
     document.getElementById("lineup-status").innerText = "🔒 Match running – lineup locked";
+    document.getElementById("save-lineup-btn").disabled = true;
+    document.getElementById("reset-lineup-btn").disabled = true;
+    document.getElementById("save-lineup-btn").style.backgroundColor = "#aaa";
+    document.getElementById("reset-lineup-btn").style.backgroundColor = "#aaa";
   }
 
   const players = await supabase.from("players").select("*").eq("team_id", teamId).then(r => r.data || []);
@@ -49,7 +53,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupDragAndDrop();
 });
 
-// ✅ Check running matches for team
+// ✅ Check running matches
 async function checkRunningMatch(teamId) {
   const { data: running1 } = await supabase.from("matches")
     .select("id")
@@ -63,18 +67,6 @@ async function checkRunningMatch(teamId) {
 
   return (running1 && running1.length > 0) || (running2 && running2.length > 0);
 }
-
-if (await checkRunningMatch(team.id)) {
-  const btn = document.getElementById("default-lineup-btn");
-  btn.disabled = true;
-  btn.innerText = "⛔ Lineup locked (Match running)";
-  btn.style.backgroundColor = "#aaa";
-  btn.style.cursor = "not-allowed";
-
-  // also disable link navigation
-  btn.closest("a").removeAttribute("href");
-}
-
 
 // 🧠 Lineup Rendering
 function renderLineup(players, lineup) {
@@ -339,7 +331,7 @@ function setupCountdown(lockTime) {
     const now = new Date();
     if (now >= lockTime) {
       locked = true;
-      status.innerText = "🔒 Lineup Locked";
+      status.innerText = "🔒 Lineup Locked (time)";
       clearInterval(timer);
     } else {
       const mins = Math.floor((lockTime - now) / 60000) % 60;
