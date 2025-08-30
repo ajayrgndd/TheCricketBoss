@@ -185,17 +185,15 @@
   <div class="main">
   <h2 style="padding: 0 16px;">Your Team</h2>
 
-  <!-- ✅ Set Default Lineup Button placed properly under the heading -->
+  <!-- ✅ Set Default Lineup Button -->
   <div class="default-lineup-action" style="text-align:center; margin: 16px 16px 0;">
     <a href="team-lineup.html?mode=default">
-      <button style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
+      <button id="default-lineup-btn"
+        style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
         🛡️ Set Default Lineup
       </button>
     </a>
   </div>
-
-  <!-- ... rest of the page content -->
-
 
     <div class="filter-bar">
       <select id="roleFilter">
@@ -250,6 +248,29 @@
       .from("players")
       .select("*")
       .eq("team_id", team.id);
+
+    // ✅ Disable Default Lineup button if match running
+    async function checkRunningMatch(teamId) {
+      const { data: running1 } = await supabase.from("matches")
+        .select("id").eq("status", "running")
+        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+        .limit(1);
+
+      const { data: running2 } = await supabase.from("fixtures")
+        .select("id").eq("status", "running")
+        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+        .limit(1);
+
+      return (running1?.length || running2?.length) > 0;
+    }
+
+    if (await checkRunningMatch(team.id)) {
+      const btn = document.getElementById("default-lineup-btn");
+      btn.disabled = true;
+      btn.innerText = "⛔ Lineup locked (Match running)";
+      btn.style.backgroundColor = "#aaa";
+      btn.style.cursor = "not-allowed";
+    }
 
     const container = document.getElementById("teamContainer");
     const searchInput = document.getElementById("searchInput");
