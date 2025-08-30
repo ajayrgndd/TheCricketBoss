@@ -28,13 +28,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   const team = await supabase.from("teams").select("*").eq("owner_id", userId).single();
   teamId = team.data.id;
 
+  // ✅ Disable lineup if match running
+  if (await checkRunningMatch(teamId)) {
+    locked = true;
+    document.getElementById("lineup-status").innerText = "🔒 Match running – lineup locked";
+  }
+
   const players = await supabase.from("players").select("*").eq("team_id", teamId).then(r => r.data || []);
   savedLineup = await supabase.from("lineups").select("*").eq("team_id", teamId).maybeSingle().then(r => r.data || null);
 
   const now = new Date();
   const lockTime = new Date();
-  lockTime.setHours(30, 0, 0, 0); // 8 PM IST
-  locked = now >= lockTime;
+  lockTime.setHours(20, 0, 0, 0); // 8 PM IST
+  if (now >= lockTime) locked = true;
 
   renderLineup(players, savedLineup);
   setupSave();
@@ -42,6 +48,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupCountdown(lockTime);
   setupDragAndDrop();
 });
+
+// ✅ Check running matches
+async function checkRunningMatch(teamId) {
+  const { data: running1 } = await supabase.from("matches")
+    .select("id").eq("status", "running")
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .limit(1);
+
+  const { data: running2 } = await supabase.from("fixtures")
+    .select("id").eq("status", "running")
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .limit(1);
+
+  return (running1?.length || running2?.length) > 0;
+}
 
 // 🧠 Lineup Rendering
 function renderLineup(players, lineup) {
@@ -63,10 +84,11 @@ function renderLineup(players, lineup) {
 
   renderCaptainPicker(lineup?.captain);
   renderKeeperPicker(lineup?.keeper);
+  renderTossPicker(lineup?.toss_decision);
   renderBowlingLineup();
 }
 
-// 📛 Player Card
+// 📛 Player Card with Skill Icons
 function makePlayerCard(p) {
   const div = document.createElement("div");
   div.className = "player-card compact";
@@ -81,7 +103,11 @@ function makePlayerCard(p) {
     <div class="player-header">
       <strong>${p.name}</strong>
       <div>${p.role} (${bowStyle})</div>
-      <div>🏏 ${p.batting} 🎯 ${p.bowling} 🧤 ${p.keeping}</div>
+      <div>
+        <img src="assets/rating/bat.png" height="14"> ${p.batting}
+        <img src="assets/rating/ball.png" height="14"> ${p.bowling}
+        <img src="assets/rating/wk.png" height="14"> ${p.keeping}
+      </div>
     </div>
     <div class="player-expanded">
       <div>Form: ${p.form || 0}</div>
@@ -144,6 +170,7 @@ function updateFromDOM() {
   currentBowlers = currentLineup.filter(p => p.bowling >= 6);
   renderCaptainPicker();
   renderKeeperPicker();
+  renderTossPicker();
   renderBowlingLineup();
 }
 
@@ -167,6 +194,14 @@ function renderKeeperPicker(savedId) {
     label.innerHTML = `<input type="radio" name="keeper" value="${p.id}" ${savedId === p.id ? "checked" : ""}> ${p.name}`;
     container.appendChild(label);
   });
+}
+
+// 🎲 Toss Picker
+function renderTossPicker(saved) {
+  const container = document.getElementById("toss-picker");
+  container.innerHTML = `<h3>If Toss Wins</h3>
+    <label><input type="radio" name="toss" value="bat" ${saved === "bat" ? "checked" : ""}> Bat First</label>
+    <label><input type="radio" name="toss" value="bowl" ${saved === "bowl" ? "checked" : ""}> Bowl First</label>`;
 }
 
 // 🎯 Bowling Lineup
@@ -253,8 +288,10 @@ function setupSave() {
     if (overAssignments.filter(Boolean).length < 20) return alert("Assign all 20 overs.");
     const captainId = document.querySelector('input[name="captain"]:checked')?.value;
     const keeperId = document.querySelector('input[name="keeper"]:checked')?.value;
+    const tossDecision = document.querySelector('input[name="toss"]:checked')?.value;
     if (!captainId) return alert("Pick a captain.");
     if (!keeperId) return alert("Pick a wicket keeper.");
+    if (!tossDecision) return alert("Pick a toss decision.");
 
     const xiIds = [...document.querySelectorAll("#playing11-list .player-card")].map(c => c.dataset.playerId);
 
@@ -265,6 +302,7 @@ function setupSave() {
       bowling_order: overAssignments,
       captain: captainId,
       keeper: keeperId,
+      toss_decision: tossDecision,
       locked: false
     }, { onConflict: ['team_id'] });
 
