@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -6,22 +6,196 @@
   <title>Your Team – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    /* same CSS as before … unchanged */
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1e1b3a;
+      color: white;
+    }
+
+    .main {
+      padding-top: 80px;
+      padding-bottom: 90px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      padding: 0 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-bar select,
+    .filter-bar input {
+      padding: 8px 10px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: none;
+      width: 160px;
+      max-width: 100%;
+    }
+
+    .default-lineup-action {
+      text-align: center;
+      margin: 16px 0;
+    }
+
+    .default-lineup-action button {
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #00e676;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .player-card {
+      background: #2d2a4a;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      gap: 14px;
+      margin: 12px 16px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      color: white;
+      position: relative;
+    }
+
+    .player-card img {
+      height: 100px;
+      border-radius: 8px;
+      border: 2px solid #00e676;
+    }
+
+    .player-meta {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .player-meta strong {
+      font-size: 18px;
+      color: #fff;
+    }
+
+    .sub {
+      font-size: 13px;
+      color: #ccc;
+    }
+
+    .salary-market {
+      font-size: 13px;
+      margin: 6px 0;
+    }
+
+    .bar-label {
+      font-size: 13px;
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .bar {
+      background: #444;
+      height: 10px;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar::before {
+      content: '';
+      position: absolute;
+      height: 100%;
+      width: calc(var(--value, 50) * 1%);
+      background: linear-gradient(90deg, #00e676, #00bcd4);
+      border-radius: 6px;
+      transition: width 0.3s ease;
+    }
+
+    .sell-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #ff4081;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .skills {
+      display: flex;
+      gap: 8px;
+      margin: 8px 0 6px;
+    }
+
+    .skill-slot {
+      width: 34px;
+      height: 34px;
+      background: #1c1a30;
+      border: 1px solid #666;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #999;
+    }
+
+    @media (max-width: 600px) {
+      .player-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .player-meta {
+        width: 100%;
+      }
+
+      .player-card img {
+        height: 90px;
+      }
+
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .sell-btn {
+        top: 8px;
+        right: 10px;
+        padding: 3px 8px;
+        font-size: 11px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="main">
   <h2 style="padding: 0 16px;">Your Team</h2>
 
-  <!-- ✅ Set Default Lineup Button -->
+  <!-- ✅ Set Default Lineup Button placed properly under the heading -->
   <div class="default-lineup-action" style="text-align:center; margin: 16px 16px 0;">
     <a href="team-lineup.html?mode=default">
-      <button id="default-lineup-btn"
-        style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
+      <button style="padding: 12px 20px; font-size: 16px; background-color: #00e676; color: black; border: none; border-radius: 6px; cursor: pointer;">
         🛡️ Set Default Lineup
       </button>
     </a>
   </div>
+
+  <!-- ... rest of the page content -->
+
 
     <div class="filter-bar">
       <select id="roleFilter">
@@ -76,27 +250,6 @@
       .from("players")
       .select("*")
       .eq("team_id", team.id);
-
-    // ✅ Disable default lineup button if match is running
-    async function checkRunningMatch(teamId) {
-      const { data: running1 } = await supabase.from("matches")
-        .select("id").eq("status", "running")
-        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-        .limit(1);
-      const { data: running2 } = await supabase.from("fixtures")
-        .select("id").eq("status", "running")
-        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-        .limit(1);
-      return (running1?.length || running2?.length) > 0;
-    }
-
-    if (await checkRunningMatch(team.id)) {
-      const btn = document.getElementById("default-lineup-btn");
-      btn.disabled = true;
-      btn.innerText = "⛔ Lineup locked (Match running)";
-      btn.style.backgroundColor = "#aaa";
-      btn.style.cursor = "not-allowed";
-    }
 
     const container = document.getElementById("teamContainer");
     const searchInput = document.getElementById("searchInput");
