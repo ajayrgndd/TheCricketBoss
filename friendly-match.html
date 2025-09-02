@@ -602,6 +602,7 @@
       return `${need} needed from ${ballsLeft} balls with ${wktsLeft} wickets in hand`;
     }
 
+    
     function updateLiveBlocks() {
       if (!all.length) return;
       const latest = all[all.length-1];
@@ -616,35 +617,17 @@
         scoreB.textContent = `${t2.runs}/${t2.wkts} - ${oversText(t2.legal)} ov`;
       } else scoreB.textContent = `--/-- - --.- ov`;
 
-      battingHeading.textContent = `Batting – ${curInn===1 ? (names[homeTeam]||'Home') : (names[awayTeam]||'Away')}`;
-      teamAName.textContent = names[homeTeam] || 'Home';
-      teamBName.textContent = names[awayTeam] || 'Away';
+      // ✅ Use matchRow toss info instead of m
+      const toss = matchRow?.result?.toss;
+      const battingFirstId = toss
+        ? (toss.winner === homeTeam
+            ? (toss.decision === "bat" ? homeTeam : awayTeam)
+            : (toss.decision === "bat" ? awayTeam : homeTeam))
+        : homeTeam;
 
-      // ✅ Adjust labels if toss decided batting order
-      const toss = (m?.result && m.result.toss) ? m.result.toss : null;
-      if (toss) {
-        const tossWinner = toss.winner;
-        const decision = toss.decision;
-        if (decision === "bat") {
-          // Toss winner bats first
-          if (tossWinner === homeTeam) {
-            teamAName.textContent = names[homeTeam] + " (1st Innings)";
-            teamBName.textContent = names[awayTeam] + " (2nd Innings)";
-          } else {
-            teamAName.textContent = names[awayTeam] + " (1st Innings)";
-            teamBName.textContent = names[homeTeam] + " (2nd Innings)";
-          }
-        } else {
-          // Toss winner bowls first
-          if (tossWinner === homeTeam) {
-            teamAName.textContent = names[awayTeam] + " (1st Innings)";
-            teamBName.textContent = names[homeTeam] + " (2nd Innings)";
-          } else {
-            teamAName.textContent = names[homeTeam] + " (1st Innings)";
-            teamBName.textContent = names[awayTeam] + " (2nd Innings)";
-          }
-        }
-      }
+      battingHeading.textContent = `Batting – ${curInn===1 ? (names[battingFirstId]||'Team A') : (names[battingFirstId===homeTeam?awayTeam:homeTeam]||'Team B')}`;
+      teamAName.textContent = names[battingFirstId] || 'Team A';
+      teamBName.textContent = names[battingFirstId===homeTeam?awayTeam:homeTeam] || 'Team B';
 
       if (curInn===2) {
         liveTarget.style.display = 'block';
@@ -825,32 +808,6 @@
 
       teamAName.textContent = names[homeTeam] || 'Home';
       teamBName.textContent = names[awayTeam] || 'Away';
-
-      // ✅ Adjust labels if toss decided batting order
-      const toss = (m?.result && m.result.toss) ? m.result.toss : null;
-      if (toss) {
-        const tossWinner = toss.winner;
-        const decision = toss.decision;
-        if (decision === "bat") {
-          // Toss winner bats first
-          if (tossWinner === homeTeam) {
-            teamAName.textContent = names[homeTeam] + " (1st Innings)";
-            teamBName.textContent = names[awayTeam] + " (2nd Innings)";
-          } else {
-            teamAName.textContent = names[awayTeam] + " (1st Innings)";
-            teamBName.textContent = names[homeTeam] + " (2nd Innings)";
-          }
-        } else {
-          // Toss winner bowls first
-          if (tossWinner === homeTeam) {
-            teamAName.textContent = names[awayTeam] + " (1st Innings)";
-            teamBName.textContent = names[homeTeam] + " (2nd Innings)";
-          } else {
-            teamAName.textContent = names[homeTeam] + " (1st Innings)";
-            teamBName.textContent = names[awayTeam] + " (2nd Innings)";
-          }
-        }
-      }
 
       const { data: ps } = await supabase
         .from('players')
