@@ -300,6 +300,7 @@
     let all = [];
     let players = {};                // id -> {name, team_id, ...}
     let homeTeam, awayTeam;
+    let battingFirst = null, battingSecond = null;
     let names = {};
     let matchRow = null;
     const roles = {};
@@ -602,7 +603,6 @@
       return `${need} needed from ${ballsLeft} balls with ${wktsLeft} wickets in hand`;
     }
 
-    
     function updateLiveBlocks() {
       if (!all.length) return;
       const latest = all[all.length-1];
@@ -617,17 +617,9 @@
         scoreB.textContent = `${t2.runs}/${t2.wkts} - ${oversText(t2.legal)} ov`;
       } else scoreB.textContent = `--/-- - --.- ov`;
 
-      // ✅ Use matchRow toss info instead of m
-      const toss = matchRow?.result?.toss;
-      const battingFirstId = toss
-        ? (toss.winner === homeTeam
-            ? (toss.decision === "bat" ? homeTeam : awayTeam)
-            : (toss.decision === "bat" ? awayTeam : homeTeam))
-        : homeTeam;
-
-      battingHeading.textContent = `Batting – ${curInn===1 ? (names[battingFirstId]||'Team A') : (names[battingFirstId===homeTeam?awayTeam:homeTeam]||'Team B')}`;
-      teamAName.textContent = names[battingFirstId] || 'Team A';
-      teamBName.textContent = names[battingFirstId===homeTeam?awayTeam:homeTeam] || 'Team B';
+      battingHeading.textContent = `Batting – ${curInn===1 ? (names[battingFirst]||'Team A') : (names[battingSecond]||'Team B')}`;
+      teamAName.textContent = names[battingFirst] || 'Team A';
+      teamBName.textContent = names[battingSecond] || 'Team B';
 
       if (curInn===2) {
         liveTarget.style.display = 'block';
@@ -689,13 +681,13 @@
 
       // Innings 1 (home)
       i1.card.style.display = 'block';
-      i1.title.textContent = `Innings 1 – ${(names[homeTeam]||'Home')}`;
+      i1.title.textContent = `Innings 1 – ${(names[battingFirst]||'Team A')}`;
       fillFullInnings(1, i1);
 
       // Innings 2 (away) – show only when there are balls in inns 2
       if (all.some(b => b.innings === 2)) {
         i2.card.style.display = 'block';
-        i2.title.textContent = `Innings 2 – ${(names[awayTeam]||'Away')}`;
+        i2.title.textContent = `Innings 2 – ${(names[battingSecond]||'Team B')}`;
         fillFullInnings(2, i2);
       } else {
         i2.card.style.display = 'none';
@@ -783,7 +775,7 @@
         const nxt = nextBall;
         if (b.innings === 1 && (!nxt || nxt.innings !== 1)) {
           const t1 = totals(all.concat([b]), 1);
-          const chasingName = names[awayTeam] || 'Team B';
+          const chasingName = names[battingSecond] || 'Team B';
           const need = t1.runs + 1;
           extras.push(`End of First Innings`);
           extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
@@ -806,8 +798,8 @@
       const { data: t } = await supabase.from('teams').select('id, team_name').in('id', [homeTeam, awayTeam]);
       (t||[]).forEach(x=> names[x.id]=x.team_name);
 
-      teamAName.textContent = names[homeTeam] || 'Home';
-      teamBName.textContent = names[awayTeam] || 'Away';
+      teamAName.textContent = names[battingFirst] || 'Team A';
+      teamBName.textContent = names[battingSecond] || 'Team B';
 
       const { data: ps } = await supabase
         .from('players')
@@ -824,6 +816,21 @@
       });
 
       await buildLineupUI(lus || []);
+      // ✅ Decide battingFirst and battingSecond based on toss result
+      const toss = (m?.result && m.result.toss) || null;
+      if (toss) {
+        if (toss.winner === homeTeam) {
+          if (toss.decision === 'bat') { battingFirst = homeTeam; battingSecond = awayTeam; }
+          else { battingFirst = awayTeam; battingSecond = homeTeam; }
+        } else if (toss.winner === awayTeam) {
+          if (toss.decision === 'bat') { battingFirst = awayTeam; battingSecond = homeTeam; }
+          else { battingFirst = homeTeam; battingSecond = awayTeam; }
+        }
+      } else {
+        // fallback: assume home bats first
+        battingFirst = homeTeam; battingSecond = awayTeam;
+      }
+
     }
 
     function byBat(a,b){ return (b.batting||0)-(a.batting||0); }
@@ -924,10 +931,12 @@
     .order('created_at',{ascending:true});
 
   // ✅ Ensure toss row is always first
-  all = (balls || []).sort((a, b) => {
-    if (a.delivery_type === "toss" && b.delivery_type !== "toss") return -1;
-    if (b.delivery_type === "toss" && a.delivery_type !== "toss") return 1;
-    return 0; // keep natural order otherwise
+  all = (balls || []).sort((a,b)=>{
+    if(a.delivery_type==="toss") return -1;
+    if(b.delivery_type==="toss") return 1;
+    if(a.innings!==b.innings) return a.innings-b.innings;
+    if(a.over_number!==b.over_number) return a.over_number-b.over_number;
+    return a.ball_in_over-b.ball_in_over;
   });
 
   liveBatRuns.clear();
