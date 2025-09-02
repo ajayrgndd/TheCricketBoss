@@ -679,12 +679,11 @@
     function updateScorecardBlocks() {
   if (!all.length) return;
 
-  // Figure out toss winner + decision
-  const tossRow = all.find(b => b.delivery_type === "toss");
   let i1Team = homeTeam, i2Team = awayTeam;
 
-  if (tossRow && tossRow.toss) {
-    const toss = tossRow.toss;
+  // ✅ Use toss info from matchRow.result
+  const toss = matchRow?.result?.toss;
+  if (toss) {
     if (toss.winner === homeTeam) {
       i1Team = toss.decision === "bat" ? homeTeam : awayTeam;
       i2Team = toss.decision === "bat" ? awayTeam : homeTeam;
@@ -708,7 +707,6 @@
     i2.card.style.display = 'none';
   }
 }
-
 
     function maybeShowSummary() {
   if (!matchRow || matchRow.status!=='completed') { 
