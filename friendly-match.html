@@ -898,29 +898,40 @@
     }
 
     async function loadOnce() {
-      if (!matchId) { alert('Missing match id'); return; }
+  if (!matchId) { 
+    alert('Missing match id'); 
+    return; 
+  }
 
-      await loadMeta();
+  await loadMeta();
 
-      const { data: balls } = await supabase
-        .from('ball_by_ball')
-        .select('*')
-        .eq('match_id', matchId)
-        .order('innings',{ascending:true})
-        .order('over_number',{ascending:true})
-        .order('ball_in_over',{ascending:true})
-        .order('created_at',{ascending:true});
+  const { data: balls } = await supabase
+    .from('ball_by_ball')
+    .select('*')
+    .eq('match_id', matchId)
+    .order('innings',{ascending:true})
+    .order('over_number',{ascending:true})
+    .order('ball_in_over',{ascending:true})
+    .order('created_at',{ascending:true});
 
-      all = balls || [];
-      liveBatRuns.clear(); prevBall=null;
+  // ✅ Ensure toss row is always first
+  all = (balls || []).sort((a, b) => {
+    if (a.delivery_type === "toss" && b.delivery_type !== "toss") return -1;
+    if (b.delivery_type === "toss" && a.delivery_type !== "toss") return 1;
+    return 0; // keep natural order otherwise
+  });
 
-      renderCommentaryTop(all, liveFeed);
-      renderCommentaryTop(all, commFeed);
+  liveBatRuns.clear();
+  prevBall = null;
 
-      updateLiveBlocks();
-      updateScorecardBlocks();
-      maybeShowSummary();
-    }
+  renderCommentaryTop(all, liveFeed);
+  renderCommentaryTop(all, commFeed);
+
+  updateLiveBlocks();
+  updateScorecardBlocks();
+  maybeShowSummary();
+}
+
 
     function startRealtime() {
       supabase.channel('bb-live')
