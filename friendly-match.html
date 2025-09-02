@@ -677,22 +677,38 @@
 
     /* ✅ missing earlier — restores scorecard + auto refresh */
     function updateScorecardBlocks() {
-      if (!all.length) return;
+  if (!all.length) return;
 
-      // Innings 1 (home)
-      i1.card.style.display = 'block';
-      i1.title.textContent = `Innings 1 – ${(names[battingFirst]||'Team A')}`;
-      fillFullInnings(1, i1);
+  // Figure out toss winner + decision
+  const tossRow = all.find(b => b.delivery_type === "toss");
+  let i1Team = homeTeam, i2Team = awayTeam;
 
-      // Innings 2 (away) – show only when there are balls in inns 2
-      if (all.some(b => b.innings === 2)) {
-        i2.card.style.display = 'block';
-        i2.title.textContent = `Innings 2 – ${(names[battingSecond]||'Team B')}`;
-        fillFullInnings(2, i2);
-      } else {
-        i2.card.style.display = 'none';
-      }
+  if (tossRow && tossRow.toss) {
+    const toss = tossRow.toss;
+    if (toss.winner === homeTeam) {
+      i1Team = toss.decision === "bat" ? homeTeam : awayTeam;
+      i2Team = toss.decision === "bat" ? awayTeam : homeTeam;
+    } else {
+      i1Team = toss.decision === "bat" ? awayTeam : homeTeam;
+      i2Team = toss.decision === "bat" ? homeTeam : awayTeam;
     }
+  }
+
+  // Innings 1
+  i1.card.style.display = 'block';
+  i1.title.textContent = `Innings 1 – ${(names[i1Team]||'Team 1')}`;
+  fillFullInnings(1, i1);
+
+  // Innings 2 (only if started)
+  if (all.some(b => b.innings === 2)) {
+    i2.card.style.display = 'block';
+    i2.title.textContent = `Innings 2 – ${(names[i2Team]||'Team 2')}`;
+    fillFullInnings(2, i2);
+  } else {
+    i2.card.style.display = 'none';
+  }
+}
+
 
     function maybeShowSummary() {
   if (!matchRow || matchRow.status!=='completed') { 
