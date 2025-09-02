@@ -28,6 +28,17 @@
     th,td{border:1px solid #2a344a;padding:8px;text-align:center;vertical-align:top}
     th{background:#1a2236}
     .muted{opacity:.75}
+    .toss-line .toss-banner {
+  background: #222a68;
+  color: #fff;
+  text-align: center;
+  font-weight: bold;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 6px;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
 
     /* Compact score tables (LIVE + SCORECARD only) */
     #live-panel table, #score-panel table { font-size:.92rem; }
@@ -489,6 +500,14 @@
   return sanitizeText(pickStable(pool, b, "R"));
 }
     function comLine(b, extra=[]) {
+      // ✅ Special case: Toss row
+  if (b.delivery_type === "toss") {
+    return `
+      <div class="com-line toss-line">
+        <div class="toss-banner">🎲 ${b.commentary}</div>
+      </div>
+    `;
+  }
       const bow = nameWithBadges(b.bowler_id);
       const bat = nameWithBadges(b.striker_id);
       const head = `Innings ${b.innings} • Over ${overLabel(b)}`;
