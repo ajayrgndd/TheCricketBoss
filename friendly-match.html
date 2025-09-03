@@ -527,24 +527,33 @@
     }
 
     function renderCommentaryTop(list, into) {
-      const htmls = [];
-      prevBall = null;
-      liveBatRuns.clear();
+  const htmls = [];
+  prevBall = null;
+  liveBatRuns.clear();
 
-      const i1Finished =
-        list.some(x => x.innings === 2) ||
-        (matchRow && (matchRow.sim_innings ?? 1) >= 2) ||
-        (matchRow && matchRow.status === 'completed');
+  const i1Finished =
+    list.some(x => x.innings === 2) ||
+    (matchRow && (matchRow.sim_innings ?? 1) >= 2) ||
+    (matchRow && matchRow.status === 'completed');
 
-      for (let i = 0; i < list.length; i++) {
-        const b = list[i];
-        const next = list[i + 1] || null;
-        const extras = buildExtras(b, next, /*addInningsEnd*/ true, /*i1Finished*/ i1Finished);
-        htmls.push(comLine(b, extras));
-      }
-      into.innerHTML = htmls.reverse().join('');
-    }
+  // ✅ First handle toss row separately
+  const tossRow = list.find(b => b.delivery_type === "toss");
+  if (tossRow) {
+    htmls.push(comLine(tossRow, []));
+  }
 
+  // Then handle rest (exclude toss row so it doesn’t duplicate)
+  const playBalls = list.filter(b => b.delivery_type !== "toss");
+  for (let i = 0; i < playBalls.length; i++) {
+    const b = playBalls[i];
+    const next = playBalls[i + 1] || null;
+    const extras = buildExtras(b, next, /*addInningsEnd*/ true, /*i1Finished*/ i1Finished);
+    htmls.push(comLine(b, extras));
+  }
+
+  // ✅ No reverse here, latest ball should already be at bottom
+  into.innerHTML = htmls.reverse().join('');
+}
     // delayed rendering queue -> prepend to TOP
     function pushToQueue(ball) {
       queue.push(ball);
