@@ -679,26 +679,37 @@
     function updateScorecardBlocks() {
   if (!all.length) return;
 
+  // Default mapping
   let i1Team = homeTeam, i2Team = awayTeam;
 
-  // ✅ Use toss info from matchRow.result
+  // ✅ Use toss info if available
   const toss = matchRow?.result?.toss;
   if (toss) {
     if (toss.winner === homeTeam) {
-      i1Team = toss.decision === "bat" ? homeTeam : awayTeam;
-      i2Team = toss.decision === "bat" ? awayTeam : homeTeam;
-    } else {
-      i1Team = toss.decision === "bat" ? awayTeam : homeTeam;
-      i2Team = toss.decision === "bat" ? homeTeam : awayTeam;
+      if (toss.decision === "bat") {
+        i1Team = homeTeam;
+        i2Team = awayTeam;
+      } else { // home bowled first
+        i1Team = awayTeam;
+        i2Team = homeTeam;
+      }
+    } else { // away won toss
+      if (toss.decision === "bat") {
+        i1Team = awayTeam;
+        i2Team = homeTeam;
+      } else { // away bowled first
+        i1Team = homeTeam;
+        i2Team = awayTeam;
+      }
     }
   }
 
-  // Innings 1
+  // 🏏 Innings 1
   i1.card.style.display = 'block';
   i1.title.textContent = `Innings 1 – ${(names[i1Team]||'Team 1')}`;
   fillFullInnings(1, i1);
 
-  // Innings 2 (only if started)
+  // 🏏 Innings 2 (only if it has started)
   if (all.some(b => b.innings === 2)) {
     i2.card.style.display = 'block';
     i2.title.textContent = `Innings 2 – ${(names[i2Team]||'Team 2')}`;
@@ -707,7 +718,6 @@
     i2.card.style.display = 'none';
   }
 }
-
     function maybeShowSummary() {
   if (!matchRow || matchRow.status!=='completed') { 
     liveSummary.style.display='none'; 
