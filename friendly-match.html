@@ -650,8 +650,8 @@
       liveBowls.innerHTML = html;
 
       // Headlines for scorecard
-      headlineA.textContent = `${names[homeTeam]||'Home'} ${t1.runs}/${t1.wkts} (${oversText(t1.legal)} ov)`;
-      headlineB.textContent = `${names[awayTeam]||'Away'} ${t2.runs}/${t2.wkts} (${oversText(t2.legal)} ov)`;
+      headlineA.textContent = `${names[battingFirst]||'Team A'} ${t1.runs}/${t1.wkts} (${oversText(t1.legal)} ov)`;
+      headlineB.textContent = `${names[battingSecond]||'Team B'} ${t2.runs}/${t2.wkts} (${oversText(t2.legal)} ov)`;
       if (in2) {
         scoreTarget.style.display='block';
         scoreTarget.textContent = targetString(t1.runs, t2);
