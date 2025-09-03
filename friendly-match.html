@@ -709,14 +709,19 @@
   i1.title.textContent = `Innings 1 – ${(names[i1Team]||'Team 1')}`;
   fillFullInnings(1, i1);
 
-  // 🏏 Innings 2 (only if it has started)
-  if (all.some(b => b.innings === 2)) {
-    i2.card.style.display = 'block';
-    i2.title.textContent = `Innings 2 – ${(names[i2Team]||'Team 2')}`;
-    fillFullInnings(2, i2);
-  } else {
-    i2.card.style.display = 'none';
-  }
+  // 🏏 Innings 1
+i1.card.style.display = 'block';
+i1.title.textContent = `Innings 1 – ${(names[battingFirst]||'Team A')}`;
+fillFullInnings(1, i1);
+
+// 🏏 Innings 2
+if (all.some(b => b.innings === 2)) {
+  i2.card.style.display = 'block';
+  i2.title.textContent = `Innings 2 – ${(names[battingSecond]||'Team B')}`;
+  fillFullInnings(2, i2);
+} else {
+  i2.card.style.display = 'none';
+}
 }
     function maybeShowSummary() {
   if (!matchRow || matchRow.status!=='completed') { 
