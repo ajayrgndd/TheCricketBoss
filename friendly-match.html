@@ -501,6 +501,9 @@
   return sanitizeText(pickStable(pool, b, "R"));
 }
     function comLine(b, extra=[]) {
+      if (b.delivery_type === 'toss') {
+        return `<div class="com-line toss-line"><div class="toss-banner">🎲 ${b.commentary}</div></div>`;
+      }
       // ✅ Special case: Toss row
   if (b.delivery_type === "toss") {
     return `
@@ -829,6 +832,9 @@ if (all.some(b => b.innings === 2)) {
     async function loadMeta() {
       const { data: m } = await supabase.from('matches').select('*').eq('id', matchId).single();
       matchRow = m || null;
+      if (!matchRow.result?.toss && matchRow.sim_state?.toss) {
+        matchRow.result = { ...(matchRow.result||{}), toss: matchRow.sim_state.toss };
+      }
 
       homeTeam = m?.home_team_id;
       awayTeam = m?.away_team_id;
