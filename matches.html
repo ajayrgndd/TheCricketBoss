@@ -11,16 +11,36 @@
   <script type="module" src="js/smooth-ui.js"></script>
 
   <style>
-    .match-card{background:#111;border-radius:12px;padding:12px;margin:14px 0;border:1px solid #222}
-    .match-head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px}
+    /* ------- Layout & centering ------- */
+    main{max-width:980px;margin:0 auto;padding:0 12px}
+    h2{margin-top:22px}
+
+    .match-list{
+      display:flex;
+      flex-direction:column;
+      align-items:center; /* center every card */
+    }
+
+    .match-card{
+      background:#111;border-radius:12px;padding:12px;margin:14px 0;border:1px solid #222;
+      width:100%; max-width:680px;  /* nice centered width */
+    }
+
+    .match-head{
+      display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px
+    }
+
     .badge{font-size:.7rem;padding:4px 8px;border-radius:999px;border:1px solid #333;letter-spacing:.02em}
     .badge-league{background:#1e293b;color:#cbd5e1}
     .badge-friendly{background:#1b4332;color:#d1fae5}
+
     .chip{font-size:.7rem;padding:4px 8px;border-radius:6px}
     .chip-live{background:#b91c1c;color:#fff}
     .chip-done{background:#334155;color:#e2e8f0}
     .chip-upcoming{background:#0f766e;color:#ecfeff}
+
     .start{font-size:.8rem;opacity:.8}
+
     .match-body{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .team{display:flex;flex-direction:column;align-items:center;gap:6px;width:38%}
     .team img{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#0b0b0b;border:1px solid #1f2937}
@@ -29,9 +49,9 @@
     .name a:hover{text-decoration:underline}
     .vs{width:24%;text-align:center;opacity:.8}
     .score{margin-top:6px;text-align:center;font-weight:800}
-    .subscore{margin-top:2px;text-align:center;font-size:.85rem;opacity:.85}
+    .subscore{margin-top:8px;text-align:center;font-size:.95rem;opacity:.9}
     .hidden-score{opacity:.6;font-weight:500}
-    .empty{opacity:.7;padding:16px;border:1px dashed #333;border-radius:10px;margin:8px 0}
+    .empty{opacity:.7;padding:16px;border:1px dashed #333;border-radius:10px;margin:8px 0; width:100%; max-width:680px; text-align:center}
   </style>
 </head>
 <body>
@@ -65,7 +85,7 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // ---------- Utilities ----------
+    /* ---------- Utilities ---------- */
     function formatDateTime(ts) {
       if (!ts) return "";
       const d = new Date(ts);
@@ -96,106 +116,21 @@
       return `<span class="chip ${cls}">${txt}</span>`;
     };
 
-    // ---------- Robust parsing (no wickets) ----------
+    /* ---------- Robust parsing (map innings to correct team) ---------- */
     const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
     function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
 
-    const ob = (o,b) => {
-      const O = Number(o) || 0;
-      const B = Number(b);
-      if (Number.isFinite(B) && B >= 0) return `${O}.${Math.min(5,B)}`;
-      return String(o);
-    };
-
-    // Sum runs from ball_by_ball for a given innings (very tolerant)
-    function runsFromBBB(bbb, which){
-      if (!Array.isArray(bbb)) return null;
-      const arr = bbb.filter(d => (d.inning ?? d.innings ?? 1) === which);
-      if (!arr.length) return null;
-      return arr.reduce((sum, d) => {
-        // prefer a "total" per delivery, otherwise add batsman+extras, else generic runs field
-        const total = d.total ?? d.runs_total ?? d.score ?? null;
-        if (total != null) return sum + Number(total || 0);
-        const bats = Number(d.batsman_runs ?? d.runs_batsman ?? d.runs_bat ?? 0);
-        const exts = Number(d.extras ?? d.runs_extras ?? 0);
-        const r = d.runs ?? d.r ?? 0;
-        return sum + (Number.isFinite(bats+exts) ? (bats+exts) : Number(r) || 0);
-      }, 0);
+    function oversFromBalls(balls){
+      if (!Number.isFinite(balls) || balls < 0) return null;
+      const O = Math.floor(balls/6), B = balls%6;
+      return `${O}.${B}`;
     }
 
-    function inferOversFromBBB(bbb, which){
-      if (!Array.isArray(bbb) || !bbb.length) return null;
-      const arr = bbb.filter(d => (d.inning ?? d.innings ?? 1) === which);
-      const list = arr.length ? arr : bbb;
-      const last = list[list.length-1];
-      if (last?.over != null) return ob(last.over, last.ball);
-      if (last?.o != null)    return ob(last.o, last.b);
-      if (last?.over_ball != null) return String(last.over_ball);
-      if (last?.ov != null)   return String(last.ov);
-      return null;
-    }
-
-    // Extract per-team runs & overs (no wickets). Tolerates many shapes.
-    function extractSimpleTotals(result, homeId, awayId){
-      const r = toJSON(result) || {};
-      const bbb = r.ball_by_ball ?? r.bbb ?? null;
-
-      const pick = (raw, which) => {
-        if (!raw) return { runs:null, overs:null };
-        // runs: prefer explicit, else compute from BBB
-        let runs = raw.runs ?? raw.score ?? null;
-        if (runs == null) runs = runsFromBBB(bbb, which);
-        // overs: prefer explicit, else compute from balls or BBB
-        let overs = raw.overs ?? raw.ov ?? raw.o ?? raw.over ?? raw.overs_f ?? null;
-        if (overs == null && raw.balls != null) {
-          const balls = Number(raw.balls);
-          if (Number.isFinite(balls) && balls >= 0) {
-            const O = Math.floor(balls/6), B = balls%6;
-            overs = `${O}.${B}`;
-          }
-        }
-        if (overs == null) overs = inferOversFromBBB(bbb, which);
-        return { runs: Number.isFinite(Number(runs)) ? Number(runs) : null, overs };
-      };
-
-      // innings array
-      if (Array.isArray(r.innings)) {
-        let home = {runs:null, overs:null}, away = {runs:null, overs:null};
-        r.innings.forEach((inn, idx) => {
-          const tid = String(inn.team_id ?? inn.team ?? '');
-          const totals = pick(inn.totals ?? inn, idx+1);
-          if (String(homeId) === tid) home = totals;
-          else if (String(awayId) === tid) away = totals;
-        });
-        return {home, away};
-      }
-
-      // home/away block
-      if (r.home || r.away) {
-        return {
-          home: pick(r.home, 1),
-          away: pick(r.away, 2)
-        };
-      }
-
-      // scoreboard keyed object
-      if (r.scoreboard && typeof r.scoreboard === 'object') {
-        return {
-          home: pick(r.scoreboard[homeId], 1),
-          away: pick(r.scoreboard[awayId], 2)
-        };
-      }
-
-      return { home:{runs:null, overs:null}, away:{runs:null, overs:null} };
-    }
-
-    // "R (O)"
     function formatScoreNoWk(t){
       if (!t || t.runs == null) return '—';
       return `${t.runs}${t.overs ? ` (${t.overs})` : ''}`;
     }
 
-    // Optional chase copy
     function buildChaseText(result){
       const r = toJSON(result) || {};
       if (r.target != null && r.balls_left != null) {
@@ -208,7 +143,6 @@
     }
 
     function completedResultLine(m, homeName, awayName){
-      // keep it extremely simple as requested
       if (m.winner_team_id) {
         const winner = (m.winner_team_id === m.home_team_id) ? homeName
                       : (m.winner_team_id === m.away_team_id) ? awayName : 'Winner';
@@ -216,8 +150,82 @@
       }
       return 'Match completed';
     }
-    // ---------- /parsing ----------
 
+    /**
+     * Extract totals per team with correct mapping even when i1 is the away team.
+     * Supports these shapes:
+     * - result.home / result.away
+     * - result.innings[] with team_id (best)
+     * - result.innings[] without team_id + result.toss {winner, decision}
+     */
+    function extractTotalsMapped(result, homeId, awayId){
+      const r = toJSON(result) || {};
+
+      // 1) Explicit home/away blocks (most stable)
+      if (r.home || r.away) {
+        const home = r.home ? {
+          runs: numOrNull(r.home.runs ?? r.home.score),
+          overs: r.home.overs ?? oversFromBalls(nOrU(r.home.balls))
+        } : {runs:null, overs:null};
+        const away = r.away ? {
+          runs: numOrNull(r.away.runs ?? r.away.score),
+          overs: r.away.overs ?? oversFromBalls(nOrU(r.away.balls))
+        } : {runs:null, overs:null};
+        return {home, away};
+      }
+
+      // 2) Innings array with team_id
+      if (Array.isArray(r.innings) && r.innings.some(x => x && (x.team_id!=null || x.team!=null))) {
+        let home = {runs:null, overs:null}, away = {runs:null, overs:null};
+        for (const inn of r.innings) {
+          const tid = String(inn.team_id ?? inn.team ?? '');
+          const totals = {
+            runs: numOrNull(inn.totals?.runs ?? inn.runs ?? inn.score),
+            overs: inn.totals?.overs ?? inn.overs ?? oversFromBalls(nOrU(inn.totals?.balls ?? inn.balls))
+          };
+          if (String(homeId) === tid) home = totals;
+          else if (String(awayId) === tid) away = totals;
+        }
+        return {home, away};
+      }
+
+      // 3) Innings array WITHOUT team_id -> derive from toss
+      if (Array.isArray(r.innings) && r.innings.length) {
+        const i1 = r.innings[0] || {};
+        const i2 = r.innings[1] || {};
+
+        // decide i1Team from toss
+        const toss = r.toss || null;
+        let i1Team = null, i2Team = null;
+        if (toss && toss.winner && toss.decision) {
+          const winner = String(toss.winner);
+          const loser  = (String(homeId) === winner) ? String(awayId) : String(homeId);
+          i1Team = (toss.decision.toLowerCase() === 'bat') ? winner : loser;
+          i2Team = (i1Team === String(homeId)) ? String(awayId) : String(homeId);
+        } else {
+          // fallback: assume home batted first (previous behavior)
+          i1Team = String(homeId); i2Team = String(awayId);
+        }
+
+        const toT = (inn) => ({
+          runs: numOrNull(inn.totals?.runs ?? inn.runs ?? inn.score),
+          overs: inn.totals?.overs ?? inn.overs ?? oversFromBalls(nOrU(inn.totals?.balls ?? inn.balls))
+        });
+
+        const i1Totals = toT(i1), i2Totals = toT(i2);
+        const home = (String(homeId) === i1Team) ? i1Totals : i2Totals;
+        const away = (String(awayId)  === i1Team) ? i1Totals : i2Totals;
+        return {home, away};
+      }
+
+      // 4) Unknown -> neutral
+      return {home:{runs:null, overs:null}, away:{runs:null, overs:null}};
+    }
+
+    const numOrNull = (v)=> Number.isFinite(Number(v)) ? Number(v) : null;
+    const nOrU = (v)=> Number.isFinite(Number(v)) ? Number(v) : undefined;
+
+    /* ---------- Card ---------- */
     function card(m){
       const homeLogo = m.home_logo || 'images/logo.png';
       const awayLogo = m.away_logo || 'images/logo.png';
@@ -230,7 +238,7 @@
       const awayNameHtml = `<a href="public-profile.html?team=${m.away_team_id}">${awayName}</a>`;
 
       const { home:homeTotals, away:awayTotals } =
-        extractSimpleTotals(m.result, m.home_team_id, m.away_team_id);
+        extractTotalsMapped(m.result, m.home_team_id, m.away_team_id);
 
       const homeScore = (live || m.status==='completed') ? formatScoreNoWk(homeTotals) : '—';
       const awayScore = (live || m.status==='completed') ? formatScoreNoWk(awayTotals) : '—';
@@ -279,6 +287,7 @@
       return div;
     }
 
+    /* ---------- Feed ---------- */
     async function renderFeed() {
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
       if (error) { console.error(error); return; }
