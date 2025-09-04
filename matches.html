@@ -49,7 +49,7 @@
     .name a:hover{text-decoration:underline}
     .vs{width:24%;text-align:center;opacity:.8}
     .score{margin-top:6px;text-align:center;font-weight:800}
-    .subscore{margin-top:8px;text-align:center;font-size:.95rem;opacity:.9}
+    .subscore{margin-top:10px;text-align:center;font-size:.95rem;opacity:.95}
     .hidden-score{opacity:.6;font-weight:500}
     .empty{opacity:.7;padding:16px;border:1px dashed #333;border-radius:10px;margin:8px 0; width:100%; max-width:680px; text-align:center}
   </style>
@@ -116,9 +116,12 @@
       return `<span class="chip ${cls}">${txt}</span>`;
     };
 
-    /* ---------- Robust parsing (map innings to correct team) ---------- */
+    /* ---------- Robust parsing & mapping ---------- */
     const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
     function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
+
+    const numOrNull = (v)=> Number.isFinite(Number(v)) ? Number(v) : null;
+    const nOrU = (v)=> Number.isFinite(Number(v)) ? Number(v) : undefined;
 
     function oversFromBalls(balls){
       if (!Number.isFinite(balls) || balls < 0) return null;
@@ -152,16 +155,18 @@
     }
 
     /**
-     * Extract totals per team with correct mapping even when i1 is the away team.
-     * Supports these shapes:
-     * - result.home / result.away
-     * - result.innings[] with team_id (best)
-     * - result.innings[] without team_id + result.toss {winner, decision}
+     * Extract totals for home & away with correct mapping even when the away team bats first.
+     * Priority:
+     *   1) result.home / result.away
+     *   2) result.innings[] with team_id
+     *   3) result.innings[] (no team_id) + toss (result.toss or sim_state.toss)
+     *   4) sim_state.i1/i2 + toss (fallback for older data)
      */
-    function extractTotalsMapped(result, homeId, awayId){
+    function extractTotalsMapped(result, homeId, awayId, sim_state){
       const r = toJSON(result) || {};
+      const sim = toJSON(sim_state) || {};
 
-      // 1) Explicit home/away blocks (most stable)
+      // 1) explicit home/away blocks
       if (r.home || r.away) {
         const home = r.home ? {
           runs: numOrNull(r.home.runs ?? r.home.score),
@@ -174,56 +179,61 @@
         return {home, away};
       }
 
-      // 2) Innings array with team_id
+      // helper to normalize totals from a generic innings block
+      const toTotals = (inn) => ({
+        runs: numOrNull(inn?.totals?.runs ?? inn?.runs ?? inn?.score),
+        overs: inn?.totals?.overs ?? inn?.overs ?? oversFromBalls(nOrU(inn?.totals?.balls ?? inn?.balls))
+      });
+
+      // 2) innings with team ids
       if (Array.isArray(r.innings) && r.innings.some(x => x && (x.team_id!=null || x.team!=null))) {
         let home = {runs:null, overs:null}, away = {runs:null, overs:null};
         for (const inn of r.innings) {
           const tid = String(inn.team_id ?? inn.team ?? '');
-          const totals = {
-            runs: numOrNull(inn.totals?.runs ?? inn.runs ?? inn.score),
-            overs: inn.totals?.overs ?? inn.overs ?? oversFromBalls(nOrU(inn.totals?.balls ?? inn.balls))
-          };
+          const totals = toTotals(inn);
           if (String(homeId) === tid) home = totals;
           else if (String(awayId) === tid) away = totals;
         }
         return {home, away};
       }
 
-      // 3) Innings array WITHOUT team_id -> derive from toss
+      // Function: decide i1 team from a toss object
+      const decideTeamsFromToss = (tossObj) => {
+        if (!tossObj || !tossObj.winner || !tossObj.decision) return null;
+        const winner = String(tossObj.winner);
+        const loser  = (String(homeId) === winner) ? String(awayId) : String(homeId);
+        const i1Team = (String(tossObj.decision).toLowerCase() === 'bat') ? winner : loser;
+        const i2Team = (i1Team === String(homeId)) ? String(awayId) : String(homeId);
+        return {i1Team, i2Team};
+      };
+
+      // 3) innings[] without team_id + toss
       if (Array.isArray(r.innings) && r.innings.length) {
-        const i1 = r.innings[0] || {};
-        const i2 = r.innings[1] || {};
-
-        // decide i1Team from toss
-        const toss = r.toss || null;
-        let i1Team = null, i2Team = null;
-        if (toss && toss.winner && toss.decision) {
-          const winner = String(toss.winner);
-          const loser  = (String(homeId) === winner) ? String(awayId) : String(homeId);
-          i1Team = (toss.decision.toLowerCase() === 'bat') ? winner : loser;
-          i2Team = (i1Team === String(homeId)) ? String(awayId) : String(homeId);
-        } else {
-          // fallback: assume home batted first (previous behavior)
-          i1Team = String(homeId); i2Team = String(awayId);
+        const order = decideTeamsFromToss(r.toss) || decideTeamsFromToss(sim.toss);
+        if (order) {
+          const i1 = toTotals(r.innings[0] || {});
+          const i2 = toTotals(r.innings[1] || {});
+          const home = (String(homeId) === order.i1Team) ? i1 : i2;
+          const away = (String(awayId)  === order.i1Team) ? i1 : i2;
+          return {home, away};
         }
-
-        const toT = (inn) => ({
-          runs: numOrNull(inn.totals?.runs ?? inn.runs ?? inn.score),
-          overs: inn.totals?.overs ?? inn.overs ?? oversFromBalls(nOrU(inn.totals?.balls ?? inn.balls))
-        });
-
-        const i1Totals = toT(i1), i2Totals = toT(i2);
-        const home = (String(homeId) === i1Team) ? i1Totals : i2Totals;
-        const away = (String(awayId)  === i1Team) ? i1Totals : i2Totals;
-        return {home, away};
       }
 
-      // 4) Unknown -> neutral
+      // 4) sim_state i1/i2 + toss (older data where only sim_state has detail)
+      if (sim.i1 || sim.i2) {
+        const order = decideTeamsFromToss(sim.toss);
+        if (order) {
+          const i1 = { runs: numOrNull(sim.i1?.runs), overs: oversFromBalls(nOrU(sim.i1?.balls)) };
+          const i2 = { runs: numOrNull(sim.i2?.runs), overs: oversFromBalls(nOrU(sim.i2?.balls)) };
+          const home = (String(homeId) === order.i1Team) ? i1 : i2;
+          const away = (String(awayId)  === order.i1Team) ? i1 : i2;
+          return {home, away};
+        }
+      }
+
+      // default
       return {home:{runs:null, overs:null}, away:{runs:null, overs:null}};
     }
-
-    const numOrNull = (v)=> Number.isFinite(Number(v)) ? Number(v) : null;
-    const nOrU = (v)=> Number.isFinite(Number(v)) ? Number(v) : undefined;
 
     /* ---------- Card ---------- */
     function card(m){
@@ -238,7 +248,7 @@
       const awayNameHtml = `<a href="public-profile.html?team=${m.away_team_id}">${awayName}</a>`;
 
       const { home:homeTotals, away:awayTotals } =
-        extractTotalsMapped(m.result, m.home_team_id, m.away_team_id);
+        extractTotalsMapped(m.result, m.home_team_id, m.away_team_id, m.sim_state);
 
       const homeScore = (live || m.status==='completed') ? formatScoreNoWk(homeTotals) : '—';
       const awayScore = (live || m.status==='completed') ? formatScoreNoWk(awayTotals) : '—';
