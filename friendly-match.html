@@ -883,70 +883,78 @@
      * Accepts match row and returns { winner_team_id, decision, text } or null.
      */
     function normalizeTossFromPayload(match) {
-  if (!match) return null;
+      if (!match) return null;
+      // top-level canonical
+      if (match.toss_winner_team_id || match.toss_decision) {
+        return { winner_team_id: match.toss_winner_team_id || null, decision: match.toss_decision || null, text: null };
+      }
+      // match.toss shape
+      if (match.toss) {
+        return { winner_team_id: match.toss.winner_team_id || match.toss.winner || null, decision: match.toss.decision || match.toss.elected || null, text: match.toss.text || null };
+      }
+      // result.toss shape
+      if (match.result && match.result.toss) {
+        const rt = match.result.toss;
+        return { winner_team_id: rt.winner_team_id || rt.winner || null, decision: rt.decision || rt.elected || null, text: rt.text || null };
+      }
+      // sim_state.toss shape
+      if (match.sim_state && match.sim_state.toss) {
+        const st = match.sim_state.toss;
+        return { winner_team_id: st.winner_team_id || st.winner || null, decision: st.decision || st.elected || null, text: st.text || null };
+      }
+      // innings inference
+      if (Array.isArray(match.innings) && match.innings.length >= 2 && match.innings[0].team_id) {
+        return { winner_team_id: null, decision: null, text: null };
+      }
+      return null;
+    }
 
-  // If result/sim_state are strings, parse them
-  let resultObj = null, simObj = null;
-  try { resultObj = typeof match.result === 'string' ? JSON.parse(match.result) : match.result; } catch(e){ resultObj = null; }
-  try { simObj = typeof match.sim_state === 'string' ? JSON.parse(match.sim_state) : match.sim_state; } catch(e){ simObj = null; }
+    /**
+     * Ensure toss banner shows above the score-strip immediately.
+     * If commentary already contains a 'toss' delivery_type row, use its commentary text.
+     */
+    function renderTossBanner(match, commentaryList) {
+      const normalized = normalizeTossFromPayload(match);
+      const bannerContainerId = 'toss-banner-inline';
 
-  if (match.toss_winner_team_id || match.toss_decision) {
-    return { winner_team_id: match.toss_winner_team_id || null, decision: match.toss_decision || null, text: null };
-  }
-  if (match.toss) {
-    return { winner_team_id: match.toss.winner_team_id || match.toss.winner || null, decision: match.toss.decision || match.toss.elected || null, text: match.toss.text || null };
-  }
-  if (resultObj && resultObj.toss) {
-    const rt = resultObj.toss;
-    return { winner_team_id: rt.winner_team_id || rt.winner || null, decision: rt.decision || rt.elected || null, text: rt.text || null };
-  }
-  if (simObj && simObj.toss) {
-    const st = simObj.toss;
-    return { winner_team_id: st.winner_team_id || st.winner || null, decision: st.decision || st.elected || null, text: st.text || null };
-  }
-  if (Array.isArray(match.innings) && match.innings.length >= 2 && match.innings[0].team_id) {
-    return { winner_team_id: null, decision: null, text: null };
-  }
-  return null;
-}
+      // find commentary toss row, if present
+      const cbToss = (commentaryList||[]).find(c => c.delivery_type === 'toss');
+      let text = null;
+      if (cbToss && cbToss.commentary) text = cbToss.commentary;
+      else if (normalized && normalized.winner_team_id) {
+        text = `Toss: Team ${normalized.winner_team_id} won the toss and elected to ${normalized.decision || 'bat'}.`;
+      } else if (normalized && normalized.text) {
+        text = normalized.text;
+      } else {
+        // nothing to show
+        text = null;
+      }
 
-function renderTossBanner(match, commentaryList) {
-  const normalized = normalizeTossFromPayload(match);
+      // Create or update banner above score-strip
+      let container = document.getElementById(bannerContainerId);
+      const scoreStrip = document.querySelector('.score-strip');
+      if (!text) {
+        if (container && container.parentNode) container.parentNode.removeChild(container);
+        return;
+      }
 
-  // prefer the actual toss commentary row if present
-  const cbToss = (commentaryList||[]).find(c => c.delivery_type === 'toss' && (c.commentary || '').trim());
-  let text = null;
-  if (cbToss && cbToss.commentary && !/^toss not available$/i.test(String(cbToss.commentary).trim())) {
-    text = cbToss.commentary;
-  } else if (normalized && normalized.winner_team_id) {
-    // try to resolve name locally if available (if match has names in payload)
-    const homeName = match.home_team_name || match.home_name || (match.home_team && match.home_team.name);
-    const awayName = match.away_team_name || match.away_name || (match.away_team && match.away_team.name);
-    const winnerName = (normalized.winner_team_id === match.home_team_id) ? homeName : (normalized.winner_team_id === match.away_team_id) ? awayName : normalized.winner_team_id;
-    const decisionText = (normalized.decision || 'bat').toLowerCase() === 'bowl' ? 'bowl first' : 'bat first';
-    text = `🎲 ${winnerName || normalized.winner_team_id} won the toss and chose to ${decisionText}.`;
-  } else if (normalized && normalized.text) {
-    text = normalized.text;
-  } else {
-    text = null;
-  }
-
-  const bannerContainerId = 'toss-banner-inline';
-  let container = document.getElementById(bannerContainerId);
-  const scoreStrip = document.querySelector('.score-strip');
-  if (!text) {
-    if (container && container.parentNode) container.parentNode.removeChild(container);
-    return;
-  }
-  if (!container) {
-    container = document.createElement('div');
-    container.id = bannerContainerId;
-    container.className = 'toss-line';
-    if (scoreStrip && scoreStrip.parentNode) scoreStrip.parentNode.insertBefore(container, scoreStrip);
-    else (document.querySelector('.wrap') || document.body).insertBefore(container, (document.querySelector('.wrap')||document.body).firstChild);
-  }
-  container.innerHTML = `<div class="toss-banner">${text}</div>`;
-}
+      if (!container) {
+        container = document.createElement('div');
+        container.id = bannerContainerId;
+        container.className = 'toss-line';
+        container.innerHTML = `<div class="toss-banner">🎲 ${text}</div>`;
+        // insert before score strip
+        if (scoreStrip && scoreStrip.parentNode) {
+          scoreStrip.parentNode.insertBefore(container, scoreStrip);
+        } else {
+          // fallback: prepend to wrap
+          const wrap = document.querySelector('.wrap') || document.body;
+          wrap.insertBefore(container, wrap.firstChild);
+        }
+      } else {
+        container.innerHTML = `<div class="toss-banner">🎲 ${text}</div>`;
+      }
+    }
 
     /**
      * Insert a toss row into commentary array if missing.
