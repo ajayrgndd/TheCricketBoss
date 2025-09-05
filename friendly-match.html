@@ -378,7 +378,7 @@
     /* ===== EXTRAS-AWARE AGGREGATES ===== */
     function isLegal(b){
       const t = (b.delivery_type||'legal').toLowerCase();
-      return t !== 'wide' && t !== 'noball';
+      return t !== 'wide' && t !== 'noball' && t !== 'toss';
     }
 
     function totals(balls, inn) {
@@ -694,26 +694,27 @@
   // Default mapping
   let i1Team = homeTeam, i2Team = awayTeam;
 
-  // ✅ Use toss info if available
-  const toss = matchRow?.result?.toss;
-  if (toss) {
-    if (toss.winner === homeTeam) {
-      if (toss.decision === "bat") {
-        i1Team = homeTeam;
-        i2Team = awayTeam;
-      } else { // home bowled first
-        i1Team = awayTeam;
-        i2Team = homeTeam;
-      }
-    } else { // away won toss
-      if (toss.decision === "bat") {
-        i1Team = awayTeam;
-        i2Team = homeTeam;
-      } else { // away bowled first
-        i1Team = homeTeam;
-        i2Team = awayTeam;
-      }
+  // ✅ Use toss info if available (normalize many shapes)
+  const normalized = normalizeTossFromPayload(matchRow);
+  if (normalized && normalized.winner_team_id) {
+    const winner = String(normalized.winner_team_id);
+    const decision = (normalized.decision||'').toLowerCase();
+    const home = String(homeTeam);
+    const away = String(awayTeam);
+    if (decision === 'bowl' || decision === 'field') {
+      // winner bowled first -> other team batted first
+      if (winner === home) { i1Team = away; i2Team = home; }
+      else { i1Team = home; i2Team = away; }
+    } else if (decision === 'bat') {
+      if (winner === home) { i1Team = home; i2Team = away; }
+      else { i1Team = away; i2Team = home; }
     }
+  } else if (Array.isArray(matchRow?.innings) && matchRow.innings.length >= 2 && matchRow.innings[0].team_id) {
+    i1Team = matchRow.innings[0].team_id;
+    i2Team = matchRow.innings[1].team_id;
+  } else if (matchRow?.result?.innings && matchRow.result.innings.length >= 2 && matchRow.result.innings[0].team_id) {
+    i1Team = matchRow.result.innings[0].team_id;
+    i2Team = matchRow.result.innings[1].team_id;
   }
 
   // 🏏 Innings 1
@@ -721,19 +722,14 @@
   i1.title.textContent = `Innings 1 – ${(names[i1Team]||'Team 1')}`;
   fillFullInnings(1, i1);
 
-  // 🏏 Innings 1
-i1.card.style.display = 'block';
-i1.title.textContent = `Innings 1 – ${(names[battingFirst]||'Team A')}`;
-fillFullInnings(1, i1);
-
-// 🏏 Innings 2
-if (all.some(b => b.innings === 2)) {
-  i2.card.style.display = 'block';
-  i2.title.textContent = `Innings 2 – ${(names[battingSecond]||'Team B')}`;
-  fillFullInnings(2, i2);
-} else {
-  i2.card.style.display = 'none';
-}
+  // 🏏 Innings 2
+  if (all.some(b => b.innings === 2)) {
+    i2.card.style.display = 'block';
+    i2.title.textContent = `Innings 2 – ${(names[i2Team]||'Team 2')}`;
+    fillFullInnings(2, i2);
+  } else {
+    i2.card.style.display = 'none';
+  }
 }
     function maybeShowSummary() {
   if (!matchRow || matchRow.status!=='completed') { 
@@ -767,7 +763,10 @@ if (all.some(b => b.innings === 2)) {
       const extras = [];
 
       const overStart = !prevBall || prevBall.innings !== b.innings || prevBall.over_number !== b.over_number;
-      if (overStart) {
+
+      // --- SUPPRESS the noisy "comes into the attack" when it would appear at match start ---
+      // Only add this line if we have a prevBall (i.e., not the very first ball in the loaded list)
+      if (overStart && prevBall) {
         const bow = nameWithBadges(b.bowler_id);
         extras.push(`${bow} comes into the attack.`);
       }
@@ -829,9 +828,157 @@ if (all.some(b => b.innings === 2)) {
     }
 
     /* ---------- Data load ---------- */
+
+    /**
+     * New client helper: normalize toss from many shapes the server may send.
+     * Accepts match row and returns { winner_team_id, decision, text } or null.
+     */
+    function normalizeTossFromPayload(match) {
+      if (!match) return null;
+      // top-level canonical
+      if (match.toss_winner_team_id || match.toss_decision) {
+        return { winner_team_id: match.toss_winner_team_id || null, decision: match.toss_decision || null, text: null };
+      }
+      // match.toss shape
+      if (match.toss) {
+        return { winner_team_id: match.toss.winner_team_id || match.toss.winner || null, decision: match.toss.decision || match.toss.elected || null, text: match.toss.text || null };
+      }
+      // result.toss shape
+      if (match.result && match.result.toss) {
+        const rt = match.result.toss;
+        return { winner_team_id: rt.winner_team_id || rt.winner || null, decision: rt.decision || rt.elected || null, text: rt.text || null };
+      }
+      // sim_state.toss shape
+      if (match.sim_state && match.sim_state.toss) {
+        const st = match.sim_state.toss;
+        return { winner_team_id: st.winner_team_id || st.winner || null, decision: st.decision || st.elected || null, text: st.text || null };
+      }
+      // innings inference
+      if (Array.isArray(match.innings) && match.innings.length >= 2 && match.innings[0].team_id) {
+        return { winner_team_id: null, decision: null, text: null };
+      }
+      return null;
+    }
+
+    /**
+     * Ensure toss banner shows above the score-strip immediately.
+     * If commentary already contains a 'toss' delivery_type row, use its commentary text.
+     */
+    function renderTossBanner(match, commentaryList) {
+      const normalized = normalizeTossFromPayload(match);
+      const bannerContainerId = 'toss-banner-inline';
+
+      // find commentary toss row, if present
+      const cbToss = (commentaryList||[]).find(c => c.delivery_type === 'toss');
+      let text = null;
+      if (cbToss && cbToss.commentary) text = cbToss.commentary;
+      else if (normalized && normalized.winner_team_id) {
+        text = `Toss: Team ${normalized.winner_team_id} won the toss and elected to ${normalized.decision || 'bat'}.`;
+      } else if (normalized && normalized.text) {
+        text = normalized.text;
+      } else {
+        // nothing to show
+        text = null;
+      }
+
+      // Create or update banner above score-strip
+      let container = document.getElementById(bannerContainerId);
+      const scoreStrip = document.querySelector('.score-strip');
+      if (!text) {
+        if (container && container.parentNode) container.parentNode.removeChild(container);
+        return;
+      }
+
+      if (!container) {
+        container = document.createElement('div');
+        container.id = bannerContainerId;
+        container.className = 'toss-line';
+        container.innerHTML = `<div class="toss-banner">🎲 ${text}</div>`;
+        // insert before score strip
+        if (scoreStrip && scoreStrip.parentNode) {
+          scoreStrip.parentNode.insertBefore(container, scoreStrip);
+        } else {
+          // fallback: prepend to wrap
+          const wrap = document.querySelector('.wrap') || document.body;
+          wrap.insertBefore(container, wrap.firstChild);
+        }
+      } else {
+        container.innerHTML = `<div class="toss-banner">🎲 ${text}</div>`;
+      }
+    }
+
+    /**
+     * Insert a toss row into commentary array if missing.
+     * Returns new array (does not mutate original).
+     */
+    function ensureTossInCommentary(match, commentaryArray) {
+      if (!Array.isArray(commentaryArray)) commentaryArray = [];
+      if (commentaryArray.some(c => c.delivery_type === 'toss')) return commentaryArray;
+
+      const normalized = normalizeTossFromPayload(match);
+      let text = 'Toss not available';
+      if (normalized && normalized.winner_team_id) {
+        text = `Toss: Team ${normalized.winner_team_id} won the toss and elected to ${normalized.decision || 'bat'}.`;
+      } else if (match?.result?.toss?.text) {
+        text = match.result.toss.text;
+      } else if (match?.sim_state?.toss?.text) {
+        text = match.sim_state.toss.text;
+      }
+
+      const tossRow = {
+        match_id: match?.id,
+        over_number: null,
+        ball_in_over: null,
+        innings: 0,
+        striker_id: null,
+        non_striker_id: null,
+        bowler_id: null,
+        runs_scored: 0,
+        extras: 0,
+        wicket: false,
+        dismissed_batsman_id: null,
+        commentary: text,
+        created_at: new Date(Date.now() - 1000).toISOString(),
+        fielder_id: null,
+        delivery_type: 'toss',
+        extras_detail: {}
+      };
+
+      return [tossRow, ...commentaryArray];
+    }
+
+    /**
+     * Filter out early noisy lines like "comes into the attack" if they appear before the first ball.
+     * We'll drop those lines only if they occur in the very first events (index < cutoff).
+     */
+    function filterInitialNoisyLines(commentaryArray) {
+      if (!Array.isArray(commentaryArray)) return commentaryArray;
+      // find index of first real ball (delivery_type === 'legal' || 'wide' || 'noball' || ball fields present)
+      const firstRealIdx = commentaryArray.findIndex(c => {
+        const dt = (c.delivery_type || '').toLowerCase();
+        if (dt === 'toss') return false;
+        if (['legal','wide','noball','bye'].includes(dt)) return true;
+        if (typeof c.over_number === 'number' && c.over_number > 0) return true;
+        return false;
+      });
+      const cutoff = firstRealIdx === -1 ? 3 : firstRealIdx + 1; // check a small window
+      const noiseRegex = /\bcomes into the attack\b/i;
+      return commentaryArray.filter((c, i) => {
+        if (i < cutoff && typeof c.commentary === 'string' && noiseRegex.test(c.commentary)) {
+          return false; // drop this early noise
+        }
+        return true;
+      });
+    }
+
     async function loadMeta() {
       const { data: m } = await supabase.from('matches').select('*').eq('id', matchId).single();
       matchRow = m || null;
+      // Backwards compatibility: prefer sim_state.toss if result.toss missing
+      if (!matchRow) {
+        alert('Match row not found');
+        return;
+      }
       if (!matchRow.result?.toss && matchRow.sim_state?.toss) {
         matchRow.result = { ...(matchRow.result||{}), toss: matchRow.sim_state.toss };
       }
@@ -841,6 +988,29 @@ if (all.some(b => b.innings === 2)) {
 
       const { data: t } = await supabase.from('teams').select('id, team_name').in('id', [homeTeam, awayTeam]);
       (t||[]).forEach(x=> names[x.id]=x.team_name);
+
+      // Decide battingFirst and battingSecond based on normalized toss info (robust)
+      const normalized = normalizeTossFromPayload(matchRow);
+      if (normalized && normalized.winner_team_id) {
+        const winner = String(normalized.winner_team_id);
+        const decision = (normalized.decision||'').toLowerCase();
+        const home = String(homeTeam);
+        const away = String(awayTeam);
+        if (decision === 'bowl' || decision === 'field') {
+          // winner bowled first -> other team batted first
+          if (winner === home) { battingFirst = awayTeam; battingSecond = homeTeam; }
+          else { battingFirst = homeTeam; battingSecond = awayTeam; }
+        } else {
+          if (winner === home) { battingFirst = homeTeam; battingSecond = awayTeam; }
+          else { battingFirst = awayTeam; battingSecond = homeTeam; }
+        }
+      } else if (Array.isArray(matchRow.innings) && matchRow.innings.length >= 2 && matchRow.innings[0].team_id) {
+        battingFirst = matchRow.innings[0].team_id;
+        battingSecond = matchRow.innings[1].team_id;
+      } else {
+        // fallback: home first
+        battingFirst = homeTeam; battingSecond = awayTeam;
+      }
 
       teamAName.textContent = names[battingFirst] || 'Team A';
       teamBName.textContent = names[battingSecond] || 'Team B';
@@ -860,21 +1030,6 @@ if (all.some(b => b.innings === 2)) {
       });
 
       await buildLineupUI(lus || []);
-      // ✅ Decide battingFirst and battingSecond based on toss result
-      const toss = (m?.result && m.result.toss) || null;
-      if (toss) {
-        if (toss.winner === homeTeam) {
-          if (toss.decision === 'bat') { battingFirst = homeTeam; battingSecond = awayTeam; }
-          else { battingFirst = awayTeam; battingSecond = homeTeam; }
-        } else if (toss.winner === awayTeam) {
-          if (toss.decision === 'bat') { battingFirst = awayTeam; battingSecond = homeTeam; }
-          else { battingFirst = homeTeam; battingSecond = awayTeam; }
-        }
-      } else {
-        // fallback: assume home bats first
-        battingFirst = homeTeam; battingSecond = awayTeam;
-      }
-
     }
 
     function byBat(a,b){ return (b.batting||0)-(a.batting||0); }
@@ -974,17 +1129,33 @@ if (all.some(b => b.innings === 2)) {
     .order('ball_in_over',{ascending:true})
     .order('created_at',{ascending:true});
 
-  // ✅ Ensure toss row is always first
-  all = (balls || []).sort((a,b)=>{
-    if(a.delivery_type==="toss") return -1;
-    if(b.delivery_type==="toss") return 1;
-    if(a.innings!==b.innings) return a.innings-b.innings;
-    if(a.over_number!==b.over_number) return a.over_number-b.over_number;
-    return a.ball_in_over-b.ball_in_over;
+  // Normalize commentary list: ensure toss row first, remove early noisy lines
+  let fetched = (balls || []).slice();
+
+  // Ensure toss row exists (server may already have it) - if not, client will inject
+  fetched = ensureTossInCommentary(matchRow, fetched);
+
+  // Filter out the "comes into the attack" only if it's before first ball
+  fetched = filterInitialNoisyLines(fetched);
+
+  // Keep deterministic ordering: toss first, then by innings/over/ball/created_at
+  all = fetched.sort((a,b)=>{
+    if (a.delivery_type === 'toss' && b.delivery_type !== 'toss') return -1;
+    if (b.delivery_type === 'toss' && a.delivery_type !== 'toss') return 1;
+    if ((a.innings||0) !== (b.innings||0)) return (a.innings||0)-(b.innings||0);
+    if ((a.over_number||0) !== (b.over_number||0)) return (a.over_number||0)-(b.over_number||0);
+    if ((a.ball_in_over||0) !== (b.ball_in_over||0)) return (a.ball_in_over||0)-(b.ball_in_over||0);
+    // finally created_at
+    const ta = new Date(a.created_at || 0).getTime();
+    const tb = new Date(b.created_at || 0).getTime();
+    return ta - tb;
   });
 
   liveBatRuns.clear();
   prevBall = null;
+
+  // Render toss banner immediately (if possible)
+  renderTossBanner(matchRow, all);
 
   renderCommentaryTop(all, liveFeed);
   renderCommentaryTop(all, commFeed);
@@ -1003,7 +1174,7 @@ if (all.some(b => b.innings === 2)) {
         )
         .on('postgres_changes',
           { event:'UPDATE', schema:'public', table:'matches', filter:`id=eq.${matchId}` },
-          (payload)=> { matchRow = payload.new; maybeShowSummary(); }
+          (payload)=> { matchRow = payload.new; maybeShowSummary(); renderTossBanner(matchRow, all); }
         )
         .subscribe();
     }
