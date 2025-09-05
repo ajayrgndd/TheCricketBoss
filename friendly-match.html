@@ -29,16 +29,16 @@
     th{background:#1a2236}
     .muted{opacity:.75}
     .toss-line .toss-banner {
-  background: #222a68;
-  color: #fff;
-  text-align: center;
-  font-weight: bold;
-  padding: 10px;
-  margin: 8px 0;
-  border-radius: 6px;
-  font-size: 16px;
-  letter-spacing: 0.5px;
-}
+      background: #222a68;
+      color: #fff;
+      text-align: center;
+      font-weight: bold;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 6px;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+    }
 
     /* Compact score tables (LIVE + SCORECARD only) */
     #live-panel table, #score-panel table { font-size:.92rem; }
@@ -223,7 +223,7 @@
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
     const supabase = createClient(
-      "https://iukofcmatlfhfwcechdqchdq.supabase.co".replace('chdq','chdq'),
+      "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
@@ -500,17 +500,19 @@
       const pool = VARIANTS[runs] || ["Runs added."];
       return sanitizeText(pickStable(pool, b, "R"));
     }
-    function comLine(b, extra=[]) {
-      if (b.delivery_type === 'toss') {
-        // place the toss banner
-        return `<div class="com-line toss-line"><div class="toss-banner">🎲 ${b.commentary}</div></div>`;
+
+    function comLine(b, extra=[]){
+      if ((b.delivery_type||'').toLowerCase() === 'toss'){
+        // For toss we expect commentary to already contain human text; show with emoji.
+        const txt = sanitizeText(b.commentary || 'Toss not available');
+        return `<div class="com-line toss-line"><div class="toss-banner">🎲 ${txt}</div></div>`;
       }
 
       const bow = nameWithBadges(b.bowler_id);
       const bat = nameWithBadges(b.striker_id);
       const head = `Innings ${b.innings} • Over ${overLabel(b)}`;
       const line = `Runs: ${b.runs_scored||0}, ${lineText(b)}`;
-      const extras = extra.length ? `<div class="sub">${extra.join("<br/>")}</div>` : "";
+      const extrasText = extra.length ? `<div class="sub">${extra.join("<br/>")}</div>` : "";
       return `
         <div class="com-line">
           <div class="com-top">
@@ -519,7 +521,7 @@
           </div>
           <div class="com-text"><strong>${bow}</strong> to <strong>${bat}</strong></div>
           <div>${line}</div>
-          ${extras}
+          ${extrasText}
         </div>`;
     }
 
@@ -533,14 +535,14 @@
         (matchRow && (matchRow.sim_innings ?? 1) >= 2) ||
         (matchRow && matchRow.status === 'completed');
 
-      // First handle toss row separately
-      const tossRow = list.find(b => (b.delivery_type || '').toLowerCase() === "toss");
+      // First handle toss row separately (if present)
+      const tossRow = list.find(b => (b.delivery_type||'').toLowerCase() === "toss");
       if (tossRow) {
         htmls.push(comLine(tossRow, []));
       }
 
       // Then handle rest (exclude toss row so it doesn’t duplicate)
-      const playBalls = list.filter(b => (b.delivery_type || '').toLowerCase() !== "toss");
+      const playBalls = list.filter(b => (b.delivery_type||'').toLowerCase() !== "toss");
       for (let i = 0; i < playBalls.length; i++) {
         const b = playBalls[i];
         const next = playBalls[i + 1] || null;
@@ -548,7 +550,7 @@
         htmls.push(comLine(b, extras));
       }
 
-      // join but we show latest on top, so we reverse (list assumed chronological)
+      // Latest ball should be at top in UI; reverse built array
       into.innerHTML = htmls.reverse().join('');
     }
 
@@ -682,66 +684,35 @@
       });
     }
 
-    /* Robustly determine innings team order:
-       1. match.innings[] with team_id
-       2. result.innings[] with team_id
-       3. normalized toss (winner + decision)
-       4. fallback: battingFirst = homeTeam
-    */
-    function determineInningsTeams(match) {
-      let i1Team = null, i2Team = null;
-      // parse strings if needed
-      const resultObj = (typeof match?.result === 'string') ? (() => { try { return JSON.parse(match.result); } catch { return match.result; }})() : match?.result;
-      const sim = (typeof match?.sim_state === 'string') ? (() => { try { return JSON.parse(match.sim_state); } catch { return match.sim_state; }})() : match?.sim_state;
+    /* ✅ missing earlier — restores scorecard + auto refresh */
+    function updateScorecardBlocks() {
+      if (!all.length) return;
 
-      if (Array.isArray(match?.innings) && match.innings.length >= 2 && match.innings[0].team_id) {
-        i1Team = match.innings[0].team_id;
-        i2Team = match.innings[1].team_id;
-        return { i1Team, i2Team };
-      }
-      if (resultObj && Array.isArray(resultObj.innings) && resultObj.innings.length >= 2 && resultObj.innings[0].team_id) {
-        i1Team = resultObj.innings[0].team_id;
-        i2Team = resultObj.innings[1].team_id;
-        return { i1Team, i2Team };
-      }
+      // Default mapping
+      let i1Team = homeTeam, i2Team = awayTeam;
 
-      // Toss normalization
-      const t = normalizeTossFromPayload(match);
-      if (t && t.winner_team_id) {
-        const winner = String(t.winner_team_id);
-        const decision = (t.decision || '').toLowerCase();
-        const home = String(match.home_team_id);
-        const away = String(match.away_team_id);
+      // ✅ Use toss info if available (normalize many shapes)
+      const normalized = normalizeTossFromPayload(matchRow);
+      if (normalized && normalized.winner_team_id) {
+        const winner = String(normalized.winner_team_id);
+        const decision = (normalized.decision||'').toLowerCase();
+        const home = String(homeTeam);
+        const away = String(awayTeam);
         if (decision === 'bowl' || decision === 'field') {
           // winner bowled first -> other team batted first
           if (winner === home) { i1Team = away; i2Team = home; }
           else { i1Team = home; i2Team = away; }
-        } else {
-          // winner elected bat
+        } else if (decision === 'bat') {
           if (winner === home) { i1Team = home; i2Team = away; }
           else { i1Team = away; i2Team = home; }
         }
-        return { i1Team, i2Team };
+      } else if (Array.isArray(matchRow?.innings) && matchRow.innings.length >= 2 && matchRow.innings[0].team_id) {
+        i1Team = matchRow.innings[0].team_id;
+        i2Team = matchRow.innings[1].team_id;
+      } else if (matchRow?.result?.innings && matchRow.result.innings.length >= 2 && matchRow.result.innings[0].team_id) {
+        i1Team = matchRow.result.innings[0].team_id;
+        i2Team = matchRow.result.innings[1].team_id;
       }
-
-      // Fallback: if match.result has home/away totals, we still want stable mapping
-      if (match?.home_team_id && match?.away_team_id) {
-        i1Team = match.home_team_id;
-        i2Team = match.away_team_id;
-        return { i1Team, i2Team };
-      }
-
-      // final fallback - use known globals
-      return { i1Team: homeTeam, i2Team: awayTeam };
-    }
-
-    function updateScorecardBlocks() {
-      if (!all.length && !matchRow) return;
-
-      // Determine innings teams robustly
-      const { i1Team, i2Team } = determineInningsTeams(matchRow || {});
-      const t1 = totals(all, 1);
-      const t2 = totals(all, 2);
 
       // 🏏 Innings 1
       i1.card.style.display = 'block';
@@ -770,19 +741,23 @@
 
       liveSummary.style.display='block';
 
+      // Use battingFirst/battingSecond mapping so we present innings totals with correct team names
+      const team1Name = names[battingFirst] || names[homeTeam] || 'Home';
+      const team2Name = names[battingSecond] || names[awayTeam] || 'Away';
+
       if (!winnerId) {
         // tie
         liveSummary.innerHTML = `
           <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">Match tied</div>
-          <div>${names[homeTeam]||'Home'}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
-          <div>${names[awayTeam]||'Away'}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+          <div>${team1Name}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+          <div>${team2Name}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
         `;
       } else {
         const winName = names[winnerId] || 'Winner';
         liveSummary.innerHTML = `
           <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">${winName} won the match</div>
-          <div>${names[homeTeam]||'Home'}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
-          <div>${names[awayTeam]||'Away'}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+          <div>${team1Name}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+          <div>${team2Name}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
         `;
       }
     }
@@ -889,32 +864,24 @@
       return null;
     }
 
-    function getTeamNameForDisplay(teamId, match) {
-      // prefer names[] mapping, then match fields home_team_name/away_team_name, else the id itself
-      if (!teamId) return null;
-      if (names && names[teamId]) return names[teamId];
-      if (match) {
-        if (teamId === match.home_team_id) return match.home_team_name || match.home_name || null;
-        if (teamId === match.away_team_id) return match.away_team_name || match.away_name || null;
-      }
-      return teamId;
-    }
-
     function renderTossBanner(match, commentaryList) {
       const normalized = normalizeTossFromPayload(match);
 
       // prefer the actual toss commentary row if present
-      const cbToss = (commentaryList||[]).find(c => (c.delivery_type || '').toLowerCase() === 'toss' && (c.commentary || '').trim());
+      const cbToss = (commentaryList||[]).find(c => (c.delivery_type||'').toLowerCase() === 'toss' && (c.commentary || '').trim());
       let text = null;
       if (cbToss && cbToss.commentary && !/^toss not available$/i.test(String(cbToss.commentary).trim())) {
         text = cbToss.commentary;
       } else if (normalized && normalized.winner_team_id) {
-        // try to resolve name locally if available (if match has names in payload)
-        const winnerName = getTeamNameForDisplay(normalized.winner_team_id, match) || normalized.winner_team_id;
-        const decisionText = (normalized.decision || 'bat').toLowerCase() === 'bowl' ? 'bowl first' : 'bat first';
+        // resolve using names map if possible
+        const winnerId = normalized.winner_team_id;
+        const winnerName = names[winnerId] || match?.home_team_name || match?.away_team_name || match?.home_name || match?.away_name || winnerId;
+        const decisionText = (normalized.decision || 'bat').toLowerCase() === 'bowl' || (normalized.decision||'').toLowerCase() === 'field' ? 'bowl first' : 'bat first';
         text = `🎲 ${winnerName} won the toss and chose to ${decisionText}.`;
       } else if (normalized && normalized.text) {
         text = normalized.text;
+        // ensure subtle emoji if not present
+        if (!/🎲/.test(text)) text = `🎲 ${text}`;
       } else {
         text = null;
       }
@@ -942,13 +909,14 @@
      */
     function ensureTossInCommentary(match, commentaryArray) {
       if (!Array.isArray(commentaryArray)) commentaryArray = [];
-      if (commentaryArray.some(c => (c.delivery_type || '').toLowerCase() === 'toss')) return commentaryArray;
+      if (commentaryArray.some(c => (c.delivery_type||'').toLowerCase() === 'toss')) return commentaryArray;
 
       const normalized = normalizeTossFromPayload(match);
       let text = 'Toss not available';
       if (normalized && normalized.winner_team_id) {
-        const winnerName = getTeamNameForDisplay(normalized.winner_team_id, match) || normalized.winner_team_id;
-        text = `🎲 ${winnerName} won the toss and elected to ${normalized.decision || 'bat'}.`;
+        // prefer name mapping if available
+        const friendly = names[normalized.winner_team_id] || `Team ${normalized.winner_team_id}`;
+        text = `Toss: ${friendly} won the toss and elected to ${normalized.decision || 'bat'}.`;
       } else if (match?.result?.toss?.text) {
         text = match.result.toss.text;
       } else if (match?.sim_state?.toss?.text) {
@@ -1004,17 +972,15 @@
     async function loadMeta() {
       const { data: m } = await supabase.from('matches').select('*').eq('id', matchId).single();
       matchRow = m || null;
+      // Backwards compatibility: prefer sim_state.toss if result.toss missing
       if (!matchRow) {
-        alert('Match row not found');
+        console.error('Match row not found', matchId);
         return;
       }
-      // Backwards compatibility: prefer sim_state.toss if result.toss missing
       if (!matchRow.result?.toss && matchRow.sim_state?.toss) {
         try {
-          matchRow.result = { ...(matchRow.result||{}), toss: typeof matchRow.sim_state === 'string' ? JSON.parse(matchRow.sim_state).toss : matchRow.sim_state.toss };
-        } catch (e) {
           matchRow.result = { ...(matchRow.result||{}), toss: matchRow.sim_state.toss };
-        }
+        } catch(e){}
       }
 
       homeTeam = m?.home_team_id;
@@ -1148,7 +1114,7 @@
 
     async function loadOnce() {
       if (!matchId) {
-        alert('Missing match id');
+        console.error('Missing match id');
         return;
       }
 
@@ -1174,10 +1140,8 @@
 
       // Keep deterministic ordering: toss first, then by innings/over/ball/created_at
       all = fetched.sort((a,b)=>{
-        const aType = (a.delivery_type||'').toLowerCase();
-        const bType = (b.delivery_type||'').toLowerCase();
-        if (aType === 'toss' && bType !== 'toss') return -1;
-        if (bType === 'toss' && aType !== 'toss') return 1;
+        if ((a.delivery_type||'').toLowerCase() === 'toss' && (b.delivery_type||'').toLowerCase() !== 'toss') return -1;
+        if ((b.delivery_type||'').toLowerCase() === 'toss' && (a.delivery_type||'').toLowerCase() !== 'toss') return 1;
         if ((a.innings||0) !== (b.innings||0)) return (a.innings||0)-(b.innings||0);
         if ((a.over_number||0) !== (b.over_number||0)) return (a.over_number||0)-(b.over_number||0);
         if ((a.ball_in_over||0) !== (b.ball_in_over||0)) return (a.ball_in_over||0)-(b.ball_in_over||0);
