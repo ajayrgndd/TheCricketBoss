@@ -1,428 +1,1235 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Friendly Match</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Friendly Match – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css"/>
+
   <style>
-    /* Minimal styling to match your site's dark theme; keep your original styles if you want */
-    body { font-family: Inter, system-ui, sans-serif; background:#071019; color:#E6EEF3; margin:0; padding:16px; }
-    .container { max-width:980px; margin:0 auto; }
-    .header { display:flex; align-items:center; justify-content:space-between; }
-    .tabs { margin-top:12px; display:flex; gap:8px; }
-    .tab { padding:8px 12px; background:#0d1620; border-radius:6px; cursor:pointer; color:#cfe7ff; }
-    .score-strip { margin-top:16px; background:#ff8c1a; color:#071019; padding:12px 16px; border-radius:10px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
-    .toss-banner { margin-top:12px; background:#2d3a66; color:#fff; padding:12px 16px; border-radius:8px; text-align:center; font-weight:600; }
-    .teams { margin-top:12px; display:flex; justify-content:space-between; align-items:flex-start; }
-    .team { width:48%; background:#0e1720; padding:12px; border-radius:10px; }
-    .section-title { font-weight:700; margin-bottom:8px; color:#c2e6c8; }
-    .commentary { margin-top:16px; background:#0d1620; padding:12px; border-radius:10px; max-height:420px; overflow:auto; }
-    .comment-row { padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.03); }
-    .comment-row.toss { background:rgba(255,255,255,0.02); font-weight:700; color:#fff; }
-    .hidden { display:none !important; }
-    .muted { color:#9aaec3; font-size:0.95em; }
+    body { background:#0b0f16; color:#e7ecf3; font-family:system-ui; margin:0; }
+    .wrap{max-width:900px;margin:0 auto;padding:16px;}
+
+    /* Tabs */
+    .tabs{display:flex;gap:6px;border-bottom:2px solid #222;position:sticky;top:48px;background:#0b0f16;z-index:5}
+    .tabs button{flex:1;padding:10px 8px;background:#10151f;color:#cfe7dc;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:700;letter-spacing:.02em}
+    .tabs button.active{background:#00e676;color:#000}
+
+    /* Score strip */
+    .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;
+      color:#000;font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
+    .score-strip .big {font-size:1.2rem}
+    .teambar{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 8px 2px;font-size:1.05rem}
+    .teambar .t{font-weight:700}
+
+    /* Cards / tables */
+    .card{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin:10px 0}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #2a344a;padding:8px;text-align:center;vertical-align:top}
+    th{background:#1a2236}
+    .muted{opacity:.75}
+    .toss-line .toss-banner {
+  background: #222a68;
+  color: #fff;
+  text-align: center;
+  font-weight: bold;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 6px;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+    /* Compact score tables (LIVE + SCORECARD only) */
+    #live-panel table, #score-panel table { font-size:.92rem; }
+    #live-panel th, #live-panel td, #score-panel th, #score-panel td { padding:6px; }
+    @media (max-width:480px){
+      #live-panel table, #score-panel table { font-size:.88rem; }
+      #live-panel th, #live-panel td, #score-panel th, #score-panel td { padding:5px; }
+    }
+
+    /* commentary */
+    .com-line{padding:10px;border-bottom:1px dashed #1f2a44}
+    .com-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .ball-tag{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:2px 6px;font-size:.75rem;color:#cbd5e1}
+    .pill{display:inline-block;font-size:.72rem;border-radius:999px;padding:2px 8px;margin-right:6px;border:1px solid #333}
+    .pill-w{background:#991b1b;color:#fff;border-color:#7f1d1d}
+    .pill-6{background:#14532d;color:#d1fae5;border-color:#064e3b}
+    .pill-4{background:#0f172a;color:#93c5fd;border-color:#1e293b}
+    .com-text{line-height:1.45}
+    .sub{opacity:.9;margin-top:4px}
+
+    .target-bar{margin-top:8px;font-weight:700;color:#c7f9cc}
+
+    /* Panels */
+    .panel{display:none}
+    .panel.show{display:block}
+
+    /* Lineup */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .xi h4{margin:0 0 8px 0}
+    .xi ul{margin:0;padding-left:18px;line-height:1.5}
+    .tag{font-size:.75rem;border:1px solid #2a344a;border-radius:6px;padding:2px 6px;margin-left:6px}
+    .row-ctrls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .spacer{flex:1}
+
+    /* ===== Skill bar ===== */
+    .skillbar{display:flex;gap:2px;margin-top:4px}
+    .skillbar .seg{width:6px;height:10px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+    .namecell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+    .nm{line-height:1.1}
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>Friendly Match</h1>
-      <div>
-        <label>Auto refresh <select id="refresh-interval"><option>2s</option><option>5s</option></select></label>
-        <button id="btn-refresh">Refresh</button>
+  <!-- Top / Bottom nav -->
+  <div id="top-bar"></div>
+
+  <div class="wrap">
+    <div class="row-ctrls">
+      <h2 style="margin:0">Friendly Match</h2>
+      <div class="spacer"></div>
+      <label class="muted" style="font-size:.9rem">
+        Auto refresh
+        <select id="auto-refresh">
+          <option value="0">Off</option>
+          <option value="2000" selected>2s</option>
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+        </select>
+      </label>
+      <button id="btn-refresh">Refresh</button>
+    </div>
+
+    <div class="tabs">
+      <button id="tab-live" class="active">LIVE</button>
+      <button id="tab-score">SCORECARD</button>
+      <button id="tab-comm">COMMENTARY</button>
+      <button id="tab-xi">LINEUP</button>
+    </div>
+
+    <!-- ===== LIVE ===== -->
+    <section id="live-panel" class="panel show">
+      <div class="score-strip">
+        <div class="big" id="live-score-a">--/-- - --.- ov</div>
+        <div class="big" id="live-score-b">--/-- - --.- ov</div>
       </div>
-    </div>
 
-    <div class="tabs" role="tablist" aria-label="Match tabs">
-      <div class="tab" data-tab="live" aria-selected="true">LIVE</div>
-      <div class="tab" data-tab="scorecard">SCORECARD</div>
-      <div class="tab" data-tab="commentary">COMMENTARY</div>
-      <div class="tab" data-tab="lineup">LINEUP</div>
-    </div>
-
-    <!-- Toss banner must appear above score strip -->
-    <div id="toss-banner" class="toss-banner" aria-live="polite">🎲 Toss not available</div>
-
-    <div class="score-strip" id="score-strip">
-      <div id="left-score">--/-- - 0.0 ov</div>
-      <div id="right-score">--/-- - 0.0 ov</div>
-    </div>
-
-    <div class="teams" id="teams">
-      <div class="team" id="home-team">
-        <div class="section-title" id="home-team-name">Home Team</div>
-        <div class="muted" id="home-team-meta">Batting – home</div>
+      <div class="teambar">
+        <div class="t" id="team-a-name">Home</div>
+        <div class="t" id="team-b-name">Away</div>
       </div>
-      <div class="team" id="away-team">
-        <div class="section-title" id="away-team-name">Away Team</div>
-        <div class="muted" id="away-team-meta">Bowling – away</div>
+
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px" id="batting-heading">Batting</div>
+        <div id="live-target" class="target-bar" style="display:none"></div>
+        <table>
+          <thead>
+            <tr><th style="text-align:left">Batsman</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>SR</th></tr>
+          </thead>
+          <tbody id="live-bats-tbody"></tbody>
+        </table>
       </div>
-    </div>
 
-    <div class="commentary" id="commentary-list" aria-live="polite" role="log">
-      <!-- commentary rows will be inserted here -->
-      <div class="comment-row muted">Loading commentary…</div>
-    </div>
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Bowler</div>
+        <table>
+          <thead>
+            <tr><th style="text-align:left">Bowler</th><th>Ov.</th><th>Runs</th><th>Wk.</th><th>Econ.</th></tr>
+          </thead>
+          <tbody id="live-bowl-tbody"></tbody>
+        </table>
+      </div>
 
+      <div class="card" id="live-summary" style="display:none"></div>
+
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Commentary</div>
+        <!-- Latest on TOP -->
+        <div id="live-feed"></div>
+      </div>
+    </section>
+
+    <!-- ===== SCORECARD ===== -->
+    <section id="score-panel" class="panel">
+      <!-- Headline lines -->
+      <div class="card">
+        <div id="headline-a" style="font-weight:800;font-size:1.05rem;">—</div>
+        <div id="headline-b" style="font-weight:800;font-size:1.05rem;margin-top:6px;">—</div>
+        <div id="score-target" class="target-bar" style="display:none"></div>
+      </div>
+
+      <div id="score-i1" class="card">
+        <div style="font-weight:800;margin-bottom:8px" id="i1-title">Innings 1</div>
+        <table>
+          <thead><tr><th style="text-align:left">Batsman</th><th style="text-align:left">Dismissal</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+          <tbody id="i1-batting"></tbody>
+        </table>
+        <h4 style="margin-top:12px">Bowling</h4>
+        <table>
+          <thead><tr><th style="text-align:left">Bowler</th><th>O</th><th>R</th><th>W</th><th>Eco</th></tr></thead>
+          <tbody id="i1-bowling"></tbody>
+        </table>
+      </div>
+
+      <div id="score-i2" class="card" style="display:none">
+        <div style="font-weight:800;margin-bottom:8px" id="i2-title">Innings 2</div>
+        <table>
+          <thead><tr><th style="text-align:left">Batsman</th><th style="text-align:left">Dismissal</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+          <tbody id="i2-batting"></tbody>
+        </table>
+        <h4 style="margin-top:12px">Bowling</h4>
+        <table>
+          <thead><tr><th style="text-align:left">Bowler</th><th>O</th><th>R</th><th>W</th><th>Eco</th></tr></thead>
+          <tbody id="i2-bowling"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== COMMENTARY ===== -->
+    <section id="comm-panel" class="panel">
+      <div class="card">
+        <!-- Latest on TOP -->
+        <div id="comm-feed"></div>
+      </div>
+    </section>
+
+    <!-- ===== LINEUP ===== -->
+    <section id="xi-panel" class="panel">
+      <div class="card xi">
+        <div class="grid-2">
+          <div>
+            <h4 id="xi-home-title">Home – Playing XI</h4>
+            <ul id="xi-home"></ul>
+          </div>
+          <div>
+            <h4 id="xi-away-title">Away – Playing XI</h4>
+            <ul id="xi-away"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <script>
-  (function(){
-    // === Configuration ===
-    // If your page sets a global "MATCH_ID" or "matchId", it will use that. Otherwise it will attempt to read from URL param 'match_id'.
-    const MATCH_ID = (window.MATCH_ID || window.matchId || new URLSearchParams(window.location.search).get("match_id") || "").trim();
+  <div id="bottom-nav"></div>
 
-    // Utility: parse UUID-like strings (loose)
-    const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  <!-- Smooth UI -->
+  <script type="module">
+    import { loadSmoothUI } from './js/smooth-ui.js';
+    loadSmoothUI('top-bar','bottom-nav');
+  </script>
 
-    // Small helper to pause for debug if needed
-    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+  <!-- Main logic -->
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    // DOM helpers
-    const $ = (sel, root=document) => root.querySelector(sel);
-    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdqchdq.supabase.co".replace('chdq','chdq'),
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
 
-    // Default API endpoints — adjust these to fit your backend if needed
-    // These are used only as fallbacks when we cannot resolve names from current DOM.
-    const API = {
-      match: (id) => `/api/matches/${id}`,
-      bbb: (id) => `/api/ball_by_ball?match_id=${id}&order=created_at.asc`,
-      team: (id) => `/api/teams/${id}`
+    /* ---------- Tabs ---------- */
+    const tabs = {
+      live: document.getElementById('tab-live'),
+      score: document.getElementById('tab-score'),
+      comm: document.getElementById('tab-comm'),
+      xi:   document.getElementById('tab-xi'),
+    };
+    const panels = {
+      live: document.getElementById('live-panel'),
+      score: document.getElementById('score-panel'),
+      comm: document.getElementById('comm-panel'),
+      xi:   document.getElementById('xi-panel'),
+    };
+    const activate = (key) => {
+      ['live','score','comm','xi'].forEach(k=>{
+        tabs[k].classList.toggle('active', k===key);
+        panels[k].classList.toggle('show', k===key);
+      });
+    };
+    tabs.live.onclick = ()=>activate('live');
+    tabs.score.onclick = ()=>activate('score');
+    tabs.comm.onclick = ()=>activate('comm');
+    tabs.xi.onclick   = ()=>activate('xi');
+
+    /* ---------- DOM refs ---------- */
+    const qs = new URLSearchParams(location.search);
+    const matchId = qs.get('id');
+
+    const liveFeed = document.getElementById('live-feed');
+    const commFeed = document.getElementById('comm-feed');
+    const liveBats = document.getElementById('live-bats-tbody');
+    const liveBowls = document.getElementById('live-bowl-tbody');
+    const liveTarget = document.getElementById('live-target');
+
+    const scoreA = document.getElementById('live-score-a');
+    const scoreB = document.getElementById('live-score-b');
+    const teamAName = document.getElementById('team-a-name');
+    const teamBName = document.getElementById('team-b-name');
+    const battingHeading = document.getElementById('batting-heading');
+    const liveSummary = document.getElementById('live-summary');
+
+    const headlineA = document.getElementById('headline-a');
+    const headlineB = document.getElementById('headline-b');
+    const scoreTarget = document.getElementById('score-target');
+
+    // Scorecard (two inns)
+    const i1 = {
+      title: document.getElementById('i1-title'),
+      bat: document.getElementById('i1-batting'),
+      bowl: document.getElementById('i1-bowling'),
+      card: document.getElementById('score-i1'),
+    };
+    const i2 = {
+      title: document.getElementById('i2-title'),
+      bat: document.getElementById('i2-batting'),
+      bowl: document.getElementById('i2-bowling'),
+      card: document.getElementById('score-i2'),
     };
 
-    /* =========================================================================
-       TOSS + COMMENTARY FIXES
-       - replace UUID in toss banner with readable team name
-       - ensure toss row is first in commentary (insert if missing)
-       - remove "comes into the attack" noise
-    ========================================================================= */
+    // XI
+    const xiHomeTitle = document.getElementById('xi-home-title');
+    const xiAwayTitle = document.getElementById('xi-away-title');
+    const xiHome = document.getElementById('xi-home');
+    const xiAway = document.getElementById('xi-away');
 
-    async function getOnPageTeamMapping() {
-      // Try to detect team names already present in page (fast)
-      // returns { [teamId]: name } for any discovered team id -> name
-      const map = {};
+    // Refresh controls
+    const autoSel = document.getElementById('auto-refresh');
+    const btnRefresh = document.getElementById('btn-refresh');
 
-      // Common patterns: elements with data-team-id attributes (most robust)
-      $$("[data-team-id]").forEach(el => {
-        const id = el.getAttribute("data-team-id");
-        if (!id) return;
-        const name = (el.textContent || "").trim();
-        if (name) map[id] = name;
-      });
+    /* ---------- State ---------- */
+    let all = [];
+    let players = {};                // id -> {name, team_id, ...}
+    let homeTeam, awayTeam;
+    let battingFirst = null, battingSecond = null;
+    let names = {};
+    let matchRow = null;
+    const roles = {};
+    const liveBatRuns = new Map();
+    let prevBall = null;
 
-      // If there are specific selectors used in your app, try them
-      const homeEl = $("#home-team-name") || $(".team-home") || $(".home .team-name");
-      const awayEl = $("#away-team-name") || $(".team-away") || $(".away .team-name");
-      if (homeEl && awayEl) {
-        // sometimes the page may include data attributes on parent
-        const homeParent = homeEl.closest("[data-team-id]");
-        const awayParent = awayEl.closest("[data-team-id]");
-        if (homeParent) map[homeParent.getAttribute("data-team-id")] = homeEl.textContent.trim();
-        if (awayParent) map[awayParent.getAttribute("data-team-id")] = awayEl.textContent.trim();
-      }
+    const queue = [];
+    let queueTimer = null;
+    const QUEUE_DELAY_MS = 800;
 
-      // Another heuristic: some apps expose a global match object (match/matchData) — check and use it
-      try {
-        const g = window.match || window.matchData || window.__MATCH__ || window._match;
-        if (g && typeof g === "object") {
-          if (g.home_team_id && g.home_team_name) map[g.home_team_id] = g.home_team_name;
-          if (g.away_team_id && g.away_team_name) map[g.away_team_id] = g.away_team_name;
-          // sometimes teams are nested
-          if (g.home && g.home.team_id && g.home.team_name) map[g.home.team_id] = g.home.team_name;
-          if (g.away && g.away.team_id && g.away.team_name) map[g.away.team_id] = g.away.team_name;
+    let autoTimer = null;
+
+    /* ---------- Helpers ---------- */
+    const oversText = (balls)=> `${Math.floor(balls/6)}.${balls%6}`;
+    const overLabel = (b)=> `${b.over_number - 1}.${b.ball_in_over}`;
+
+    /* NEW: shorten names -> initials + surname */
+    function shortName(full){
+      if (!full) return '—';
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return parts[0];
+      const last = parts.pop();
+      const initials = parts.map(w => (w[0] || '').toUpperCase()).filter(Boolean).join(' ');
+      return `${initials} ${last}`;
+    }
+
+    function hash32(str){
+      let h = 0x811c9dc5 >>> 0;
+      for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+      return h>>>0;
+    }
+    function pickStable(pool, b, salt=''){
+      if (!pool || pool.length===0) return "";
+      const key = `${matchId||''}|${b.innings}|${b.over_number}|${b.ball_in_over}|${salt}`;
+      const h = hash32(key);
+      return pool[h % pool.length];
+    }
+
+    /* ======= skill bar helpers ======= */
+    const PALETTE = [
+      "#f8f532","#f3e61c","#e9d60e","#d4cf10","#b0d022",
+      "#7ec14a","#49a769","#2f9ea6","#1d78c6","#1850a1",
+      "#1a2f7a","#5d2f7a","#a9483c","#cc1f1f"
+    ]; // yellow->green->blue->orange->red
+
+    function boostMap(){
+      const s = matchRow?.sim_state || {};
+      return s.player_boosts || s.boosts || {}; // flexible
+    }
+
+    function skillScore(pid, kind){
+      const p = players[pid]; if(!p) return 0;
+      let base = 0;
+      if (kind==='bat') base = Number(p.batting)||0;
+      else if (kind==='bowl') base = Number(p.bowling)||0;
+      else base = Math.max(Number(p.batting)||0, Number(p.bowling)||0);
+      const b = Number(boostMap()[pid])||0;
+      return Math.max(0, base + b);
+    }
+
+    function segmentsFor(score){
+      const maxScore = 100; // tune if your skill scale differs
+      const frac = Math.max(0, Math.min(1, score / maxScore));
+      let n = Math.round(frac * PALETTE.length);
+      return Math.max(1, Math.min(PALETTE.length, n));
+    }
+
+    function colorBarHTML(pid, kind){
+      const segs = segmentsFor(skillScore(pid, kind));
+      const blocks = PALETTE.slice(0, segs)
+        .map(c=>`<span class="seg" style="background:${c}"></span>`).join("");
+      return `<div class="skillbar" title="Skill+Boost: ${skillScore(pid,kind).toFixed(1)}">${blocks}</div>`;
+    }
+
+    /* ===== EXTRAS-AWARE AGGREGATES ===== */
+    function isLegal(b){
+      const t = (b.delivery_type||'legal').toLowerCase();
+      return t !== 'wide' && t !== 'noball' && t !== 'toss';
+    }
+
+    function totals(balls, inn) {
+      const arrAll = balls.filter(b=>b.innings===inn);
+      const arrLegals = arrAll.filter(isLegal);
+      const runs = arrAll.reduce((s,b)=> s + (b.runs_scored||0) + (b.extras||0), 0);
+      const wkts = arrAll.reduce((s,b)=> s + (b.wicket?1:0), 0);
+      return { runs, wkts, legal: arrLegals.length };
+    }
+
+    function aggBat(balls, inn) {
+      const map={};
+      balls.filter(b=>b.innings===inn).forEach(b=>{
+        const id=b.striker_id; if(!id) return;
+        const m = map[id] ||= {runs:0,balls:0,fours:0,sixes:0};
+        m.runs += b.runs_scored||0;
+        if (isLegal(b)) { // only legal balls are faced
+          m.balls++;
+          if(b.runs_scored===4) m.fours++;
+          if(b.runs_scored===6) m.sixes++;
         }
-      } catch (e) {
-        // ignore
-      }
-
+      });
       return map;
     }
 
-    async function fetchTeamNameByApi(id) {
-      if (!id) return null;
-      try {
-        const res = await fetch(API.team(id));
-        if (!res.ok) return null;
-        const j = await res.json();
-        // expect { id, team_name } or { team_name: 'A Team' }
-        return j.team_name || j.name || (j.data && j.data.team_name) || null;
-      } catch(e) {
-        return null;
+    function aggBowl(balls, inn) {
+      const map={};
+      balls.filter(b=>b.innings===inn).forEach(b=>{
+        const id=b.bowler_id; if(!id) return;
+        const m = map[id] ||= {runs:0,balls:0,wkts:0};
+        // Runs conceded include all runs (incl. wides, no-balls, byes)
+        m.runs += (b.runs_scored||0)+(b.extras||0);
+        // Balls bowled count only legal deliveries
+        if (isLegal(b)) m.balls++;
+        // Wickets credited to bowler exclude run-out
+        const t = (b.dismissal_type||'').toLowerCase();
+        if (b.wicket && t!=='runout' && t!=='run-out') m.wkts++;
+      });
+      return map;
+    }
+
+    // Name + badges (shortened)
+    function nameWithBadges(pid){
+      const p = players[pid]; if(!p) return '—';
+      const r = roles[p.team_id] || {};
+      const tags = [];
+      if (r.captain && r.captain===pid) tags.push('C');
+      if (r.keeper && r.keeper===pid)  tags.push('WK');
+      const nm = shortName(p.name);
+      return `${nm}${tags.length?` (${tags.join(', ')})`:''}`;
+    }
+
+    // Dismissal helpers
+    function dismissalMap(balls, inn){
+      const map={};
+      balls.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id)
+        .forEach(b=>{
+          map[b.dismissed_batsman_id] = {
+            type:(b.dismissal_type||'').toLowerCase() || 'out',
+            bowler:b.bowler_id||null,
+            fielder:b.fielder_id||null
+          };
+        });
+      return map;
+    }
+    function dismissText(pid, dm){
+      const d = dm[pid];
+      if(!d) return "not out";
+      const bowTxt = d.bowler ? nameWithBadges(d.bowler) : '';
+      const fldTxt = d.fielder ? nameWithBadges(d.fielder) : '';
+      const t = (d.type||'').toLowerCase();
+      if (t === 'bowled') return `b ${bowTxt}`;
+      if (t === 'lbw')    return `lbw b ${bowTxt}`;
+      if (t === 'caught') {
+        if (d.fielder && d.bowler && d.fielder === d.bowler) return `c & b ${bowTxt}`;
+        if (d.fielder) return `c ${fldTxt} b ${bowTxt}`;
+        return `c b ${bowTxt}`;
+      }
+      if (t === 'runout' || t==='run-out') return d.fielder ? `run out (${fldTxt})` : `run out`;
+      return bowTxt ? `b ${bowTxt}` : 'out';
+    }
+
+    // Commentary formatting
+    function pillsFor(b) {
+      const pills=[];
+      if (b.wicket) pills.push(`<span class="pill pill-w">WICKET</span>`);
+      if (b.runs_scored===6) pills.push(`<span class="pill pill-6">SIX</span>`);
+      if (b.runs_scored===4) pills.push(`<span class="pill pill-4">FOUR</span>`);
+      return pills.join('');
+    }
+    const VARIANTS = {
+      0: ["Dot ball.","Beaten!","Good length — no run."],
+      1: ["Just a single.","Nudged for one.","Oh Oh, What a save, saved 3 runs for his team. Good effort from the fielder."],
+      2: ["They come back for two.","Comfortable two.","Tried for a Big Hit, On the Air, A fielder there. Ohh My God, DROPPED. Got Two Runs."],
+      3: ["All hustle — three!","Good running — three.","Long chase, three taken."],
+      4: ["FOUR! Crunched.","Pierces the gap — four.","Stroked away for four."],
+      6: ["SIX! Launched.","Into the stands — six!","Its on the Air, Gone... Gone... Gone Over the Ropes. Its a SIX!"],
+      W: ["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
+    };
+    function sanitizeText(t){ return String(t||"").replace(/^\s*runs?\s*:?\s*/i,"").trim(); }
+    function lineText(b) {
+      if (b.commentary && b.commentary.trim()) return sanitizeText(b.commentary);
+
+      const dt = (b.delivery_type||'legal').toLowerCase();
+      if (dt === 'wide')  return "Wide — +1 run";
+      if (dt === 'noball')return "No-ball — +1 run";
+      if (dt === 'bye')   return `Byes — +${(b.extras_detail?.byes)||1}`;
+
+      if (b.wicket) {
+        const t = (b.dismissal_type||"").toLowerCase();
+        if (t === "bowled") return "Bowled him!";
+        if (t === "lbw")    return "LBW given!";
+        if (t === "caught") return "Edged and taken!";
+        if (t === "runout" || t==="run-out") return "Run out!";
+        return "Wicket!";
+      }
+
+      const runs = Math.min(6, Math.max(0, b.runs_scored||0));
+      const pool = VARIANTS[runs] || ["Runs added."];
+      return sanitizeText(pickStable(pool, b, "R"));
+    }
+    function comLine(b, extra=[]) {
+      if (b.delivery_type === 'toss') {
+        // place the toss banner
+        return `<div class="com-line toss-line"><div class="toss-banner">🎲 ${b.commentary}</div></div>`;
+      }
+
+      const bow = nameWithBadges(b.bowler_id);
+      const bat = nameWithBadges(b.striker_id);
+      const head = `Innings ${b.innings} • Over ${overLabel(b)}`;
+      const line = `Runs: ${b.runs_scored||0}, ${lineText(b)}`;
+      const extras = extra.length ? `<div class="sub">${extra.join("<br/>")}</div>` : "";
+      return `
+        <div class="com-line">
+          <div class="com-top">
+            <span class="ball-tag">${head}</span>
+            ${pillsFor(b)}
+          </div>
+          <div class="com-text"><strong>${bow}</strong> to <strong>${bat}</strong></div>
+          <div>${line}</div>
+          ${extras}
+        </div>`;
+    }
+
+    function renderCommentaryTop(list, into) {
+      const htmls = [];
+      prevBall = null;
+      liveBatRuns.clear();
+
+      const i1Finished =
+        list.some(x => x.innings === 2) ||
+        (matchRow && (matchRow.sim_innings ?? 1) >= 2) ||
+        (matchRow && matchRow.status === 'completed');
+
+      // First handle toss row separately
+      const tossRow = list.find(b => (b.delivery_type || '').toLowerCase() === "toss");
+      if (tossRow) {
+        htmls.push(comLine(tossRow, []));
+      }
+
+      // Then handle rest (exclude toss row so it doesn’t duplicate)
+      const playBalls = list.filter(b => (b.delivery_type || '').toLowerCase() !== "toss");
+      for (let i = 0; i < playBalls.length; i++) {
+        const b = playBalls[i];
+        const next = playBalls[i + 1] || null;
+        const extras = buildExtras(b, next, /*addInningsEnd*/ true, /*i1Finished*/ i1Finished);
+        htmls.push(comLine(b, extras));
+      }
+
+      // join but we show latest on top, so we reverse (list assumed chronological)
+      into.innerHTML = htmls.reverse().join('');
+    }
+
+    // delayed rendering queue -> prepend to TOP
+    function pushToQueue(ball) {
+      queue.push(ball);
+      if (!queueTimer) {
+        queueTimer = setInterval(() => {
+          if (queue.length === 0) { clearInterval(queueTimer); queueTimer=null; return; }
+          const b = queue.shift();
+          all.push(b);
+          const extras = buildExtras(b, /*next*/ null, /*addInningsEnd*/ false);
+          const html = comLine(b, extras);
+          liveFeed.insertAdjacentHTML('afterbegin', html);
+          commFeed.insertAdjacentHTML('afterbegin', html);
+          updateLiveBlocks();
+          updateScorecardBlocks();
+          maybeShowSummary();
+        }, QUEUE_DELAY_MS);
       }
     }
 
-    async function replaceTossIdsWithNames() {
-      const banner = $("#toss-banner");
-      if (!banner) return;
-      let text = (banner.textContent || "").trim();
-      if (!text) return;
+    /* ===== rows with skill bars ===== */
+    function nameCell(pid, star, kind){
+      const nm = nameWithBadges(pid);
+      return `<div class="namecell">
+                <div class="nm">${nm}${star?' ★':''}</div>
+                ${colorBarHTML(pid, kind)}
+              </div>`;
+    }
 
-      // find first UUID in the text
-      const idMatch = text.match(UUID_RE);
-      if (!idMatch) return; // nothing to replace
+    function rowBatMini(pid, stat, star=false) {
+      const nmCell = nameCell(pid, star, 'bat');
+      const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
+      return `<tr><td style="text-align:left">${nmCell}</td>
+                <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
+    }
+    function rowBowl(pid, stat, star=false) {
+      const nmCell = nameCell(pid, star, 'bowl');
+      const ov = `${Math.floor(stat.balls/6)}.${stat.balls%6}`;
+      const eco = stat.balls ? (stat.runs/(stat.balls/6)).toFixed(1) : "0.0";
+      return `<tr><td style="text-align:left">${nmCell}</td>
+                <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
+    }
+    function rowBatFull(pid, stat, dm) {
+      const nmCell = nameCell(pid, false, 'bat');
+      const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
+      const dis = dismissText(pid, dm);
+      return `<tr><td style="text-align:left">${nmCell}</td>
+              <td style="text-align:left">${dis}</td>
+              <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
+    }
 
-      const id = idMatch[0];
-      // try local mapping first
-      const map = await getOnPageTeamMapping();
+    function targetString(t1Runs, t2) {
+      const target = t1Runs + 1;
+      const need = Math.max(0, target - t2.runs);
+      const ballsLeft = Math.max(0, 120 - t2.legal);
+      const wktsLeft = Math.max(0, 10 - t2.wkts);
+      return `${need} needed from ${ballsLeft} balls with ${wktsLeft} wickets in hand`;
+    }
 
-      let name = map[id];
-      if (!name) {
-        // try fetching from api if configured
-        name = await fetchTeamNameByApi(id);
-      }
-      if (!name) {
-        // last fallback: try to locate name by scanning the two team boxes (maybe they contain the id in data-* attr)
-        const teamEls = $$("[data-team-id]");
-        for (const el of teamEls) {
-          if (el.getAttribute("data-team-id") === id) {
-            name = (el.textContent || "").trim();
-            break;
-          }
-        }
-      }
+    function updateLiveBlocks() {
+      if (!all.length) return;
+      const latest = all[all.length-1];
+      const curInn = latest.innings;
 
-      if (name) {
-        // replace occurrences of the UUID with readable name
-        const newText = text.replace(new RegExp(id, "g"), name);
-        banner.textContent = newText;
+      const t1 = totals(all, 1);
+      scoreA.textContent = `${t1.runs}/${t1.wkts} - ${oversText(t1.legal)} ov`;
+      let t2 = {runs:0,wkts:0,legal:0};
+      const in2 = all.some(b=>b.innings===2);
+      if (in2) {
+        t2 = totals(all, 2);
+        scoreB.textContent = `${t2.runs}/${t2.wkts} - ${oversText(t2.legal)} ov`;
+      } else scoreB.textContent = `--/-- - --.- ov`;
+
+      battingHeading.textContent = `Batting – ${curInn===1 ? (names[battingFirst]||'Team A') : (names[battingSecond]||'Team B')}`;
+      teamAName.textContent = names[battingFirst] || 'Team A';
+      teamBName.textContent = names[battingSecond] || 'Team B';
+
+      if (curInn===2) {
+        liveTarget.style.display = 'block';
+        liveTarget.textContent = targetString(t1.runs, t2);
       } else {
-        // If we couldn't resolve the name, try to format the UUID into a short form to be more readable
-        const short = id.slice(0, 8);
-        banner.textContent = text.replace(id, short);
+        liveTarget.style.display = 'none';
+      }
+
+      // Batsmen (current pair)
+      const batAgg = aggBat(all, curInn);
+      const strikerId = latest.striker_id;
+      const nonId = latest.non_striker_id;
+      const s1 = batAgg[strikerId] || {runs:0,balls:0,fours:0,sixes:0};
+      const s2 = batAgg[nonId] || {runs:0,balls:0,fours:0,sixes:0};
+      liveBats.innerHTML = rowBatMini(strikerId, s1, true) + rowBatMini(nonId, s2, false);
+
+      // Bowlers (current + last)
+      const bowlAgg = aggBowl(all, curInn);
+      const curBowler = latest.bowler_id;
+      let lastBowler = null;
+      for (let i=all.length-2;i>=0;i--) {
+        const b=all[i]; if (b.innings!==curInn) break;
+        if (b.bowler_id!==curBowler) { lastBowler=b.bowler_id; break; }
+      }
+      const sb = bowlAgg[curBowler] || {runs:0,balls:0,wkts:0};
+      let html = rowBowl(curBowler, sb, true);
+      if (lastBowler) html += rowBowl(lastBowler, bowlAgg[lastBowler] || {runs:0,balls:0,wkts:0});
+      liveBowls.innerHTML = html;
+
+      // Headlines for scorecard
+      headlineA.textContent = `${names[battingFirst]||'Team A'} ${t1.runs}/${t1.wkts} (${oversText(t1.legal)} ov)`;
+      headlineB.textContent = `${names[battingSecond]||'Team B'} ${t2.runs}/${t2.wkts} (${oversText(t2.legal)} ov)`;
+      if (in2) {
+        scoreTarget.style.display='block';
+        scoreTarget.textContent = targetString(t1.runs, t2);
+      } else {
+        scoreTarget.style.display='none';
       }
     }
 
-    function removeComesIntoTheAttackNoise() {
-      // Find commentary list rows and remove any that are purely "X comes into the attack" or similar
-      const container = $("#commentary-list");
-      if (!container) return;
-      const rows = Array.from(container.children);
-      rows.forEach(row => {
-        const text = (row.textContent || "").trim();
-        if (!text) return;
-        // A few likely phrasings we want to quiet:
-        if (/comes into the attack/i.test(text) || /comes into the bowling attack/i.test(text) || /comes into the attack\./i.test(text)) {
-          // remove the row (but keep a very small visual marker if you want: here we remove entirely)
-          row.remove();
-        }
+    function fillFullInnings(inn, ui) {
+      const bats = aggBat(all, inn);
+      const bowls = aggBowl(all, inn);
+      const dm = dismissalMap(all, inn);
+
+      ui.bat.innerHTML = "";
+      Object.entries(bats).forEach(([pid,st])=>{
+        ui.bat.insertAdjacentHTML('beforeend', rowBatFull(pid, st, dm));
+      });
+      ui.bowl.innerHTML = "";
+      Object.entries(bowls).forEach(([pid,st])=>{
+        ui.bowl.insertAdjacentHTML('beforeend', rowBowl(pid, st));
       });
     }
 
-    function moveTossRowToTop() {
-      // If there's an existing commentary row with data-delivery-type="toss" or class 'toss', move it to top.
-      const container = $("#commentary-list");
-      if (!container) return;
-      // look for explicit data-delivery-type attributes
-      let tossRow = container.querySelector('[data-delivery-type="toss"]') || container.querySelector('.comment-row.toss');
-      if (tossRow) {
-        container.insertBefore(tossRow, container.firstChild);
-        return true;
+    /* Robustly determine innings team order:
+       1. match.innings[] with team_id
+       2. result.innings[] with team_id
+       3. normalized toss (winner + decision)
+       4. fallback: battingFirst = homeTeam
+    */
+    function determineInningsTeams(match) {
+      let i1Team = null, i2Team = null;
+      // parse strings if needed
+      const resultObj = (typeof match?.result === 'string') ? (() => { try { return JSON.parse(match.result); } catch { return match.result; }})() : match?.result;
+      const sim = (typeof match?.sim_state === 'string') ? (() => { try { return JSON.parse(match.sim_state); } catch { return match.sim_state; }})() : match?.sim_state;
+
+      if (Array.isArray(match?.innings) && match.innings.length >= 2 && match.innings[0].team_id) {
+        i1Team = match.innings[0].team_id;
+        i2Team = match.innings[1].team_id;
+        return { i1Team, i2Team };
       }
-      // alternatively, scan for a row with text "Toss" at start
-      const rows = Array.from(container.children);
-      for (const r of rows) {
-        const txt = (r.textContent || "").trim().toLowerCase();
-        if (txt.startsWith("toss") || txt.includes("won the toss") || txt.includes("elected to")) {
-          container.insertBefore(r, container.firstChild);
-          return true;
+      if (resultObj && Array.isArray(resultObj.innings) && resultObj.innings.length >= 2 && resultObj.innings[0].team_id) {
+        i1Team = resultObj.innings[0].team_id;
+        i2Team = resultObj.innings[1].team_id;
+        return { i1Team, i2Team };
+      }
+
+      // Toss normalization
+      const t = normalizeTossFromPayload(match);
+      if (t && t.winner_team_id) {
+        const winner = String(t.winner_team_id);
+        const decision = (t.decision || '').toLowerCase();
+        const home = String(match.home_team_id);
+        const away = String(match.away_team_id);
+        if (decision === 'bowl' || decision === 'field') {
+          // winner bowled first -> other team batted first
+          if (winner === home) { i1Team = away; i2Team = home; }
+          else { i1Team = home; i2Team = away; }
+        } else {
+          // winner elected bat
+          if (winner === home) { i1Team = home; i2Team = away; }
+          else { i1Team = away; i2Team = home; }
         }
+        return { i1Team, i2Team };
       }
-      return false;
+
+      // Fallback: if match.result has home/away totals, we still want stable mapping
+      if (match?.home_team_id && match?.away_team_id) {
+        i1Team = match.home_team_id;
+        i2Team = match.away_team_id;
+        return { i1Team, i2Team };
+      }
+
+      // final fallback - use known globals
+      return { i1Team: homeTeam, i2Team: awayTeam };
     }
 
-    function insertVirtualTossRowIfMissing(tossText) {
-      const container = $("#commentary-list");
-      if (!container) return;
-      // if first row is already a toss, nothing to do
-      const first = container.firstElementChild;
-      if (first && ((first.getAttribute && first.getAttribute("data-delivery-type") === "toss") || (first.classList && first.classList.contains("toss")) || (first.textContent || "").toLowerCase().includes("toss"))) {
+    function updateScorecardBlocks() {
+      if (!all.length && !matchRow) return;
+
+      // Determine innings teams robustly
+      const { i1Team, i2Team } = determineInningsTeams(matchRow || {});
+      const t1 = totals(all, 1);
+      const t2 = totals(all, 2);
+
+      // 🏏 Innings 1
+      i1.card.style.display = 'block';
+      i1.title.textContent = `Innings 1 – ${(names[i1Team]||'Team 1')}`;
+      fillFullInnings(1, i1);
+
+      // 🏏 Innings 2
+      if (all.some(b => b.innings === 2)) {
+        i2.card.style.display = 'block';
+        i2.title.textContent = `Innings 2 – ${(names[i2Team]||'Team 2')}`;
+        fillFullInnings(2, i2);
+      } else {
+        i2.card.style.display = 'none';
+      }
+    }
+
+    function maybeShowSummary() {
+      if (!matchRow || matchRow.status!=='completed') {
+        liveSummary.style.display='none';
         return;
       }
-      // create row element and insert at top
-      const div = document.createElement("div");
-      div.className = "comment-row toss";
-      div.setAttribute("data-delivery-type", "toss");
-      div.textContent = tossText || "Toss: not available";
-      container.insertBefore(div, container.firstChild);
-    }
 
-    async function loadCommentaryAndFixes() {
-      const container = $("#commentary-list");
-      if (!container) return;
-      // Clear existing
-      container.innerHTML = '<div class="comment-row muted">Loading commentary…</div>';
+      const t1 = totals(all,1);
+      const t2 = totals(all,2);
+      const winnerId = matchRow.winner_team_id;
 
-      // Try to load commentary rows from an API endpoint if available (fallback). This is non-destructive: if your page already populated commentary, these steps still run to clean.
-      try {
-        // Prefer to use existing comment DOM if present (non-API mode):
-        const existingRows = $$(".comment-row");
-        if (existingRows && existingRows.length > 1) {
-          // We already have commentary rows: just run cleanup
-          removeComesIntoTheAttackNoise();
-          const moved = moveTossRowToTop();
-          if (!moved) {
-            // try to get toss text from page or match object
-            const tossTxt = getExistingTossTextFromPage();
-            if (tossTxt) insertVirtualTossRowIfMissing(tossTxt);
-          }
-          await replaceTossIdsWithNames();
-          return;
-        }
+      liveSummary.style.display='block';
 
-        // Otherwise attempt to fetch via API (fallback)
-        if (!MATCH_ID) {
-          container.innerHTML = '<div class="comment-row muted">No match ID available to load commentary.</div>';
-          return;
-        }
-        const res = await fetch(API.bbb(MATCH_ID));
-        if (!res.ok) {
-          container.innerHTML = `<div class="comment-row muted">Failed to load commentary (HTTP ${res.status}).</div>`;
-          return;
-        }
-        const data = await res.json();
-        // Expect array of rows with { delivery_type, commentary, created_at }
-        container.innerHTML = "";
-        // Ensure toss row first if present in dataset
-        const tossRows = data.filter(r => (r.delivery_type || "").toLowerCase() === "toss");
-        const otherRows = data.filter(r => (r.delivery_type || "").toLowerCase() !== "toss");
-        // If toss row present, push it first; each row -> DOM element
-        const pushRow = (r) => {
-          const el = document.createElement("div");
-          el.className = "comment-row";
-          if ((r.delivery_type || "").toLowerCase() === "toss") {
-            el.classList.add("toss");
-            el.setAttribute("data-delivery-type", "toss");
-          } else {
-            el.setAttribute("data-delivery-type", r.delivery_type || "legal");
-          }
-          el.textContent = r.commentary || (r.comment || formatBallRow(r));
-          return el;
-        };
-        if (tossRows.length) {
-          container.appendChild(pushRow(tossRows[0]));
-        } else {
-          // if not present, try to create from match.result / sim_state
-          const matchObj = await tryFetchMatchObject(MATCH_ID);
-          const tossText = extractTossTextFromMatchObj(matchObj);
-          if (tossText) container.appendChild(pushRow({ delivery_type: "toss", commentary: tossText }));
-        }
-        // append the rest but filter out noisy lines
-        for (const r of otherRows) {
-          const txt = (r.commentary || r.comment || "").trim();
-          if (!txt) continue;
-          if (/comes into the attack/i.test(txt)) continue;
-          container.appendChild(pushRow(r));
-        }
-
-        // final pass modifications
-        removeComesIntoTheAttackNoise();
-        await replaceTossIdsWithNames();
-
-      } catch (err) {
-        console.warn("loadCommentaryAndFixes error", err);
-        container.innerHTML = '<div class="comment-row muted">Error loading commentary.</div>';
+      if (!winnerId) {
+        // tie
+        liveSummary.innerHTML = `
+          <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">Match tied</div>
+          <div>${names[homeTeam]||'Home'}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+          <div>${names[awayTeam]||'Away'}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+        `;
+      } else {
+        const winName = names[winnerId] || 'Winner';
+        liveSummary.innerHTML = `
+          <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">${winName} won the match</div>
+          <div>${names[homeTeam]||'Home'}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+          <div>${names[awayTeam]||'Away'}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+        `;
       }
     }
 
-    async function tryFetchMatchObject(matchId) {
-      // Try to find match object on page first
-      const possible = window.match || window.matchData || window.__MATCH__ || window._match;
-      if (possible) return possible;
-      // Try to find a JSON blob in the DOM (common pattern)
-      const el = $("#match-data-json") || document.querySelector('[type="application/json"][data-role="match"]');
-      if (el) {
-        try { return JSON.parse(el.textContent); } catch {}
+    function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = false) {
+      const extras = [];
+
+      const overStart = !prevBall || prevBall.innings !== b.innings || prevBall.over_number !== b.over_number;
+
+      // --- SUPPRESS the noisy "comes into the attack" when it would appear at match start ---
+      // Only add this line if we have a prevBall (i.e., not the very first ball in the loaded list)
+      if (overStart && prevBall) {
+        const bow = nameWithBadges(b.bowler_id);
+        extras.push(`${bow} comes into the attack.`);
       }
-      // Else fall back to network request if endpoint available
-      if (!matchId) return null;
-      try {
-        const res = await fetch(API.match(matchId));
-        if (!res.ok) return null;
-        return await res.json();
-      } catch (e) {
-        return null;
+
+      const dt = (b.delivery_type||'legal').toLowerCase();
+      if (dt === 'wide')  extras.push(`Wide — +${b.extras||1}`);
+      if (dt === 'noball')extras.push(`No-ball — +${b.extras||1}`);
+      if (dt === 'bye' && (b.extras_detail?.byes)) extras.push(`Byes — +${b.extras_detail.byes}`);
+
+      const prevRuns = liveBatRuns.get(b.striker_id) || 0;
+      const newRuns  = prevRuns + (b.runs_scored || 0);
+      if (newRuns >= 50 && prevRuns < 50 && newRuns < 100) {
+        extras.push(`${nameWithBadges(b.striker_id)} scores his FIFTY`);
+      } else if (newRuns >= 100 && prevRuns < 100) {
+        extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
       }
+
+      if (b.wicket) {
+        const type = (b.dismissal_type || '').toLowerCase();
+        const bow  = nameWithBadges(b.bowler_id);
+        const fld  = b.fielder_id ? nameWithBadges(b.fielder_id) : "";
+        let disTxt = "out";
+        if (type === "bowled") disTxt = `b ${bow}`;
+        else if (type === "lbw") disTxt = `lbw b ${bow}`;
+        else if (type === "caught") {
+          if (b.fielder_id && b.bowler_id && b.fielder_id === b.bowler_id) disTxt = `c & b ${bow}`;
+          else if (b.fielder_id) disTxt = `c ${fld} b ${bow}`;
+          else disTxt = `c b ${bow}`;
+        } else if (type === "runout" || type === "run-out") {
+          disTxt = b.fielder_id ? `run out (${fld})` : `run out`;
+        }
+        const outName  = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
+        const ballsFor = all.concat([b]).filter(x => x.striker_id === (b.dismissed_batsman_id || b.striker_id)).filter(isLegal).length;
+        const runsFor  = newRuns;
+        extras.push(`${outName} ${disTxt} ${runsFor}(${ballsFor})`);
+
+        const nb = nextBall;
+        if (nb && nb.innings === b.innings) {
+          const newcomer = nb.striker_id !== b.striker_id && nb.striker_id !== (prevBall?.striker_id)
+            ? nb.striker_id : nb.non_striker_id;
+          if (newcomer) extras.push(`${nameWithBadges(newcomer)} comes in to the Crease.`);
+        }
+      }
+
+      if (addInningsEnd && i1Finished) {
+        const nxt = nextBall;
+        if (b.innings === 1 && (!nxt || nxt.innings !== 1)) {
+          const t1 = totals(all.concat([b]), 1);
+          const chasingName = names[battingSecond] || 'Team B';
+          const need = t1.runs + 1;
+          extras.push(`End of First Innings`);
+          extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
+        }
+      }
+
+      liveBatRuns.set(b.striker_id, newRuns);
+      prevBall = b;
+      return extras;
     }
 
-    function extractTossTextFromMatchObj(m) {
-      if (!m) return null;
-      // If result.toss.text exists prefer that
-      if (m.result && m.result.toss && m.result.toss.text) return m.result.toss.text;
-      // sim_state.toss.text
-      if (m.sim_state && m.sim_state.toss && m.sim_state.toss.text) return m.sim_state.toss.text;
-      // canonicalized shapes
-      const canonical = (m.toss || (m.result && m.result.toss) || (m.sim_state && m.sim_state.toss));
-      if (canonical) {
-        const winner = canonical.winner || canonical.winner_team_id || canonical.winnerId;
-        const decision = canonical.decision || canonical.elected || canonical.choice || "bat";
-        if (winner) return `Toss: Team ${winner} won the toss and elected to ${decision}.`;
+    /* ---------- Data load ---------- */
+
+    /**
+     * New client helper: normalize toss from many shapes the server may send.
+     * Accepts match row and returns { winner_team_id, decision, text } or null.
+     */
+    function normalizeTossFromPayload(match) {
+      if (!match) return null;
+
+      // If result/sim_state are strings, parse them
+      let resultObj = null, simObj = null;
+      try { resultObj = typeof match.result === 'string' ? JSON.parse(match.result) : match.result; } catch(e){ resultObj = null; }
+      try { simObj = typeof match.sim_state === 'string' ? JSON.parse(match.sim_state) : match.sim_state; } catch(e){ simObj = null; }
+
+      if (match.toss_winner_team_id || match.toss_decision) {
+        return { winner_team_id: match.toss_winner_team_id || null, decision: match.toss_decision || null, text: null };
       }
-      // last fallback stringification
+      if (match.toss) {
+        return { winner_team_id: match.toss.winner_team_id || match.toss.winner || null, decision: match.toss.decision || match.toss.elected || null, text: match.toss.text || null };
+      }
+      if (resultObj && resultObj.toss) {
+        const rt = resultObj.toss;
+        return { winner_team_id: rt.winner_team_id || rt.winner || null, decision: rt.decision || rt.elected || null, text: rt.text || null };
+      }
+      if (simObj && simObj.toss) {
+        const st = simObj.toss;
+        return { winner_team_id: st.winner_team_id || st.winner || null, decision: st.decision || st.elected || null, text: st.text || null };
+      }
+      if (Array.isArray(match.innings) && match.innings.length >= 2 && match.innings[0].team_id) {
+        return { winner_team_id: null, decision: null, text: null };
+      }
       return null;
     }
 
-    function getExistingTossTextFromPage() {
-      const el = $("#toss-banner");
-      if (!el) return null;
-      const txt = (el.textContent || "").trim();
-      if (!txt || txt.toLowerCase().indexOf("toss") === -1) return null;
-      return txt;
+    function getTeamNameForDisplay(teamId, match) {
+      // prefer names[] mapping, then match fields home_team_name/away_team_name, else the id itself
+      if (!teamId) return null;
+      if (names && names[teamId]) return names[teamId];
+      if (match) {
+        if (teamId === match.home_team_id) return match.home_team_name || match.home_name || null;
+        if (teamId === match.away_team_id) return match.away_team_name || match.away_name || null;
+      }
+      return teamId;
     }
 
-    function formatBallRow(r) {
-      // fallback formatter when commentary text missing
-      return `${r.innings || ''} ${r.over_number || ''}.${r.ball_in_over || ''} - ${r.commentary || ''}`.trim();
+    function renderTossBanner(match, commentaryList) {
+      const normalized = normalizeTossFromPayload(match);
+
+      // prefer the actual toss commentary row if present
+      const cbToss = (commentaryList||[]).find(c => (c.delivery_type || '').toLowerCase() === 'toss' && (c.commentary || '').trim());
+      let text = null;
+      if (cbToss && cbToss.commentary && !/^toss not available$/i.test(String(cbToss.commentary).trim())) {
+        text = cbToss.commentary;
+      } else if (normalized && normalized.winner_team_id) {
+        // try to resolve name locally if available (if match has names in payload)
+        const winnerName = getTeamNameForDisplay(normalized.winner_team_id, match) || normalized.winner_team_id;
+        const decisionText = (normalized.decision || 'bat').toLowerCase() === 'bowl' ? 'bowl first' : 'bat first';
+        text = `🎲 ${winnerName} won the toss and chose to ${decisionText}.`;
+      } else if (normalized && normalized.text) {
+        text = normalized.text;
+      } else {
+        text = null;
+      }
+
+      const bannerContainerId = 'toss-banner-inline';
+      let container = document.getElementById(bannerContainerId);
+      const scoreStrip = document.querySelector('.score-strip');
+      if (!text) {
+        if (container && container.parentNode) container.parentNode.removeChild(container);
+        return;
+      }
+      if (!container) {
+        container = document.createElement('div');
+        container.id = bannerContainerId;
+        container.className = 'toss-line';
+        if (scoreStrip && scoreStrip.parentNode) scoreStrip.parentNode.insertBefore(container, scoreStrip);
+        else (document.querySelector('.wrap') || document.body).insertBefore(container, (document.querySelector('.wrap')||document.body).firstChild);
+      }
+      container.innerHTML = `<div class="toss-banner">${text}</div>`;
     }
 
-    /* === Initialization / periodic refresh === */
-    async function doInitialEnhancements() {
-      // Wait a tick for the page to render server-populated content
-      await wait(50);
+    /**
+     * Insert a toss row into commentary array if missing.
+     * Returns new array (does not mutate original).
+     */
+    function ensureTossInCommentary(match, commentaryArray) {
+      if (!Array.isArray(commentaryArray)) commentaryArray = [];
+      if (commentaryArray.some(c => (c.delivery_type || '').toLowerCase() === 'toss')) return commentaryArray;
 
-      // If the banner currently contains a UUID, replace it
-      await replaceTossIdsWithNames();
+      const normalized = normalizeTossFromPayload(match);
+      let text = 'Toss not available';
+      if (normalized && normalized.winner_team_id) {
+        const winnerName = getTeamNameForDisplay(normalized.winner_team_id, match) || normalized.winner_team_id;
+        text = `🎲 ${winnerName} won the toss and elected to ${normalized.decision || 'bat'}.`;
+      } else if (match?.result?.toss?.text) {
+        text = match.result.toss.text;
+      } else if (match?.sim_state?.toss?.text) {
+        text = match.sim_state.toss.text;
+      }
 
-      // Load commentary and apply fixes (this will *not* remove real commentary you depend on)
-      await loadCommentaryAndFixes();
+      const tossRow = {
+        match_id: match?.id,
+        over_number: 0,
+        ball_in_over: 0,
+        innings: 0,
+        striker_id: null,
+        non_striker_id: null,
+        bowler_id: null,
+        runs_scored: 0,
+        extras: 0,
+        wicket: false,
+        dismissed_batsman_id: null,
+        commentary: text,
+        created_at: new Date(Date.now() - 1000).toISOString(),
+        fielder_id: null,
+        delivery_type: 'toss',
+        extras_detail: {}
+      };
 
-      // Remove noisy lines if they still exist
-      removeComesIntoTheAttackNoise();
+      return [tossRow, ...commentaryArray];
     }
 
-    // Kick off when DOM loaded
-    document.addEventListener("DOMContentLoaded", () => {
-      doInitialEnhancements().catch(e => console.error("enhancements error", e));
+    /**
+     * Filter out early noisy lines like "comes into the attack" if they appear before the first ball.
+     * We'll drop those lines only if they occur in the very first events (index < cutoff).
+     */
+    function filterInitialNoisyLines(commentaryArray) {
+      if (!Array.isArray(commentaryArray)) return commentaryArray;
+      // find index of first real ball (delivery_type === 'legal' || 'wide' || 'noball' || ball fields present)
+      const firstRealIdx = commentaryArray.findIndex(c => {
+        const dt = (c.delivery_type || '').toLowerCase();
+        if (dt === 'toss') return false;
+        if (['legal','wide','noball','bye'].includes(dt)) return true;
+        if (typeof c.over_number === 'number' && c.over_number > 0) return true;
+        return false;
+      });
+      const cutoff = firstRealIdx === -1 ? 3 : firstRealIdx + 1; // check a small window
+      const noiseRegex = /\bcomes into the attack\b/i;
+      return commentaryArray.filter((c, i) => {
+        if (i < cutoff && typeof c.commentary === 'string' && noiseRegex.test(c.commentary)) {
+          return false; // drop this early noise
+        }
+        return true;
+      });
+    }
 
-      // Wire refresh button if present
-      const btn = document.getElementById("btn-refresh");
-      if (btn) btn.addEventListener("click", async () => {
-        await doInitialEnhancements();
+    async function loadMeta() {
+      const { data: m } = await supabase.from('matches').select('*').eq('id', matchId).single();
+      matchRow = m || null;
+      if (!matchRow) {
+        alert('Match row not found');
+        return;
+      }
+      // Backwards compatibility: prefer sim_state.toss if result.toss missing
+      if (!matchRow.result?.toss && matchRow.sim_state?.toss) {
+        try {
+          matchRow.result = { ...(matchRow.result||{}), toss: typeof matchRow.sim_state === 'string' ? JSON.parse(matchRow.sim_state).toss : matchRow.sim_state.toss };
+        } catch (e) {
+          matchRow.result = { ...(matchRow.result||{}), toss: matchRow.sim_state.toss };
+        }
+      }
+
+      homeTeam = m?.home_team_id;
+      awayTeam = m?.away_team_id;
+
+      const { data: t } = await supabase.from('teams').select('id, team_name').in('id', [homeTeam, awayTeam]);
+      (t||[]).forEach(x=> names[x.id]=x.team_name);
+
+      // Decide battingFirst and battingSecond based on normalized toss info (robust)
+      const normalized = normalizeTossFromPayload(matchRow);
+      if (normalized && normalized.winner_team_id) {
+        const winner = String(normalized.winner_team_id);
+        const decision = (normalized.decision||'').toLowerCase();
+        const home = String(homeTeam);
+        const away = String(awayTeam);
+        if (decision === 'bowl' || decision === 'field') {
+          // winner bowled first -> other team batted first
+          if (winner === home) { battingFirst = awayTeam; battingSecond = homeTeam; }
+          else { battingFirst = homeTeam; battingSecond = awayTeam; }
+        } else {
+          if (winner === home) { battingFirst = homeTeam; battingSecond = awayTeam; }
+          else { battingFirst = awayTeam; battingSecond = homeTeam; }
+        }
+      } else if (Array.isArray(matchRow.innings) && matchRow.innings.length >= 2 && matchRow.innings[0].team_id) {
+        battingFirst = matchRow.innings[0].team_id;
+        battingSecond = matchRow.innings[1].team_id;
+      } else {
+        // fallback: home first
+        battingFirst = homeTeam; battingSecond = awayTeam;
+      }
+
+      teamAName.textContent = names[battingFirst] || 'Team A';
+      teamBName.textContent = names[battingSecond] || 'Team B';
+
+      const { data: ps } = await supabase
+        .from('players')
+        .select('id, name, team_id, role, batting, bowling')
+        .in('team_id', [homeTeam, awayTeam]);
+      (ps||[]).forEach(p=> players[p.id] = { ...p });
+
+      const { data: lus } = await supabase
+        .from('lineups')
+        .select('team_id,captain,keeper,playing_xi,batting_order,bowling_order')
+        .in('team_id', [homeTeam, awayTeam]);
+      (lus||[]).forEach(l => {
+        roles[l.team_id] = { captain: l.captain || null, keeper: l.keeper || null, playing_xi: Array.isArray(l.playing_xi) ? l.playing_xi.slice() : null };
       });
 
-      // Auto-refresh interval (optional)
-      const sel = document.getElementById("refresh-interval");
-      if (sel) {
-        let ms = 2000;
-        sel.addEventListener("change", () => {
-          const v = sel.value || "2s";
-          if (v.endsWith("s")) ms = parseInt(v.slice(0,-1),10)*1000;
-          // set up periodic refresh
-          if (window.__enhancerInterval) clearInterval(window.__enhancerInterval);
-          window.__enhancerInterval = setInterval(() => doInitialEnhancements().catch(()=>{}), ms);
-        });
-        // trigger initial
-        sel.dispatchEvent(new Event("change"));
-      }
-    });
+      await buildLineupUI(lus || []);
+    }
 
-    // Expose small API for manual override if needed
-    window.__tossEnhancer = {
-      replaceTossIdsWithNames,
-      loadCommentaryAndFixes,
-      insertVirtualTossRowIfMissing,
-      moveTossRowToTop
-    };
-  })();
+    function byBat(a,b){ return (b.batting||0)-(a.batting||0); }
+    function byBowl(a,b){ return (b.bowling||0)-(a.bowling||0); }
+    function byAll(a,b){ return ((b.batting||0)+(b.bowling||0))-((a.batting||0)+(a.bowling||0)); }
+    function poolFor(teamId){ return Object.values(players).filter(p=>p.team_id===teamId); }
+
+    async function buildLineupUI(lineupRows) {
+      function sanitizeXI(teamId, requestedXI) {
+        const pool = poolFor(teamId).sort(byAll);
+        const used = new Set();
+        const xi = [];
+        (requestedXI || []).forEach(id => { if (players[id] && players[id].team_id === teamId && !used.has(id)) { xi.push(id); used.add(id); } });
+        for (const p of pool) { if (xi.length>=11) break; if (!used.has(p.id)) { xi.push(p.id); used.add(p.id); } }
+        return xi.slice(0,11);
+      }
+      function autoXI(teamId) {
+        const list = poolFor(teamId);
+        const isWK   = p => /wk/i.test(p.role || '');
+        const isBAT  = p => /bat/i.test(p.role || '');
+        const isAR   = p => /(all|ar)/i.test(p.role || '');
+        const isBOWL = p => /bow/i.test(p.role || '');
+        const wk   = list.filter(isWK).sort(byBat);
+        const bat  = list.filter(isBAT).sort(byBat);
+        const ar   = list.filter(isAR).sort(byAll);
+        const bowl = list.filter(isBOWL).sort(byBowl);
+        const pick = []; const used = new Set();
+        const take = (arr,n)=>{ for(const p of arr){ if(pick.length>=11) break; if(!used.has(p.id)){ pick.push(p.id); used.add(p.id); if(--n===0) break; } } };
+        if (wk.length) take(wk,1);
+        take(bat,4); take(ar,1); take(bowl,5);
+        for (const p of list.sort(byAll)){ if (pick.length>=11) break; if(!used.has(p.id)){ pick.push(p.id); used.add(p.id);} }
+        return pick.slice(0,11);
+      }
+      function fromLineup(teamId) {
+        const row = lineupRows.find(r => r.team_id === teamId);
+        if (!row) return null;
+        const req = Array.isArray(row.playing_xi) ? row.playing_xi : null;
+        if (!req || req.length === 0) return null;
+        return sanitizeXI(teamId, req);
+      }
+      function makeXI(teamId){ return fromLineup(teamId) || autoXI(teamId); }
+
+      const homeXI = makeXI(homeTeam);
+      const awayXI = makeXI(awayTeam);
+
+      function ensureRole(teamId, xi, kind){
+        const cur = roles[teamId]?.[kind] || null;
+        if (cur && xi.includes(cur)) return cur;
+        const pool = xi.map(id=>players[id]).filter(Boolean);
+        let pick=null;
+        if (kind==='keeper'){
+          pick = pool.find(p=>/wk/i.test(p.role||'')) || pool.sort(byBat)[0];
+        } else {
+          pick = pool.sort(byAll)[0];
+        }
+        if (!roles[teamId]) roles[teamId]={};
+        roles[teamId][kind] = pick ? pick.id : xi[0];
+        return roles[teamId][kind];
+      }
+      ensureRole(homeTeam, homeXI, 'captain');
+      ensureRole(homeTeam, homeXI, 'keeper');
+      ensureRole(awayTeam, awayXI, 'captain');
+      ensureRole(awayTeam, awayXI, 'keeper');
+
+      const renderList = (ul, ids, teamId) => {
+        ul.innerHTML = '';
+        ids.forEach(id=>{
+          const p=players[id]; if(!p) return;
+          const bits=[];
+          if (roles[teamId]?.captain===id) bits.push('C');
+          if (roles[teamId]?.keeper===id)  bits.push('WK');
+          if (p.role) bits.push(p.role);
+          ul.insertAdjacentHTML('beforeend', `<li>${shortName(p.name)}${bits.length?` <span class="tag">${bits.join(' • ')}</span>`:''}</li>`);
+        });
+      };
+
+      xiHomeTitle.textContent = `${names[homeTeam] || 'Home'} – Playing XI`;
+      xiAwayTitle.textContent = `${names[awayTeam] || 'Away'} – Playing XI`;
+      renderList(xiHome, homeXI, homeTeam);
+      renderList(xiAway, awayXI, awayTeam);
+    }
+
+    async function loadOnce() {
+      if (!matchId) {
+        alert('Missing match id');
+        return;
+      }
+
+      await loadMeta();
+
+      const { data: balls } = await supabase
+        .from('ball_by_ball')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('innings',{ascending:true})
+        .order('over_number',{ascending:true})
+        .order('ball_in_over',{ascending:true})
+        .order('created_at',{ascending:true});
+
+      // Normalize commentary list: ensure toss row first, remove early noisy lines
+      let fetched = (balls || []).slice();
+
+      // Ensure toss row exists (server may already have it) - if not, client will inject
+      fetched = ensureTossInCommentary(matchRow, fetched);
+
+      // Filter out the "comes into the attack" only if it's before first ball
+      fetched = filterInitialNoisyLines(fetched);
+
+      // Keep deterministic ordering: toss first, then by innings/over/ball/created_at
+      all = fetched.sort((a,b)=>{
+        const aType = (a.delivery_type||'').toLowerCase();
+        const bType = (b.delivery_type||'').toLowerCase();
+        if (aType === 'toss' && bType !== 'toss') return -1;
+        if (bType === 'toss' && aType !== 'toss') return 1;
+        if ((a.innings||0) !== (b.innings||0)) return (a.innings||0)-(b.innings||0);
+        if ((a.over_number||0) !== (b.over_number||0)) return (a.over_number||0)-(b.over_number||0);
+        if ((a.ball_in_over||0) !== (b.ball_in_over||0)) return (a.ball_in_over||0)-(b.ball_in_over||0);
+        // finally created_at
+        const ta = new Date(a.created_at || 0).getTime();
+        const tb = new Date(b.created_at || 0).getTime();
+        return ta - tb;
+      });
+
+      liveBatRuns.clear();
+      prevBall = null;
+
+      // Render toss banner immediately (if possible)
+      renderTossBanner(matchRow, all);
+
+      renderCommentaryTop(all, liveFeed);
+      renderCommentaryTop(all, commFeed);
+
+      updateLiveBlocks();
+      updateScorecardBlocks();
+      maybeShowSummary();
+    }
+
+
+    function startRealtime() {
+      supabase.channel('bb-live')
+        .on('postgres_changes',
+          { event:'INSERT', schema:'public', table:'ball_by_ball', filter:`match_id=eq.${matchId}` },
+          (payload)=> pushToQueue(payload.new)
+        )
+        .on('postgres_changes',
+          { event:'UPDATE', schema:'public', table:'matches', filter:`id=eq.${matchId}` },
+          (payload)=> { matchRow = payload.new; maybeShowSummary(); renderTossBanner(matchRow, all); }
+        )
+        .subscribe();
+    }
+
+    function applyAuto(ms){
+      if (autoTimer) { clearInterval(autoTimer); autoTimer=null; }
+      const n = parseInt(ms,10)||0;
+      if (n>0){ autoTimer = setInterval(loadOnce, n); }
+    }
+    autoSel.onchange = (e)=> applyAuto(e.target.value);
+    btnRefresh.onclick = ()=> loadOnce();
+
+    async function init(){
+      await loadOnce();
+      startRealtime();
+      applyAuto(autoSel.value);
+    }
+
+    init();
   </script>
 </body>
 </html>
