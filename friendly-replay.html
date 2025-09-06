@@ -8,26 +8,21 @@
   <style>
     body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
     .wrap{max-width:980px;margin:0 auto;padding:16px}
-
     .head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
     .badge{font-size:.75rem;padding:4px 10px;border-radius:999px;border:1px solid #26314b;background:#0f1522}
     .badge-friendly{background:#1b4332;color:#d1fae5;border-color:#24543f}
     .chip-done{background:#334155;color:#e2e8f0;border:1px solid #3b475f;border-radius:6px;padding:4px 10px;font-size:.75rem}
     .muted{opacity:.75}
-
     .tabs{display:flex;gap:6px;border-bottom:2px solid #1d263a;position:sticky;top:48px;background:#0b0f16;z-index:5}
     .tabs button{flex:1;padding:10px 8px;background:#10151f;color:#cfe7dc;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:700;letter-spacing:.02em}
     .tabs button.active{background:#00e676;color:#000}
-
     .panel{display:none}
     .panel.show{display:block}
-
     .card{background:#121825;border:1px solid #1d263a;border-radius:12px;padding:12px;margin:14px 0}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #2a344a;padding:8px;text-align:center;vertical-align:top}
     th{background:#192238}
     td.left{text-align:left}
-
     /* compact score tables (SCORECARD only) */
     #score-panel table{font-size:.92rem}
     #score-panel th,#score-panel td{padding:6px}
@@ -35,11 +30,9 @@
       #score-panel table{font-size:.88rem}
       #score-panel th,#score-panel td{padding:5px}
     }
-
     .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;
       font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
     .score-strip .big{font-size:1.05rem}
-
     .feed{display:flex;flex-direction:column;gap:8px}
     .ball{padding:12px;border:1px dashed #26314b;border-radius:10px;background:#0f1522}
     .ball .head{font-weight:700;margin-bottom:6px}
@@ -48,13 +41,11 @@
     .b4{background:#123d27;border-color:#1c593a;color:#b8ffd6}
     .b6{background:#0e2e57;border-color:#1a4886;color:#cfe8ff}
     .sub{opacity:.9;margin-top:4px}
-
-    /* ===== Skill bar ===== */
+    /* Skill bar */
     .skillbar{display:flex;gap:2px;margin-top:4px}
     .skillbar .seg{width:6px;height:10px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
     .namecell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
     .nm{line-height:1.1}
-
     /* Toss banner */
     .toss-line .toss-banner{background:#222a68;color:#fff;text-align:center;font-weight:bold;padding:10px;margin:8px 0;border-radius:6px;font-size:16px;letter-spacing:.5px}
   </style>
@@ -74,14 +65,12 @@
     <h2 id="match-title">Home vs Away</h2>
     <div class="muted" id="match-sub">Kickoff — --</div>
 
-    <!-- Default SCORECARD -->
     <div class="tabs" style="margin-top:12px">
       <button id="tab-replay">REPLAY</button>
       <button id="tab-score" class="active">SCORECARD</button>
       <button id="tab-summary">SUMMARY</button>
     </div>
 
-    <!-- REPLAY -->
     <section id="replay-panel" class="panel">
       <div class="card">
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -101,10 +90,9 @@
         </div>
       </div>
 
-      <!-- Toss banner will be injected here -->
+      <!-- Toss banner injected here -->
       <div id="toss-banner-inline"></div>
 
-      <!-- Mini score strip (always visible on REPLAY tab) -->
       <div class="score-strip">
         <div class="big" id="mini-a">0/0 - 0.0 ov</div>
         <div class="big" id="mini-b">0/0 - 0.0 ov</div>
@@ -115,7 +103,6 @@
       </div>
     </section>
 
-    <!-- SCORECARD (final) -->
     <section id="score-panel" class="panel show">
       <div class="card">
         <div id="headline-a" style="font-weight:800;font-size:1.05rem;">—</div>
@@ -157,7 +144,6 @@
       </div>
     </section>
 
-    <!-- SUMMARY -->
     <section id="summary-panel" class="panel">
       <div class="card">
         <h3>Match Summary</h3>
@@ -196,7 +182,7 @@
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    /* ====== bootstrap ====== */
+    /* bootstrap */
     const qs = new URLSearchParams(location.search);
     const matchId = qs.get("id");
 
@@ -264,7 +250,7 @@
     let timer = null;
     let delay = 700;
 
-    /* ==== skill-bar helpers ==== */
+    /* skill helpers */
     const PALETTE = [
       "#f8f532","#f3e61c","#e9d60e","#d4cf10","#b0d022",
       "#7ec14a","#49a769","#2f9ea6","#1d78c6","#1850a1",
@@ -332,7 +318,6 @@
       return `${dd}-${mm}-${yyyy}, ${hh}:${mi} ${ampm}`;
     }
 
-    /* LEGAL delivery helper so wides/noballs don’t count as balls */
     const isLegal = (b)=> {
       const t = (b.delivery_type||"legal").toLowerCase();
       return t!=="wide" && t!=="noball";
@@ -413,7 +398,6 @@
       return pool[Math.floor(Math.random()*pool.length)];
     }
 
-    // Commentary HTML (with extras)
     function ballHtml(b, extraLines=[]){
       const head = `Innings ${b.innings} • Over ${overLabel(b)}`;
       const bow = nameWithBadges(b.bowler_id);
@@ -466,18 +450,12 @@
     btnOver.onclick=()=>{ stepOver(); setButtons(); };
     btnRestart.onclick=()=>{ restart(); };
 
-    // running batting totals to catch milestones
-    const liveBatRuns = new Map(); // pid -> runs so far (during replay)
+    const liveBatRuns = new Map();
     function stepOne(){
-      if (shown>=allBalls.length) {
-        maybeFinalMessage();
-        return false;
-      }
+      if (shown>=allBalls.length) { maybeFinalMessage(); return false; }
       const b=allBalls[shown++];
 
       const extras = [];
-
-      // over start / bowler change
       const prev = allBalls[shown-2] || null;
       const overStart = !prev || prev.innings!==b.innings || prev.over_number!==b.over_number;
       if (overStart) {
@@ -485,13 +463,11 @@
         extras.push(`${bow} comes into the attack.`);
       }
 
-      // === explicit extras like LIVE ===
       const dt = (b.delivery_type||"legal").toLowerCase();
       if (dt === "wide")   extras.push(`Wide — +${b.extras||1}`);
       if (dt === "noball") extras.push(`No-ball — +${b.extras||1}`);
       if (dt === "bye" && (b.extras_detail?.byes)) extras.push(`Byes — +${b.extras_detail.byes}`);
 
-      // milestones
       const prevRuns = liveBatRuns.get(b.striker_id) || 0;
       const newRuns = prevRuns + (b.runs_scored||0);
       liveBatRuns.set(b.striker_id, newRuns);
@@ -501,7 +477,6 @@
         extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
       }
 
-      // wicket line + newcomer
       if (b.wicket) {
         const disTxt = dismissTextFromBall(b);
         const outPid = b.dismissed_batsman_id || b.striker_id;
@@ -517,12 +492,9 @@
         }
       }
 
-      // render
       commFeed.insertAdjacentHTML("afterbegin", ballHtml(b, extras));
-
       updateMini(allBalls.slice(0,shown));
 
-      // end of innings 1 message
       const next = allBalls[shown] || null;
       if (!next || next.innings !== b.innings) {
         if (b.innings===1) {
@@ -571,9 +543,7 @@
       }
     }
 
-    /* -------------------------
-       Toss helpers (robust)
-       ------------------------- */
+    /* Toss helpers */
     function normalizeTossFromPayload(match) {
       if (!match) return null;
       let resultObj = null, simObj = null;
@@ -600,7 +570,6 @@
     function renderTossBanner(matchRow, commentaryList) {
       const normalized = normalizeTossFromPayload(matchRow);
 
-      // prefer the actual toss commentary row if present
       const cbToss = (commentaryList||[]).find(c => (c.delivery_type||'').toLowerCase() === 'toss' && (c.commentary || '').trim());
       let text = null;
       if (cbToss && cbToss.commentary && !/^toss not available$/i.test(String(cbToss.commentary).trim())) {
@@ -608,7 +577,6 @@
       } else if (normalized && normalized.winner_team_id) {
         const winnerId = normalized.winner_team_id;
         const decisionText = (normalized.decision || 'bat').toLowerCase() === 'bowl' || (normalized.decision||'').toLowerCase() === 'field' ? 'bowl first' : 'bat first';
-        // try to resolve team name if present in names map, otherwise show id
         const winnerName = names[winnerId] || winnerId;
         text = `🎲 ${winnerName} won the toss and chose to ${decisionText}.`;
       } else if (normalized && normalized.text) {
@@ -691,8 +659,7 @@
       });
     }
 
-    /* ---------- Data load + render ---------- */
-
+    /* Data load + render (with battingFirst mapping fix) */
     async function loadReplay(){
       if(!matchId){ alert("Missing match id"); return; }
 
@@ -718,16 +685,10 @@
         .order("ball_in_over",{ascending:true})
         .order("created_at",{ascending:true});
 
-      // Normalize commentary list: ensure toss row first, remove early noisy lines
       let fetched = (balls || []).slice();
-
-      // Ensure toss row (client-side) if server hasn't inserted one
       fetched = ensureTossInCommentary(match, fetched);
-
-      // Remove early "comes into the attack" noise if present before first ball
       fetched = filterInitialNoisyLines(fetched);
 
-      // Deterministic ordering: toss first, then by innings/over/ball/created_at
       allBalls = fetched.sort((a,b)=>{
         if ((a.delivery_type||'').toLowerCase() === 'toss' && (b.delivery_type||'').toLowerCase() !== 'toss') return -1;
         if ((b.delivery_type||'').toLowerCase() === 'toss' && (a.delivery_type||'').toLowerCase() !== 'toss') return 1;
@@ -739,6 +700,35 @@
         return ta - tb;
       });
 
+      // Determine battingFirst and battingSecond robustly using toss / innings / result
+      let battingFirst = m.home_team_id;
+      let battingSecond = m.away_team_id;
+      const normalized = normalizeTossFromPayload(m);
+      if (normalized && normalized.winner_team_id) {
+        const winner = String(normalized.winner_team_id);
+        const decision = (normalized.decision||'').toLowerCase();
+        const home = String(m.home_team_id);
+        const away = String(m.away_team_id);
+        if (decision === 'bowl' || decision === 'field') {
+          // winner bowled first -> other team batted first
+          if (winner === home) { battingFirst = m.away_team_id; battingSecond = m.home_team_id; }
+          else { battingFirst = m.home_team_id; battingSecond = m.away_team_id; }
+        } else {
+          if (winner === home) { battingFirst = m.home_team_id; battingSecond = m.away_team_id; }
+          else { battingFirst = m.away_team_id; battingSecond = m.home_team_id; }
+        }
+      } else if (Array.isArray(m.innings) && m.innings.length >= 2 && m.innings[0].team_id) {
+        battingFirst = m.innings[0].team_id;
+        battingSecond = m.innings[1].team_id;
+      } else if (m.result?.innings && m.result.innings.length >= 2 && m.result.innings[0].team_id) {
+        battingFirst = m.result.innings[0].team_id;
+        battingSecond = m.result.innings[1].team_id;
+      } else {
+        // fallback home/away
+        battingFirst = m.home_team_id;
+        battingSecond = m.away_team_id;
+      }
+
       shown=0; commFeed.innerHTML=""; updateMini([]); setButtons();
       liveBatRuns.clear();
 
@@ -748,11 +738,13 @@
       subEl.textContent = `Kickoff — ${when?fmtDateTime(when):"--"}`;
 
       const t1=totals(allBalls,1), t2=totals(allBalls,2);
-      headlineA.textContent = `${names[m.home_team_id]||"Home"} ${t1.runs}/${t1.wkts} (${oversTxt(t1.legal)} ov)`;
-      headlineB.textContent = `${names[m.away_team_id]||"Away"} ${t2.runs}/${t2.wkts} (${oversTxt(t2.legal)} ov)`;
 
-      in1Name.textContent = `${names[m.home_team_id]||"Home"} — Innings 1`;
-      in2Name.textContent = `${names[m.away_team_id]||"Away"} — Innings 2`;
+      // Use battingFirst / battingSecond for the score headlines and innings labels
+      headlineA.textContent = `${names[battingFirst]||'Team A'} ${t1.runs}/${t1.wkts} (${oversTxt(t1.legal)} ov)`;
+      headlineB.textContent = `${names[battingSecond]||'Team B'} ${t2.runs}/${t2.wkts} (${oversTxt(t2.legal)} ov)`;
+
+      in1Name.textContent = `${names[battingFirst]||'Team 1'} — Innings 1`;
+      in2Name.textContent = `${names[battingSecond]||'Team 2'} — Innings 2`;
       in1Tot.textContent = `${t1.runs}/${t1.wkts} in ${oversTxt(t1.legal)} ov`;
       in2Tot.textContent = `${t2.runs}/${t2.wkts} in ${oversTxt(t2.legal)} ov`;
 
@@ -800,11 +792,10 @@
       fill(document.getElementById("sum-away-topbat"), tbAway);
       fill(document.getElementById("sum-away-topbowl"), bwAway);
 
-      // Render toss banner now that we have names + commentary
+      // Render toss banner now (we have names + commentary)
       renderTossBanner(match, allBalls);
     }
 
-    // helpers used above for filling rows (kept local)
     function rowBat(tbody, map, dm){
       tbody.innerHTML="";
       Object.entries(map).forEach(([pid,st])=>{
