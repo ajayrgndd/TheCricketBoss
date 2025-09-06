@@ -1,16 +1,14 @@
-// profile-setup.js (REPLACE existing)
+// js/profile-setup.js (patched, ready-to-deploy)
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 import { generateSquad } from "./squad-generator.js";
 
-// --- IMPORTANT ---
-// Replace the ANON key below with your project's ANON (public) key.
-// Do NOT use your service_role key here.
+// --- IMPORTANT: put your ANON (public) key here. Never put the service_role key in client code.
 const SUPABASE_URL = "https://iukofcmatlfhfwcechdq.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Team logos array (kept from your original file)
+// Team logos array
 const teamLogos = [
   "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo1.png",
   "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo2.png",
@@ -43,7 +41,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
   console.log("🔍 Submitted data:", { managerName, teamName, dob, region });
 
   try {
-    // Get current user
+    // ---------- user
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {
       console.error("❌ User fetch failed:", userError);
@@ -54,7 +52,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     const user = userData.user;
     console.log("✅ User found:", user.id);
 
-    // If profile already exists, don't recreate — redirect
+    // ---------- check existing profile
     const { data: existingProfile, error: existingProfileErr } = await supabase
       .from("profiles")
       .select("*")
@@ -70,7 +68,7 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
       return;
     }
 
-    // 1) Insert profile (safe)
+    // ---------- insert profile
     const { data: profileInsertData, error: profileError } = await supabase
       .from("profiles")
       .insert({
@@ -98,92 +96,139 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     }
     console.log("✅ Profile inserted:", profileInsertData);
 
-    // 2) Find a bot team (support both 'type' = 'bot' and is_bot = true)
-    // Query: (type = 'bot' OR is_bot = true) AND owner_id IS NULL
-    const { data: botTeams, error: botError } = await supabase
-      .from("teams")
-      .select("*")
-      .or("type.eq.bot,is_bot.eq.true")
-      .is("owner_id", null)
-      .limit(1);
+    // ---------- try to find a bot team (type='bot' OR is_bot=true) with owner_id IS NULL
+    let chosenTeam = null;
+    try {
+      const { data: botTeams, error: botError } = await supabase
+        .from("teams")
+        .select("*")
+        .or("type.eq.bot,is_bot.eq.true")
+        .is("owner_id", null)
+        .limit(1);
 
-    if (botError) {
-      console.error("❌ Bot team fetch failed:", botError);
-      alert("Something went wrong while fetching a bot team.");
-      return;
+      if (botError) {
+        console.warn("[profile-setup] bot team fetch error:", botError);
+      } else if (botTeams && botTeams.length > 0) {
+        chosenTeam = botTeams[0];
+        console.log("✅ Bot team found:", chosenTeam.id);
+      } else {
+        console.log("⚠️ No bot team available (empty result).");
+      }
+    } catch (err) {
+      console.warn("[profile-setup] bot team fetch threw:", err);
     }
-    if (!botTeams || botTeams.length === 0) {
-      console.warn("⚠️ No available bot teams.");
-      alert("No available bot teams right now. Please try again later.");
-      return;
-    }
-    const botTeam = botTeams[0];
-    console.log("✅ Bot team selected:", botTeam.id);
 
-    // Pick logo
+    // ---------- if a bot team was found, attempt to claim it; else create a new team row
+    let teamToUse = null;
     const logo_url = teamLogos[Math.floor(Math.random() * teamLogos.length)];
 
-    // 3) Claim/assign the bot team to the real user
-    // We require: only update if owner_id IS NULL (so two clients can't race and claim the same team)
-    const { data: updatedTeam, error: teamUpdateError } = await supabase
-      .from("teams")
-      .update({
-        owner_id: user.id,
-        type: "user",
-        is_bot: false,
-        team_name,
-        manager_name,
-        logo_url,
-        region,
-        last_active: new Date().toISOString()
-      })
-      .eq("id", botTeam.id)
-      .is("owner_id", null)   // extra safety: only apply if still unclaimed
-      .select()
-      .maybeSingle();
+    if (chosenTeam) {
+      // claim: update only if owner_id IS NULL to avoid race
+      const { data: updatedTeam, error: teamUpdateError } = await supabase
+        .from("teams")
+        .update({
+          owner_id: user.id,
+          type: "user",
+          is_bot: false,
+          team_name,
+          manager_name,
+          logo_url,
+          region,
+          last_active: new Date().toISOString()
+        })
+        .eq("id", chosenTeam.id)
+        .is("owner_id", null)
+        .select()
+        .maybeSingle();
 
-    if (teamUpdateError) {
-      console.error("❌ Failed to assign team:", teamUpdateError);
-      alert("Team assignment failed: " + (teamUpdateError.message || teamUpdateError));
-      return;
-    }
-    if (!updatedTeam) {
-      // probably lost a race — tell user to retry
-      console.warn("⚠️ Team was claimed by someone else; retrying. Please try again.");
-      alert("This team was claimed by another user — please try signing up again.");
-      return;
-    }
-    console.log("✅ Team assigned to user:", updatedTeam.id);
+      if (teamUpdateError) {
+        console.warn("⚠️ Claiming bot team failed:", teamUpdateError);
+        // fallback: create a brand-new team
+        const { data: newTeamData, error: newTeamErr } = await supabase
+          .from("teams")
+          .insert({
+            team_name,
+            owner_id: user.id,
+            type: "user",
+            is_bot: false,
+            manager_name,
+            logo_url,
+            region,
+            last_active: new Date().toISOString()
+          })
+          .select()
+          .maybeSingle();
 
-    // 4) Delete old bot players assigned to that team (if any)
-    // First, check how many players exist
-    const { data: playersBefore, error: playersBeforeErr, count: beforeCount } = await supabase
-      .from("players")
-      .select("id", { count: "exact" })
-      .eq("team_id", updatedTeam.id);
-
-    if (playersBeforeErr) {
-      console.warn("[profile-setup] players select error:", playersBeforeErr);
+        if (newTeamErr) {
+          console.error("❌ Failed to create fallback team after claim failure:", newTeamErr);
+          alert("Team assignment failed. Please try again.");
+          return;
+        }
+        teamToUse = newTeamData;
+        console.log("✅ Fallback new team created:", teamToUse.id);
+      } else {
+        teamToUse = updatedTeam || chosenTeam;
+        console.log("✅ Bot team successfully claimed:", teamToUse.id);
+      }
     } else {
-      console.log(`[profile-setup] players found before delete: ${beforeCount}`);
+      // no bot found — create a new team for the user
+      console.log("⚠️ No available bot team — creating a new team for this user.");
+      const { data: newTeamData, error: newTeamErr } = await supabase
+        .from("teams")
+        .insert({
+          team_name,
+          owner_id: user.id,
+          type: "user",
+          is_bot: false,
+          manager_name,
+          logo_url,
+          region,
+          last_active: new Date().toISOString()
+        })
+        .select()
+        .maybeSingle();
+
+      if (newTeamErr) {
+        console.error("❌ Failed to create new team:", newTeamErr);
+        alert("Failed to create a new team. Please try again later.");
+        return;
+      }
+      teamToUse = newTeamData;
+      console.log("✅ New team created for user:", teamToUse.id);
     }
 
-    const { data: deletedPlayers, error: deleteError } = await supabase
-      .from("players")
-      .delete()
-      .eq("team_id", updatedTeam.id)
-      .select("id");
+    // ---------- delete old players for that team (if any)
+    try {
+      const { data: playersBefore, error: playersBeforeErr, count: beforeCount } = await supabase
+        .from("players")
+        .select("id", { count: "exact" })
+        .eq("team_id", teamToUse.id);
 
-    if (deleteError) {
-      console.warn("⚠️ Failed to delete old players:", deleteError);
-    } else {
-      console.log(`🧹 Deleted old players count: ${deletedPlayers?.length ?? 0}`, deletedPlayers);
+      if (playersBeforeErr) {
+        console.warn("[profile-setup] players select error:", playersBeforeErr);
+      } else {
+        console.log(`[profile-setup] players found before delete: ${beforeCount}`);
+      }
+
+      const { data: deletedPlayers, error: deleteError } = await supabase
+        .from("players")
+        .delete()
+        .eq("team_id", teamToUse.id)
+        .select("id");
+
+      if (deleteError) {
+        console.warn("⚠️ Failed to delete old players:", deleteError);
+      } else {
+        console.log(`🧹 Deleted old players count: ${deletedPlayers?.length ?? 0}`, deletedPlayers);
+      }
+    } catch (err) {
+      console.warn("[profile-setup] delete players threw:", err);
     }
 
-    // 4b) Update profile with assigned team_id
+    // ---------- update profile with team_id
     const { error: profileUpdateError } = await supabase
       .from("profiles")
-      .update({ team_id: updatedTeam.id })
+      .update({ team_id: teamToUse.id })
       .eq("user_id", user.id);
 
     if (profileUpdateError) {
@@ -193,51 +238,55 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
     }
     console.log("✅ Profile updated with team_id");
 
-    // 5) Delete old stadium for that team (if any) then create new stadium
-    const { data: oldStadium, error: oldStadiumErr } = await supabase
-      .from("stadiums")
-      .select("id")
-      .eq("team_id", updatedTeam.id)
-      .maybeSingle();
-
-    if (oldStadiumErr) {
-      console.warn("[profile-setup] old stadium read error:", oldStadiumErr);
-    }
-
-    if (oldStadium?.id) {
-      const { error: stadiumDelErr } = await supabase
-        .from("stadiums")
-        .delete()
-        .eq("id", oldStadium.id);
-
-      if (stadiumDelErr) {
-        console.warn("⚠️ Failed to delete old stadium:", stadiumDelErr);
-      } else {
-        console.log("🧹 Old stadium deleted");
-      }
-    }
-
-    const { data: newStadium, error: stadiumCreateError } = await supabase
-      .from("stadiums")
-      .insert({
-        team_id: updatedTeam.id,
-        name: `${teamName} Arena`,
-        capacity: 5000,
-        level: "Local",
-        user_id: user.id
-      })
-      .select()
-      .maybeSingle();
-
-    if (stadiumCreateError) {
-      console.error("❌ Failed to create stadium:", stadiumCreateError);
-    } else {
-      console.log("🏟️ New stadium created:", newStadium?.id);
-    }
-
-    // 6) Generate new squad (pass the same supabase instance)
+    // ---------- delete old stadium (if any) and create a new one
     try {
-      const squad = await generateSquad(updatedTeam.id, supabase);
+      const { data: oldStadium, error: oldStadiumErr } = await supabase
+        .from("stadiums")
+        .select("id")
+        .eq("team_id", teamToUse.id)
+        .maybeSingle();
+
+      if (oldStadiumErr) {
+        console.warn("[profile-setup] old stadium read error:", oldStadiumErr);
+      }
+
+      if (oldStadium?.id) {
+        const { error: stadiumDelErr } = await supabase
+          .from("stadiums")
+          .delete()
+          .eq("id", oldStadium.id);
+
+        if (stadiumDelErr) {
+          console.warn("⚠️ Failed to delete old stadium:", stadiumDelErr);
+        } else {
+          console.log("🧹 Old stadium deleted");
+        }
+      }
+
+      const { data: newStadium, error: stadiumCreateError } = await supabase
+        .from("stadiums")
+        .insert({
+          team_id: teamToUse.id,
+          name: `${teamName} Arena`,
+          capacity: 5000,
+          level: "Local",
+          user_id: user.id
+        })
+        .select()
+        .maybeSingle();
+
+      if (stadiumCreateError) {
+        console.error("❌ Failed to create stadium:", stadiumCreateError);
+      } else {
+        console.log("🏟️ New stadium created:", newStadium?.id);
+      }
+    } catch (err) {
+      console.warn("[profile-setup] stadium ops threw:", err);
+    }
+
+    // ---------- generate squad (uses same supabase client)
+    try {
+      const squad = await generateSquad(teamToUse.id, supabase);
       console.log("✅ Squad generation complete, players count:", squad?.length ?? 0);
     } catch (err) {
       console.error("❌ Squad generation failed:", err);
