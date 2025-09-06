@@ -1,12 +1,13 @@
-// js/profile-setup.js — patched with verbose error reporting
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 import { generateSquad } from "./squad-generator.js";
 
-const SUPABASE_URL = "https://iukofcmatlfhfwcechdq.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"; // <-- put anon key here
+// Supabase client
+const supabase = createClient(
+  "https://iukofcmatlfhfwcechdq.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+);
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+// 🎨 Team logo options
 const teamLogos = [
   "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo1.png",
   "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo2.png",
@@ -28,22 +29,6 @@ const teamLogos = [
   "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/team_logos/Logo18.png"
 ];
 
-// small helper to show useful error info to console and as an alert
-function showFatalError(context, err) {
-  try {
-    console.error(`[profile-setup] ERROR @ ${context}:`, err);
-    // Supabase errors are objects with .message, .code, .details sometimes
-    const errMsg = err?.message ?? (typeof err === 'string' ? err : JSON.stringify(err, Object.getOwnPropertyNames(err)).slice(0, 1000));
-    const code = err?.code ? (` code=${err.code}`) : '';
-    // show a compact alert so you can copy-paste it here
-    alert(`Error (${context}): ${errMsg}${code}\n\nCheck console for full object.`);
-  } catch (e) {
-    // fallback
-    console.error('[profile-setup] showFatalError failed', e);
-    alert('Fatal error — check console.');
-  }
-}
-
 document.getElementById("setup-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -55,253 +40,163 @@ document.getElementById("setup-form").addEventListener("submit", async (e) => {
   console.log("🔍 Submitted data:", { managerName, teamName, dob, region });
 
   try {
-    // get user
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) {
-      showFatalError('getUser', userError || 'No authenticated user');
-      window.location.href = 'login.html';
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("❌ User fetch failed:", userError?.message);
+      alert("User not found. Please login again.");
+      window.location.href = "login.html";
       return;
     }
-    const user = userData.user;
-    console.log('[profile-setup] user id', user.id);
 
-    // avoid double-create: check existing profile
-    const { data: existingProfile, error: existingProfileErr } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
+    console.log("✅ User found:", user.id);
+
+    // 1️⃣ Insert Profile
+    const { error: profileError } = await supabase.from("profiles").insert({
+      user_id: user.id,
+      manager_name: managerName,
+      team_name: teamName,
+      dob,
+      region,
+      xp: 10,
+      coins: 10,
+      cash: 1000,
+      level: "Beginner"
+    });
+
+    if (profileError) {
+      console.error("❌ Profile insert failed:", profileError.message);
+      if (profileError.message.includes("duplicate key value")) {
+        alert("❌ Team name already exists. Please choose a different name.");
+      } else {
+        alert("❌ Profile setup failed: " + profileError.message);
+      }
+      return;
+    }
+
+    console.log("✅ Profile inserted successfully");
+
+    // 2️⃣ Find a bot team
+    const { data: botTeams, error: botError } = await supabase
+      .from("teams")
+      .select("*")
+      .eq("type", "bot")
+      .is("owner_id", null)
+      .limit(1);
+
+    if (botError) {
+      console.error("❌ Bot team fetch failed:", botError.message);
+      alert("Something went wrong while fetching a bot team.");
+      return;
+    }
+
+    if (!botTeams || botTeams.length === 0) {
+      console.warn("⚠️ No available bot teams.");
+      alert("No available bot teams right now. Please try again later.");
+      return;
+    }
+
+    const botTeam = botTeams[0];
+    console.log("✅ Bot team found:", botTeam.id);
+
+    // 🖼️ Pick a random logo
+    const logo_url = teamLogos[Math.floor(Math.random() * teamLogos.length)];
+
+    // 3️⃣ Assign bot team to user
+    const { error: teamUpdateError } = await supabase
+      .from("teams")
+      .update({
+        owner_id: user.id,
+        type: "user",
+        team_name: teamName,
+        manager_name: managerName,
+        logo_url,
+        region,
+        last_active: new Date().toISOString()
+      })
+      .eq("id", botTeam.id);
+
+    if (teamUpdateError) {
+      console.error("❌ Failed to assign team:", teamUpdateError.message);
+      alert("Team assignment failed: " + teamUpdateError.message);
+      return;
+    }
+
+    console.log("✅ Team assigned to user");
+
+    // 4️⃣ Delete old bot players
+    const { error: deleteError, count } = await supabase
+      .from("players")
+      .delete({ count: "exact" })
+      .eq("team_id", botTeam.id);
+
+    if (deleteError) {
+      console.warn("⚠️ Failed to delete old bot players:", deleteError.message);
+    } else {
+      console.log(`🧹 ${count} old bot players deleted`);
+    }
+    // 🔁 3B: Update profile with assigned team_id
+const { error: profileUpdateError } = await supabase
+  .from("profiles")
+  .update({ team_id: botTeam.id })
+  .eq("user_id", user.id);
+
+if (profileUpdateError) {
+  console.error("❌ Failed to update profile with team_id:", profileUpdateError.message);
+  alert("Failed to link profile with team.");
+  return;
+}
+
+console.log("✅ Profile updated with team_id");
+
+
+    // 5️⃣ Delete old bot stadium (if any)
+    const { data: oldStadium } = await supabase
+      .from("stadiums")
+      .select("id")
+      .eq("team_id", botTeam.id)
       .maybeSingle();
 
-    if (existingProfileErr) {
-      console.warn('[profile-setup] profile read error', existingProfileErr);
-    }
-    if (existingProfile) {
-      console.log('[profile-setup] profile exists — redirecting home');
-      window.location.href = 'home.html';
-      return;
-    }
-
-    // insert profile
-    let profileInsertData;
-    try {
-      const res = await supabase
-        .from('profiles')
-        .insert({
-          user_id: user.id,
-          manager_name: managerName,
-          team_name: teamName,
-          dob,
-          region,
-          xp: 10,
-          coins: 10,
-          cash: 1000,
-          level: 'Beginner'
-        })
-        .select()
-        .maybeSingle();
-
-      profileInsertData = res.data;
-      if (res.error) throw res.error;
-      console.log('[profile-setup] Profile inserted', profileInsertData);
-    } catch (err) {
-      showFatalError('insert profile', err);
-      return;
-    }
-
-    // find bot team
-    let chosenTeam = null;
-    try {
-      const { data: botTeams, error: botErr } = await supabase
-        .from('teams')
-        .select('*')
-        .or('type.eq.bot,is_bot.eq.true')
-        .is('owner_id', null)
-        .limit(1);
-
-      if (botErr) {
-        console.warn('[profile-setup] botTeams query returned error', botErr);
-      } else if (botTeams && botTeams.length > 0) {
-        chosenTeam = botTeams[0];
-        console.log('[profile-setup] bot team found', chosenTeam.id);
-      } else {
-        console.log('[profile-setup] no bot teams available');
-      }
-    } catch (err) {
-      console.warn('[profile-setup] bot team query threw', err);
-    }
-
-    // claim or create team
-    let teamToUse = null;
-    const logo_url = teamLogos[Math.floor(Math.random() * teamLogos.length)];
-    if (chosenTeam) {
-      try {
-        const { data: updatedTeam, error: teamUpdateError } = await supabase
-          .from('teams')
-          .update({
-            owner_id: user.id,
-            type: 'user',
-            is_bot: false,
-            team_name,
-            manager_name,
-            logo_url,
-            region,
-            last_active: new Date().toISOString()
-          })
-          .eq('id', chosenTeam.id)
-          .is('owner_id', null)
-          .select()
-          .maybeSingle();
-
-        if (teamUpdateError) throw teamUpdateError;
-        teamToUse = updatedTeam || chosenTeam;
-        console.log('[profile-setup] team claimed', teamToUse.id);
-      } catch (err) {
-        console.warn('[profile-setup] claim failed, will create new team instead', err);
-        // try create fallback
-        try {
-          const { data: newTeamData, error: newTeamErr } = await supabase
-            .from('teams')
-            .insert({
-              team_name,
-              owner_id: user.id,
-              type: 'user',
-              is_bot: false,
-              manager_name,
-              logo_url,
-              region,
-              last_active: new Date().toISOString()
-            })
-            .select()
-            .maybeSingle();
-
-          if (newTeamErr) throw newTeamErr;
-          teamToUse = newTeamData;
-          console.log('[profile-setup] fallback team created', teamToUse.id);
-        } catch (createErr) {
-          showFatalError('create fallback team', createErr);
-          return;
-        }
-      }
-    } else {
-      // create a new team
-      try {
-        const { data: newTeamData, error: newTeamErr } = await supabase
-          .from('teams')
-          .insert({
-            team_name,
-            owner_id: user.id,
-            type: 'user',
-            is_bot: false,
-            manager_name,
-            logo_url,
-            region,
-            last_active: new Date().toISOString()
-          })
-          .select()
-          .maybeSingle();
-
-        if (newTeamErr) throw newTeamErr;
-        teamToUse = newTeamData;
-        console.log('[profile-setup] new team created', teamToUse.id);
-      } catch (err) {
-        showFatalError('create team', err);
-        return;
-      }
-    }
-
-    if (!teamToUse || !teamToUse.id) {
-      showFatalError('team check', 'teamToUse missing after claim/create');
-      return;
-    }
-
-    // delete old players
-    try {
-      const sel = await supabase
-        .from('players')
-        .select('id', { count: 'exact' })
-        .eq('team_id', teamToUse.id);
-
-      if (sel.error) console.warn('[profile-setup] players select error', sel.error);
-      else console.log('[profile-setup] players before delete count', sel.count);
-
-      const del = await supabase
-        .from('players')
+    if (oldStadium?.id) {
+      const { error: stadiumDelError } = await supabase
+        .from("stadiums")
         .delete()
-        .eq('team_id', teamToUse.id)
-        .select('id');
-
-      if (del.error) console.warn('[profile-setup] players delete error', del.error);
-      else console.log('[profile-setup] deleted players', (del.data || []).length);
-    } catch (err) {
-      console.warn('[profile-setup] delete players threw', err);
-    }
-
-    // update profile.team_id
-    try {
-      const { error: pUpdateErr } = await supabase
-        .from('profiles')
-        .update({ team_id: teamToUse.id })
-        .eq('user_id', user.id);
-
-      if (pUpdateErr) throw pUpdateErr;
-      console.log('[profile-setup] profile updated with team_id');
-    } catch (err) {
-      showFatalError('update profile.team_id', err);
-      return;
-    }
-
-    // stadium ops (delete & create)
-    try {
-      const { data: oldStadium, error: oldStadiumErr } = await supabase
-        .from('stadiums')
-        .select('id')
-        .eq('team_id', teamToUse.id)
-        .maybeSingle();
-      if (oldStadiumErr) console.warn('[profile-setup] old stadium read error', oldStadiumErr);
-
-      if (oldStadium?.id) {
-        const { error: sDelErr } = await supabase
-          .from('stadiums')
-          .delete()
-          .eq('id', oldStadium.id);
-
-        if (sDelErr) console.warn('[profile-setup] stadium delete error', sDelErr);
-        else console.log('[profile-setup] old stadium deleted');
+        .eq("id", oldStadium.id);
+      if (stadiumDelError) {
+        console.warn("⚠️ Failed to delete old stadium:", stadiumDelError.message);
+      } else {
+        console.log("🧹 Old bot stadium deleted");
       }
-
-      const { data: newStadium, error: stadiumCreateError } = await supabase
-        .from('stadiums')
-        .insert({
-          team_id: teamToUse.id,
-          name: `${teamName} Arena`,
-          capacity: 5000,
-          level: 'Local',
-          user_id: user.id
-        })
-        .select()
-        .maybeSingle();
-
-      if (stadiumCreateError) throw stadiumCreateError;
-      console.log('[profile-setup] stadium created', newStadium?.id);
-    } catch (err) {
-      // non-fatal but report
-      showFatalError('stadium ops', err);
-      // continue — stadium errors shouldn't break squad generation unless RLS blocks players insertion
-      // return; // <-- don't return here, continue and see if squad insertion works
     }
 
-    // generate squad (final)
+    // 6️⃣ Create new stadium for user
+    const { error: stadiumCreateError } = await supabase.from("stadiums").insert({
+      team_id: botTeam.id,
+      name: `${teamName} Arena`,
+      capacity: 5000,
+      level: "Local"
+    });
+
+    if (stadiumCreateError) {
+      console.error("❌ Failed to create stadium:", stadiumCreateError.message);
+    } else {
+      console.log("🏟️ New stadium created");
+    }
+
+    // 7️⃣ Generate new squad
     try {
-      const inserted = await generateSquad(teamToUse.id, supabase);
-      console.log('[profile-setup] generateSquad returned', inserted?.length ?? 0);
+      await generateSquad(botTeam.id);
+      console.log("✅ Squad generation complete");
     } catch (err) {
-      showFatalError('generateSquad', err);
+      console.error("❌ Squad generation failed:", err.message);
+      alert("Squad generation failed. Please try again.");
       return;
     }
 
-    alert('✅ Welcome! Your squad has been created.');
-    window.location.href = 'squad.html';
-  } catch (err) {
-    showFatalError('main submit handler', err);
+    alert("✅ Welcome! Your squad has been created.");
+    window.location.href = "squad.html";
+  } catch (e) {
+    console.error("❌ Unexpected error in setup flow:", e);
+    alert("Unexpected error: " + e.message);
   }
 });
+
