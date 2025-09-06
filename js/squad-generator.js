@@ -1,13 +1,7 @@
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+// squad-generator.js (REPLACE existing)
 import { regionNameData } from "./data/region-names.js";
 import { calculateWeeklySalary, calculateMarketValue } from "./utils/salary.js";
 
-const supabase = createClient(
-  "https://iukofcmatlfhfwcechdq.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-);
-
-// 🎲 Random style generators
 function getRandomBattingStyle() {
   return Math.random() < 0.5 ? "Right Hand Batter" : "Left Hand Batter";
 }
@@ -15,8 +9,6 @@ function getRandomBowlingStyle() {
   const styles = ["Right Hand Seamer", "Left Hand Seamer", "Right Hand Spinner", "Left Hand Spinner"];
   return styles[Math.floor(Math.random() * styles.length)];
 }
-
-// 📊 Weighted Age Generator
 function getWeightedRandomAge() {
   const ageBuckets = [
     { min: 18, max: 19, weight: 2 },
@@ -26,25 +18,17 @@ function getWeightedRandomAge() {
     { min: 30, max: 32, weight: 1 },
     { min: 33, max: 35, weight: 1 }
   ];
-
   const expanded = [];
-  for (const bucket of ageBuckets) {
-    for (let i = 0; i < bucket.weight; i++) {
-      expanded.push(bucket);
-    }
-  }
-
+  for (const bucket of ageBuckets) for (let i = 0; i < bucket.weight; i++) expanded.push(bucket);
   const selected = expanded[Math.floor(Math.random() * expanded.length)];
   return Math.floor(Math.random() * (selected.max - selected.min + 1)) + selected.min;
 }
-
 function determineSkillLevel(batting, bowling, keeping) {
   const avg = (batting + bowling + keeping) / 3;
   if (avg < 10) return "Newbie";
   if (avg < 20) return "Trainee";
   return "Domestic";
 }
-
 function getRoleImage(role) {
   const base = "https://raw.githubusercontent.com/ajayrgndd/TheCricketBoss/main/assets/players/";
   const roleMap = {
@@ -56,16 +40,35 @@ function getRoleImage(role) {
   return base + (roleMap[role] || "default.png");
 }
 
-// 🏏 Squad Generator
-export async function generateSquad(teamId) {
-  const { data: existing } = await supabase.from("players").select("id").eq("team_id", teamId);
-  if (existing?.length > 0) return existing;
+// NOTE: generateSquad now requires supabase instance (passed from caller).
+export async function generateSquad(teamId, supabase) {
+  if (!teamId) throw new Error("teamId missing");
 
-  const { data: teamData } = await supabase
+  // check if players already exist
+  const { data: existingPlayers, error: existingErr } = await supabase
+    .from("players")
+    .select("id", { count: "exact" })
+    .eq("team_id", teamId)
+    .limit(1);
+
+  if (existingErr) {
+    console.warn("[generateSquad] players select error:", existingErr);
+  } else if (existingPlayers && existingPlayers.length > 0) {
+    console.log("[generateSquad] players already exist for team, skipping generation");
+    // return minimal info
+    return existingPlayers;
+  }
+
+  // fetch team meta
+  const { data: teamData, error: teamErr } = await supabase
     .from("teams")
-    .select("team_name, owner_id, manager_name, region")
+    .select("team_name, manager_name, region")
     .eq("id", teamId)
-    .single();
+    .maybeSingle();
+
+  if (teamErr || !teamData) {
+    throw new Error("Team not found or read error: " + (teamErr?.message || String(teamErr)));
+  }
 
   const { team_name, manager_name, region } = teamData;
   const usedNames = new Set();
@@ -116,7 +119,7 @@ export async function generateSquad(teamId) {
           break;
       }
 
-      // 🧠 Unique name selection
+      // Unique name selection
       let name = "Unnamed";
       let playerRegion = region;
       for (let t = 0; t < 10; t++) {
@@ -153,7 +156,8 @@ export async function generateSquad(teamId) {
         salary: 0,
         market_price: 0,
         team_name,
-        manager_name
+        manager_name,
+        is_wk: role === "Wicket Keeper"
       };
 
       player.salary = calculateWeeklySalary(player);
@@ -162,27 +166,38 @@ export async function generateSquad(teamId) {
     }
   }
 
-  const { error: insertErr } = await supabase.from("players").insert(squad);
-  if (insertErr) console.error("❌ Failed to insert squad:", insertErr.message);
-  else console.log("✅ Squad inserted successfully");
+  // Batch insert and return inserted rows
+  const { data: inserted, error: insertErr } = await supabase
+    .from("players")
+    .insert(squad)
+    .select("id, name, role, batting, bowling, keeping");
 
-  // 🧹 Delete old stadium if exists
-  const { data: stadium } = await supabase
-    .from("stadiums")
-    .select("id")
-    .eq("team_id", teamId)
-    .maybeSingle();
+  if (insertErr) {
+    console.error("❌ Failed to insert squad:", insertErr);
+    throw insertErr;
+  }
+  console.log("✅ Squad inserted successfully - players:", inserted?.length ?? 0);
 
-  if (stadium?.id) {
-    await supabase.from("stadiums").delete().eq("id", stadium.id);
+  // stadium replacement (safety: ignore errors but log)
+  try {
+    const { data: stadium } = await supabase
+      .from("stadiums")
+      .select("id")
+      .eq("team_id", teamId)
+      .maybeSingle();
+
+    if (stadium?.id) {
+      await supabase.from("stadiums").delete().eq("id", stadium.id);
+    }
+    await supabase.from("stadiums").insert({
+      team_id: teamId,
+      name: `${team_name} Arena`,
+      capacity: 5000,
+      level: "Local"
+    });
+  } catch (e) {
+    console.warn("[generateSquad] stadium replacement warning:", e);
   }
 
-  await supabase.from("stadiums").insert({
-    team_id: teamId,
-    name: `${team_name} Arena`,
-    capacity: 5000,
-    level: "Local"
-  });
-
-  return squad;
+  return inserted;
 }
