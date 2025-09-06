@@ -81,7 +81,7 @@
         </div>
       </div>
 
-      <!-- toss banner placeholder -->
+      <!-- toss banner placeholder for REPLAY -->
       <div id="toss-banner-inline"></div>
 
       <!-- Mini score strip (always visible on REPLAY tab) -->
@@ -96,6 +96,9 @@
     </section>
 
     <!-- SCORECARD (final) -->
+    <!-- toss banner placeholder for SCORECARD (we will render here as well) -->
+    <div id="toss-banner-score"></div>
+
     <section id="score-panel" class="panel show">
       <div class="card">
         <div id="headline-a" style="font-weight:800;font-size:1.05rem;">—</div>
@@ -229,6 +232,7 @@
     const miniBScore = document.getElementById("mini-b-score");
     const commFeed = document.getElementById("comm-feed");
     const tossBannerContainer = document.getElementById("toss-banner-inline");
+    const tossBannerScoreContainer = document.getElementById("toss-banner-score");
 
     const resLine = document.getElementById("result-line");
     const sumHomeName = document.getElementById("sum-home-name");
@@ -381,10 +385,13 @@
       }
 
       if (!text) {
-        if (tossBannerContainer && tossBannerContainer.parentNode) tossBannerContainer.innerHTML = "";
+        if (tossBannerContainer) tossBannerContainer.innerHTML = "";
+        if (tossBannerScoreContainer) tossBannerScoreContainer.innerHTML = "";
         return;
       }
-      tossBannerContainer.innerHTML = `<div class="toss-line"><div class="toss-banner">${text}</div></div>`;
+      const bannerHtml = `<div class="toss-line"><div class="toss-banner">${text}</div></div>`;
+      if (tossBannerContainer) tossBannerContainer.innerHTML = bannerHtml;
+      if (tossBannerScoreContainer) tossBannerScoreContainer.innerHTML = bannerHtml;
     }
 
     function ensureTossInCommentary(matchRow, commentaryArray){
@@ -642,7 +649,6 @@
         winnerText = `${names[winnerId] || winnerId} won the match`;
       } else {
         if (t1.runs > t2.runs) {
-          // battingFirst team (which is battingFirst) - determine which team that was
           const teamName = names[battingFirst] || homeName;
           const margin = t1.runs - t2.runs;
           winnerText = `${teamName} won the match by ${margin} runs`;
@@ -779,7 +785,7 @@
       // Render mini strip initially
       updateMini(allBalls);
 
-      // Toss banner (computed from match row + commentary)
+      // Toss banner (render into both REPLAY and SCORECARD)
       renderTossBanner(match, allBalls);
 
       // Summary panel
@@ -792,7 +798,6 @@
       let winnerLabel = null;
       if (m.winner_team_id) winnerLabel = names[m.winner_team_id] || String(m.winner_team_id);
       else if (m.result && m.result.winner) {
-        // result.winner might be 'home'/'away' or an id
         const rw = m.result.winner;
         if (rw === 'home') winnerLabel = homeName;
         else if (rw === 'away') winnerLabel = awayName;
