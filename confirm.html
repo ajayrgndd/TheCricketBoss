@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -31,40 +31,76 @@
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
-    );
+    // IMPORTANT:
+    // - Use your project's public ANON key here (not the service_role key).
+    // - If you've exposed a service_role key previously, rotate/revoke it immediately in Supabase.
+    const SUPABASE_URL = "https://iukofcmatlfhfwcechdq.supabase.co"; // keep your project URL
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";        // <-- replace this!
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    if (!session) {
-      // No session – user not logged in
-      window.location.href = "index.html";
-    } else {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+    (async function confirmFlow() {
+      try {
+        // get session
+        const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
+        if (sessErr) {
+          console.error('getSession error', sessErr);
+          // decide whether to redirect — safe fallback:
+          window.location.href = "index.html";
+          return;
+        }
 
-      if (!user || !user.email_confirmed_at) {
-        alert("⚠️ Please confirm your email before proceeding.");
-        await supabase.auth.signOut();
+        const session = sessionData?.session ?? null;
+        if (!session) {
+          // No session – user not logged in
+          window.location.href = "index.html";
+          return;
+        }
+
+        // get user
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError) {
+          console.error('getUser error', userError);
+          // sign-out to be safe & redirect to login
+          try { await supabase.auth.signOut(); } catch (e) { /* ignore */ }
+          window.location.href = "login.html";
+          return;
+        }
+        const user = userData?.user ?? null;
+
+        if (!user || !user.email_confirmed_at) {
+          alert("⚠️ Please confirm your email before proceeding.");
+          // sign out and redirect to login
+          try { await supabase.auth.signOut(); } catch (e) { console.warn('signOut failed', e); }
+          window.location.href = "login.html";
+          return;
+        }
+
+        // Email is confirmed – now check for profile
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single();
+
+        if (profileError && profileError.code !== 'PGRST116') {
+          // PGRST116 or 404-like single() not found may be a specific PostgREST code — log for debug
+          console.error('profiles.select error', profileError);
+        }
+
+        // If profile exists, go to home; otherwise profile-setup
+        if (profile) {
+          window.location.href = "home.html";
+        } else {
+          window.location.href = "profile-setup.html";
+        }
+      } catch (err) {
+        console.error('Unexpected error during confirm flow', err);
+        // fallback - send to login
+        try { await supabase.auth.signOut(); } catch (e) {}
         window.location.href = "login.html";
-        return;
       }
-
-      // Email is confirmed – now check for profile
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (profile) {
-        window.location.href = "home.html";
-      } else {
-        window.location.href = "profile-setup.html";
-      }
-    }
+    })();
   </script>
 </body>
 </html>
-
