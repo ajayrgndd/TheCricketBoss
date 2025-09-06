@@ -1,4 +1,4 @@
-// squad-generator.js (REPLACE existing)
+// squad-generator.js — fixed, defensive version
 import { regionNameData } from "./data/region-names.js";
 import { calculateWeeklySalary, calculateMarketValue } from "./utils/salary.js";
 
@@ -40,37 +40,56 @@ function getRoleImage(role) {
   return base + (roleMap[role] || "default.png");
 }
 
-// NOTE: generateSquad now requires supabase instance (passed from caller).
+/**
+ * generateSquad(teamId, supabase)
+ * - teamId: UUID of the team to populate
+ * - supabase: an already-created Supabase client instance (important)
+ *
+ * Returns an array of inserted player rows (id,name,role,...)
+ */
 export async function generateSquad(teamId, supabase) {
-  if (!teamId) throw new Error("teamId missing");
+  if (!teamId) throw new Error("generateSquad: teamId is required");
+  if (!supabase) throw new Error("generateSquad: supabase client instance is required");
 
-  // check if players already exist
-  const { data: existingPlayers, error: existingErr } = await supabase
-    .from("players")
-    .select("id", { count: "exact" })
-    .eq("team_id", teamId)
-    .limit(1);
+  // 1) Check if players already exist for this team
+  try {
+    const { data: existingPlayers, error: existingErr, count } = await supabase
+      .from("players")
+      .select("id", { count: "exact" })
+      .eq("team_id", teamId)
+      .limit(1);
 
-  if (existingErr) {
-    console.warn("[generateSquad] players select error:", existingErr);
-  } else if (existingPlayers && existingPlayers.length > 0) {
-    console.log("[generateSquad] players already exist for team, skipping generation");
-    // return minimal info
-    return existingPlayers;
+    if (existingErr) {
+      console.warn("[generateSquad] players select error:", existingErr);
+    } else if (existingPlayers && existingPlayers.length > 0) {
+      console.log("[generateSquad] players already exist for team – skipping generation");
+      return existingPlayers;
+    }
+  } catch (e) {
+    console.warn("[generateSquad] warning while checking existing players:", e);
   }
 
-  // fetch team meta
+  // 2) Read the team row (must exist and have a name)
   const { data: teamData, error: teamErr } = await supabase
     .from("teams")
     .select("team_name, manager_name, region")
     .eq("id", teamId)
     .maybeSingle();
 
-  if (teamErr || !teamData) {
-    throw new Error("Team not found or read error: " + (teamErr?.message || String(teamErr)));
+  if (teamErr) {
+    console.error("[generateSquad] team read error:", teamErr);
+    throw new Error("Team read error: " + (teamErr?.message || String(teamErr)));
+  }
+  if (!teamData) {
+    throw new Error("Team not found for id: " + teamId);
   }
 
-  const { team_name, manager_name, region } = teamData;
+  // Use a safe team label variable (avoid referencing undeclared names)
+  const teamLabel = teamData.team_name ?? "Unnamed Team";
+  const managerName = teamData.manager_name ?? "";
+  const teamRegion = teamData.region ?? null;
+
+  // 3) Build the squad
   const usedNames = new Set();
   const squad = [];
   const roles = ["Batsman", "Bowler", "All-Rounder", "Wicket Keeper"];
@@ -119,12 +138,12 @@ export async function generateSquad(teamId, supabase) {
           break;
       }
 
-      // Unique name selection
-      let name = "Unnamed";
-      let playerRegion = region;
+      // Unique name selection (fallbacks robust)
+      let name = "Unnamed Player";
+      let playerRegion = teamRegion ?? availableRegions[Math.floor(Math.random() * availableRegions.length)];
       for (let t = 0; t < 10; t++) {
         const r = availableRegions[Math.floor(Math.random() * availableRegions.length)];
-        const names = regionNameData[r];
+        const names = regionNameData[r] || ["Player " + Math.floor(Math.random()*10000)];
         const candidate = names[Math.floor(Math.random() * names.length)];
         if (!usedNames.has(candidate)) {
           usedNames.add(candidate);
@@ -135,6 +154,7 @@ export async function generateSquad(teamId, supabase) {
       }
 
       const skill_level = determineSkillLevel(batting, bowling, keeping);
+
       const player = {
         team_id: teamId,
         name,
@@ -155,8 +175,8 @@ export async function generateSquad(teamId, supabase) {
         image_url: getRoleImage(role),
         salary: 0,
         market_price: 0,
-        team_name,
-        manager_name,
+        team_name: teamLabel,
+        manager_name: managerName,
         is_wk: role === "Wicket Keeper"
       };
 
@@ -166,32 +186,33 @@ export async function generateSquad(teamId, supabase) {
     }
   }
 
-  // Batch insert and return inserted rows
+  // 4) Insert players (batch)
   const { data: inserted, error: insertErr } = await supabase
     .from("players")
     .insert(squad)
     .select("id, name, role, batting, bowling, keeping");
 
   if (insertErr) {
-    console.error("❌ Failed to insert squad:", insertErr);
+    console.error("[generateSquad] Failed to insert squad:", insertErr);
     throw insertErr;
   }
-  console.log("✅ Squad inserted successfully - players:", inserted?.length ?? 0);
+  console.log("[generateSquad] Squad inserted successfully - players:", (inserted?.length || 0));
 
-  // stadium replacement (safety: ignore errors but log)
+  // 5) Replace stadium safely (use the safe teamLabel variable)
   try {
-    const { data: stadium } = await supabase
+    const { data: currentStadium } = await supabase
       .from("stadiums")
       .select("id")
       .eq("team_id", teamId)
       .maybeSingle();
 
-    if (stadium?.id) {
-      await supabase.from("stadiums").delete().eq("id", stadium.id);
+    if (currentStadium?.id) {
+      await supabase.from("stadiums").delete().eq("id", currentStadium.id);
     }
+
     await supabase.from("stadiums").insert({
       team_id: teamId,
-      name: `${team_name} Arena`,
+      name: `${teamLabel} Arena`,
       capacity: 5000,
       level: "Local"
     });
