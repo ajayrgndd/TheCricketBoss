@@ -1,133 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Redirecting – TheCricketBoss</title>
   <style>
-    body{font-family:'Segoe UI',sans-serif;background:#0f2430;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-    .card{max-width:520px;padding:28px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.03));box-shadow:0 8px 30px rgba(0,0,0,0.6);text-align:center}
-    h2{margin:0 0 6px;font-size:20px}
-    p.loader{margin:6px 0 18px;color:#00e676}
-    .debug{margin-top:12px;text-align:left;background:rgba(255,255,255,0.02);padding:10px;border-radius:8px;font-size:13px;color:#cfe8e0;max-height:180px;overflow:auto}
-    .label{color:#9ad2c8;font-weight:600}
-    a.btn{display:inline-block;margin-top:10px;padding:8px 14px;border-radius:8px;background:#066; color:#fff;text-decoration:none}
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1b2838;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    .loader {
+      font-size: 16px;
+      color: #00e676;
+    }
   </style>
 </head>
 <body>
-  <div class="card" id="card">
+  <div>
     <h2>Welcome to TheCricketBoss 🏏</h2>
     <p class="loader">Checking your profile... please wait</p>
-
-    <div id="debugBox" class="debug" aria-live="polite">
-      <div><span class="label">Debug:</span> awaiting checks...</div>
-    </div>
   </div>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    // <-- IMPORTANT: Replace with your project's URL and ANON (public) key ONLY.
-    const SUPABASE_URL = "https://iukofcmatlfhfwcechdq.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"; // <-- set your anon/public key here
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data: { session } } = await supabase.auth.getSession();
 
-    // Utility: update the small debug box on the page
-    function updateDebug(html) {
-      const el = document.getElementById('debugBox');
-      if (!el) return;
-      el.innerHTML = html;
-    }
+    if (!session) {
+      // No session – user not logged in
+      window.location.href = "index.html";
+    } else {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    (async function confirmFlow() {
-      try {
-        updateDebug('<div><strong>Debug:</strong> retrieving session...</div>');
-        console.log('[confirm] starting confirmFlow');
-
-        // get session
-        const { data: sessionData, error: sessErr } = await supabase.auth.getSession();
-        if (sessErr) {
-          console.warn('[confirm] getSession error', sessErr);
-          updateDebug(`<div><strong>getSession error</strong>: ${String(sessErr.message || sessErr)}</div>`);
-          // safe fallback: go to login
-          window.location.href = 'index.html';
-          return;
-        }
-
-        const session = sessionData?.session ?? null;
-        console.log('[confirm] session', session);
-        updateDebug(`<div><strong>Session:</strong> ${session ? 'exists' : 'none'}</div>`);
-
-        if (!session) {
-          // No session – user not logged in
-          console.log('[confirm] No session -> redirecting to index.html');
-          window.location.href = 'index.html';
-          return;
-        }
-
-        // get user object
-        const { data: userData, error: userErr } = await supabase.auth.getUser();
-        if (userErr) {
-          console.error('[confirm] getUser error', userErr);
-          updateDebug(`<div><strong>getUser error:</strong> ${String(userErr.message || userErr)}</div>`);
-          // sign-out & redirect
-          try { await supabase.auth.signOut(); } catch(e) {}
-          window.location.href = 'login.html';
-          return;
-        }
-
-        const user = userData?.user ?? null;
-        console.log('[confirm] user object', user);
-        updateDebug(`<div><strong>User ID:</strong> ${user?.id ?? 'none'}</div>
-                     <div><strong>Raw user object (console)</strong> — check browser console for full details</div>`);
-
-        // Detect email confirmation — try both common fields (some setups use 'confirmed_at' or 'email_confirmed_at')
-        const confirmedField1 = user?.email_confirmed_at ?? null;
-        const confirmedField2 = user?.confirmed_at ?? null;
-        const isConfirmed = Boolean(confirmedField1 || confirmedField2);
-
-        console.log('[confirm] email_confirmed_at:', confirmedField1, 'confirmed_at:', confirmedField2, 'isConfirmed:', isConfirmed);
-
-        // show the detected confirmation value in debug box
-        updateDebug(`<div><strong>User ID:</strong> ${user?.id ?? 'none'}</div>
-                     <div><strong>email_confirmed_at:</strong> ${String(confirmedField1)}</div>
-                     <div><strong>confirmed_at:</strong> ${String(confirmedField2)}</div>
-                     <div><strong>isConfirmed:</strong> ${isConfirmed}</div>
-                     <div style="margin-top:8px"><em>Checking profile next...</em></div>`);
-
-        if (!user || !isConfirmed) {
-          // not confirmed — redirect to login after signout
-          alert("⚠️ Please confirm your email before proceeding.");
-          try { await supabase.auth.signOut(); } catch (e) { console.warn('[confirm] signOut error', e); }
-          window.location.href = 'login.html';
-          return;
-        }
-
-        // Email confirmed — now check for profile row
-        const { data: profile, error: profileErr } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .maybeSingle(); // maybeSingle returns null when no row instead of throwing
-
-        console.log('[confirm] profile query result', { profile, profileErr });
-        updateDebug(document.getElementById('debugBox').innerHTML +
-                    `<div style="margin-top:8px"><strong>Profile:</strong> ${profile ? 'found' : 'not found'}</div>`);
-
-        // Redirect based on presence of profile
-        if (profile) {
-          window.location.href = 'home.html';
-        } else {
-          window.location.href = 'profile-setup.html';
-        }
-      } catch (err) {
-        console.error('[confirm] Unexpected error', err);
-        updateDebug(`<div><strong>Unexpected error:</strong> ${String(err)}</div>`);
-        try { await supabase.auth.signOut(); } catch(e) {}
-        window.location.href = 'login.html';
+      if (!user || !user.email_confirmed_at) {
+        alert("⚠️ Please confirm your email before proceeding.");
+        await supabase.auth.signOut();
+        window.location.href = "login.html";
+        return;
       }
-    })();
+
+      // Email is confirmed – now check for profile
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profile) {
+        window.location.href = "home.html";
+      } else {
+        window.location.href = "profile-setup.html";
+      }
+    }
   </script>
 </body>
 </html>
+
