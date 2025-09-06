@@ -755,12 +755,37 @@
       const bowlAgg1=aggBowl(allBalls,1), bowlAgg2=aggBowl(allBalls,2);
       rowBowl(bowl1, bowlAgg1); rowBowl(bowl2, bowlAgg2);
 
-      const homeName=names[m.home_team_id]||"Home";
-      const awayName=names[m.away_team_id]||"Away";
-      const homeRuns=m.result?.home?.runs ?? t1.runs;
-      const awayRuns=m.result?.away?.runs ?? t2.runs;
-      const winner=m.result?.winner ?? (homeRuns>awayRuns?"home":awayRuns>homeRuns?"away":"tie");
-      resLine.textContent = winner==="tie" ? `Match tied — ${homeName} ${homeRuns}, ${awayName} ${awayRuns}` : `${winner==="home"?homeName:awayName} won the match`;
+      const homeName = names[m.home_team_id] || "Home";
+const awayName = names[m.away_team_id] || "Away";
+const homeRuns = m.result?.home?.runs ?? t1.runs;
+const awayRuns = m.result?.away?.runs ?? t2.runs;
+
+// Determine winner id robustly (many possible shapes)
+let winnerId = null;
+if (m.winner_team_id) {
+  winnerId = m.winner_team_id;
+} else if (m.result?.winner_team_id) {
+  winnerId = m.result.winner_team_id;
+} else if (m.result?.winner) {
+  const w = String(m.result.winner).toLowerCase();
+  if (w === "home") winnerId = m.home_team_id;
+  else if (w === "away") winnerId = m.away_team_id;
+  else winnerId = m.result.winner; // maybe already an id
+}
+
+// Fallback: derive from runs if still unknown
+if (!winnerId) {
+  if (homeRuns > awayRuns) winnerId = m.home_team_id;
+  else if (awayRuns > homeRuns) winnerId = m.away_team_id;
+  else winnerId = null; // tie
+}
+
+if (!winnerId) {
+  resLine.textContent = `Match tied — ${homeName} ${homeRuns}, ${awayName} ${awayRuns}`;
+} else {
+  const winName = names[winnerId] || String(winnerId);
+  resLine.textContent = `${winName} won the match`;
+}
       sumHomeName.textContent=homeName; sumAwayName.textContent=awayName;
       sumHomeScore.textContent=`${homeRuns} (${oversTxt(t1.legal)} ov)`;
       sumAwayScore.textContent=`${awayRuns} (${oversTxt(t2.legal)} ov)`;
