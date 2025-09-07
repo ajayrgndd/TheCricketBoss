@@ -181,6 +181,11 @@
     .task .txt { flex:1 }
     .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:12px }
 
+    /* Top 3 tweaks */
+    .top-player-name { font-size:13px; font-weight:700; color:#fff; } /* reduced size */
+    .top-player-role { font-size:12px; color:#cfd3ff; }
+    .top-player-skill { font-size:12px; color:#a8f5c6; display:flex; align-items:center; gap:8px; justify-content:center; }
+
     @media (max-width:520px){
       .match-card { flex-direction:column; align-items:flex-start }
       .match-meta { margin-left:0; text-align:left; }
@@ -358,6 +363,17 @@
       return (Math.round(val * 10) / 10).toFixed(1);
     }
 
+    // Short name formatter: all parts except last -> initials, last part full.
+    function shortName(full) {
+      if (!full) return '–';
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '–';
+      if (parts.length === 1) return parts[0];
+      const last = parts[parts.length - 1];
+      const initials = parts.slice(0, parts.length - 1).map(p => p[0].toUpperCase()).join(' ');
+      return `${initials} ${last}`;
+    }
+
     // compute last Wednesday
     function lastWednesday(reference = new Date()) {
       const d = new Date(reference);
@@ -529,12 +545,13 @@
           <div style="display:flex;justify-content:space-around;align-items:center;">
             ${ranked.map(p => {
               const icon = (p.topSkillName === 'Batting') ? 'assets/rating/bat.png' : 'assets/rating/ball.png';
+              const displayName = shortName(p.name);
               return `
               <div style="text-align:center;max-width:120px;">
                 <img src="${p.image_url || fallbackImage}" alt="${p.name || 'Player'}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;object-position:top;margin-bottom:8px;border:2px solid rgba(255,255,255,0.04);" />
-                <div style="font-weight:700">${p.name || '–'}</div>
-                <div style="font-size:0.85rem;color:#cfd3ff">${p.role || '–'}</div>
-                <div style="font-size:0.85rem;color:#a8f5c6;display:flex;align-items:center;justify-content:center;gap:8px">
+                <div class="top-player-name">${displayName}</div>
+                <div class="top-player-role">${p.role || '–'}</div>
+                <div class="top-player-skill">
                   <img src="${icon}" alt="${p.topSkillName}" style="width:16px;height:16px;vertical-align:middle" />
                   <span>${p.topSkillLevel}</span>
                 </div>
