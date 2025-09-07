@@ -352,7 +352,7 @@
     // compute last Wednesday
     function lastWednesday(reference = new Date()) {
       const d = new Date(reference);
-      const day = d.getDay(); // 0 Sun ... 3 Wed
+      const day = d.getDay();
       const diff = (day >= 3) ? day - 3 : 7 - (3 - day);
       d.setDate(d.getDate() - diff);
       d.setHours(0,0,0,0);
@@ -361,17 +361,13 @@
 
     // parse kickoff date/time for a match-like record
     function parseKickoff(m) {
-      // prefer kickoff_at (timestamp with tz) if present
       if (m.kickoff_at) {
         return new Date(m.kickoff_at);
       }
-      // if sim_start_at present, use that
       if (m.started_at) return new Date(m.started_at);
-      // fallback: combine date + start_time
       try {
-        const date = m.date; // 'YYYY-MM-DD' or Date
+        const date = m.date;
         const t = m.start_time || '21:00:00';
-        // Create a local date with given components (interpreting as local)
         if (!date) return null;
         const [y,mo,da] = (typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0]).split('-').map(Number);
         const [hh,mm,ss] = (t + ':00').split(':').map(Number);
@@ -388,7 +384,6 @@
     function humanKickoff(dt) {
       if (!dt) return 'TBA';
       try {
-        // convert to IST string
         const opts = { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'Asia/Kolkata' };
         return dt.toLocaleString('en-IN', opts) + ' IST';
       } catch (e) {
@@ -484,10 +479,59 @@
         supabase.from("lineups").select("playing_xi,keeper,captain,team_id").eq("team_id", team.id).maybeSingle()
       ]);
 
-      // Fetch next upcoming match across fixtures and friendlies
-      // We'll try fixtures table first (league), then matches (friendly). If both present choose earliest kickoff.
-      const nowISO = new Date().toISOString();
+      // --- Render Top 3 Players (rank by highest of Batting and Bowling ONLY) ---
+      (function renderTop3() {
+        function getSkillTitle(score) {
+          if (score > 100) return "The Boss";
+          if (score > 80) return "Titan";
+          if (score > 60) return "World Class";
+          if (score > 50) return "Supreme";
+          if (score > 40) return "National";
+          if (score > 30) return "Professional";
+          if (score > 20) return "Domestic";
+          if (score > 10) return "Trainee";
+          return "Newbie";
+        }
 
+        const allPlayers = Array.isArray(players) ? players : (players?.data ?? players ?? []);
+        const ranked = (allPlayers || []).map(p => {
+          const bat = toNum(p.batting);
+          const bowl = toNum(p.bowling);
+          const topVal = Math.max(bat, bowl); // ONLY batting vs bowling
+          const topSkillName = (bat >= bowl) ? 'Batting' : 'Bowling';
+          return {
+            ...p,
+            topSkillValue: topVal,
+            topSkillName,
+            topSkillLevel: getSkillTitle(topVal)
+          };
+        })
+        .sort((a,b) => b.topSkillValue - a.topSkillValue)
+        .slice(0,3);
+
+        const topEl = document.getElementById("top-players-list");
+        const fallbackImage = 'assets/default-avatar.png';
+        if (!ranked.length) {
+          topEl.innerHTML = "No players found.";
+          return;
+        }
+
+        topEl.innerHTML = `
+          <div style="display:flex;justify-content:space-around;align-items:center;">
+            ${ranked.map(p => `
+              <div style="text-align:center;max-width:120px;">
+                <img src="${p.image_url || fallbackImage}" alt="${p.name || 'Player'}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;object-position:top;margin-bottom:8px;border:2px solid rgba(255,255,255,0.04);" />
+                <div style="font-weight:700">${p.name || '–'}</div>
+                <div style="font-size:0.85rem;color:#cfd3ff">${p.role || '–'}</div>
+                <div style="font-size:0.85rem;color:#a8f5c6">${p.topSkillName}: ${p.topSkillLevel}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      })();
+      // --- end Top 3 Players ---
+
+      // Fetch next upcoming match across fixtures and friendlies
       const [fixturesRes, friendliesRes] = await Promise.all([
         supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5),
         supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5)
@@ -497,7 +541,6 @@
       if (fixturesRes?.data) fixturesRes.data.forEach(f => combined.push({ ...f, _kind: 'league' }));
       if (friendliesRes?.data) friendliesRes.data.forEach(m => combined.push({ ...m, _kind: 'friendly' }));
 
-      // pick the earliest kickoff among combined
       let nextMatch = null;
       let nextKickoff = null;
       for (const m of combined) {
@@ -531,27 +574,18 @@
         const homeInfo = await teamInfo(homeId);
         const awayInfo = await teamInfo(awayId);
 
-        // compute opponent id relative to user's team
         const opponentId = (homeId === team.id) ? awayId : homeId;
-        const opponentInfo = (homeId === team.id) ? awayInfo : homeInfo;
 
-        // compute OVR for opponent if available (try fetch players)
-        let opponentPlayers = [];
-        try {
-          const { data: op } = await supabase.from('players').select('*').eq('team_id', opponentId);
-          opponentPlayers = op || [];
-        } catch(e){}
-
-        // compute our OVR based on our lineup/players
+        // compute our OVR & opponent OVR
         const ourSelection = pickByLineupOrAuto(players || [], lineup || null);
         const ourRates = computeRatings(ourSelection);
 
-        // opponent selection & ovr
         const oppLineupRes = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', opponentId).maybeSingle();
+        const { data: opponentPlayersData } = await supabase.from('players').select('*').eq('team_id', opponentId);
+        const opponentPlayers = opponentPlayersData || [];
         const oppSelection = pickByLineupOrAuto(opponentPlayers || [], oppLineupRes?.data || null);
         const oppRates = computeRatings(oppSelection);
 
-        // kickoff display & countdown
         const kickoffDt = parseKickoff(nextMatch) || new Date();
         fixtureInfo.innerHTML = `
           <div class="match-card">
@@ -559,7 +593,10 @@
               <img class="team-logo" src="${homeInfo.logo_url || 'assets/default-logo.png'}" alt="${homeInfo.team_name}" />
               <div style="min-width:120px">
                 <div style="font-weight:800">${homeInfo.team_name}</div>
-                <div style="font-size:12px;color:#cfd3ff">OVR: ${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}</div>
+                <div style="font-size:12px;color:#cfd3ff">
+                  <img src="assets/rating/ovr.png" alt="OVR" style="width:18px;height:18px;vertical-align:middle;margin-right:6px" />
+                  ${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}
+                </div>
               </div>
             </div>
 
@@ -572,7 +609,10 @@
             <div class="team-block" style="margin-left:auto">
               <div style="min-width:120px; text-align:right">
                 <div style="font-weight:800">${awayInfo.team_name}</div>
-                <div style="font-size:12px;color:#cfd3ff">OVR: ${fmtOne(oppRates.ovr)}</div>
+                <div style="font-size:12px;color:#cfd3ff">
+                  <img src="assets/rating/ovr.png" alt="OVR" style="width:18px;height:18px;vertical-align:middle;margin-right:6px" />
+                  ${fmtOne(oppRates.ovr)}
+                </div>
               </div>
               <img class="team-logo" src="${awayInfo.logo_url || 'assets/default-logo.png'}" alt="${awayInfo.team_name}" />
             </div>
@@ -593,10 +633,7 @@
       // --------------------------
       // Match Preparation progress (4 tasks x 25%)
       // --------------------------
-      // Task 1: Training completion check
-      // We'll consider training completed if there's a training_sessions row for this user in the last 7 days (adjustable).
       const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      const weekAnchorStr = sevenDaysAgo.toISOString().split('T')[0];
 
       const { data: recentTraining } = await supabase
         .from('training_sessions')
@@ -606,8 +643,6 @@
 
       const trainingDone = (recentTraining && recentTraining.length > 0);
 
-      // Task 2: Scout done this week (we'll check last_scouted_date in profiles)
-      // require last_scouted_date >= last Wednesday
       const lastWed = lastWednesday(new Date());
       const scoutedDateStr = profile?.last_scouted_date || profile?.last_scouted || null;
       let scoutDone = false;
@@ -617,7 +652,6 @@
         scoutDone = sd >= lastWed;
       }
 
-      // Task 3: Default lineup exists and valid
       let lineupDone = false;
       try {
         const { data: lu } = await supabase
@@ -627,7 +661,6 @@
           .maybeSingle();
 
         if (lu?.playing_xi && Array.isArray(lu.playing_xi) && lu.playing_xi.length >= 11) {
-          // ensure captain & keeper are in XI (if set)
           const xiSet = new Set(lu.playing_xi);
           const capOk = !lu.captain || xiSet.has(lu.captain);
           const wkOk = !lu.keeper || xiSet.has(lu.keeper);
@@ -639,32 +672,27 @@
         lineupDone = false;
       }
 
-      // Task 4: Average fitness > 95 (prefer lineup players, else auto-pick)
+      // compute fitness
       let fitnessDone = false;
-      // pick players for X I
       let useXI = [];
       const luRow = await supabase.from('lineups').select('playing_xi').eq('team_id', team.id).maybeSingle();
       if (luRow?.data?.playing_xi && Array.isArray(luRow.data.playing_xi) && luRow.data.playing_xi.length) {
         const idset = new Set(luRow.data.playing_xi);
         useXI = (players || []).filter(p => idset.has(p.id));
       } else {
-        // fallback: pick by role preference: 5 bats,1 ar,5 bowlers as requested
         const all = players || [];
         const bats = all.filter(p => (p.role || '').toLowerCase().includes('bat') || (p.batting && p.batting>0)).sort((a,b)=>toNum(b.batting)-toNum(a.batting)).slice(0,5);
         const ars = all.filter(p => (p.role||'').toLowerCase().includes('all') || ((p.batting||0)>0 && (p.bowling||0)>0)).sort((a,b)=> (toNum(b.batting)+toNum(b.bowling))-(toNum(a.batting)+toNum(a.bowling))).slice(0,2);
         const bowls = all.filter(p => (p.role||'').toLowerCase().includes('bowl') || (p.bowling && p.bowling>0)).sort((a,b)=>toNum(b.bowling)-toNum(a.bowling)).slice(0,5);
-        // ensure unique players and then limit to 11
         const byId = new Map();
         [...bats, ...ars, ...bowls].forEach(p => { if (!byId.has(p.id)) byId.set(p.id, p); });
         useXI = Array.from(byId.values()).slice(0,11);
       }
 
-      // compute average fitness; treat null as 0 (changeable)
       const fitnessVals = (useXI || []).map(p => toNum(p.fitness));
       const avgFitness = fitnessVals.length ? (fitnessVals.reduce((s,v)=>s+v,0) / fitnessVals.length) : 0;
       fitnessDone = avgFitness > 95;
 
-      // Update UI tasks
       const tasks = [
         { id: 'training', ok: trainingDone, label: trainingDone ? 'Completed' : 'Pending', link: 'training.html' },
         { id: 'scout', ok: scoutDone, label: scoutDone ? 'Completed' : 'Pending', link: 'scout.html' },
@@ -688,34 +716,25 @@
         }
       });
 
-      // fill bar & percent
       const prepFill = document.getElementById('prepFill');
       const prepPercent = document.getElementById('prepPercent');
       prepFill.style.width = score + '%';
       prepPercent.textContent = `${score}%`;
-
-      // Update the fitness text specifically
       document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
 
-      // done — autopoll countdown/refresh minor items every 20s (countdown already every second)
+      // periodic refresh every 20s for tasks & countdown is already running
       setInterval(async () => {
-        // refresh only training & scout & lineup & fitness quickly (non-blocking)
         try {
-          // training
           const { data: rt } = await supabase.from('training_sessions').select('id').eq('user_id', user.id).gte('created_at', sevenDaysAgo.toISOString().split('T')[0]).limit(1);
           const newTrainingDone = (rt && rt.length>0);
-          // scout
           const { data: pf } = await supabase.from('profiles').select('last_scouted_date,last_scouted').eq('user_id', user.id).single();
           let newScoutDone = false;
           if (pf?.last_scouted_date || pf?.last_scouted) {
-            const sd = new Date(pf.last_scouted_date || pf.last_scouted);
-            sd.setHours(0,0,0,0);
+            const sd = new Date(pf.last_scouted_date || pf.last_scouted); sd.setHours(0,0,0,0);
             newScoutDone = sd >= lastWed;
           }
-          // lineup
           const { data: lu2 } = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', team.id).maybeSingle();
           const newLineupDone = (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length >= 11);
-          // fitness: refetch players
           const { data: playersRef } = await supabase.from('players').select('*').eq('team_id', team.id);
           let newAvg = 0;
           if (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length) {
@@ -733,7 +752,6 @@
             newAvg = use.length ? (use.reduce((s,p)=>s + toNum(p.fitness),0) / use.length) : 0;
           }
 
-          // recalc score
           let newScore = 0;
           if (newTrainingDone) newScore += 25;
           if (newScoutDone) newScore += 25;
@@ -742,7 +760,6 @@
 
           prepFill.style.width = newScore + '%';
           prepPercent.textContent = `${newScore}%`;
-          // update dots
           const map = { training: newTrainingDone, scout: newScoutDone, lineup: newLineupDone, fitness: newAvg > 95 };
           Object.keys(map).forEach(k=>{
             const el = document.querySelector(`.task[data-task="${k}"]`);
@@ -761,7 +778,7 @@
         } catch (e) {
           console.warn('Periodic prep refresh failed', e);
         }
-      }, 20000); // every 20s
+      }, 20000);
     }
 
     main();
