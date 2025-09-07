@@ -127,10 +127,10 @@
       font-size: 0.85rem;
     }
 
-    /* NEW: Next Match card styles */
+    /* NEXT MATCH tweaks: smaller text and smaller logo, no boxed table behind name */
     .match-card {
       display:flex;
-      gap:12px;
+      gap:10px;
       align-items:center;
     }
     .team-block {
@@ -139,22 +139,31 @@
       align-items:center;
     }
     .team-logo {
-      width:54px;height:54px;border-radius:8px;object-fit:cover;background:#222;border:1px solid rgba(255,255,255,0.04);
+      width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04);
     }
-    .match-meta { margin-left:12px; color:#cfd3ff; }
-    .badge { font-size:12px;padding:6px 8px;border-radius:8px;background:#222;color:#cfd3ff;border:1px solid rgba(255,255,255,0.04);display:inline-block }
-    .countdown { font-weight:800; font-size:1.05rem; color:#00e676; }
+    .team-text {
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+    .team-name { font-weight:700; font-size:14px; color:#fff; }
+    .ovr-row { font-size:12px; color:#cfd3ff; display:flex; align-items:center; gap:6px; }
 
-    /* NEW: Progress bar & checklist */
+    .match-meta { margin-left:10px; color:#cfd3ff; text-align:center; }
+    .badge { font-size:11px; padding:4px 7px; border-radius:8px; background:#222; color:#cfd3ff; border:1px solid rgba(255,255,255,0.04); display:inline-block }
+    .kickoff { margin-top:6px; font-weight:700; font-size:13px; }
+    .countdown { font-weight:700; font-size:13px; color:#00e676; margin-top:6px; }
+
+    /* NEW: Progress bar & checklist (kept sizes modest) */
     .prep {
       display:flex;
       flex-direction:column;
-      gap:10px;
+      gap:8px;
     }
     .prep-bar {
-      height: 14px;
+      height: 12px;
       background:#333;
-      border-radius:10px;
+      border-radius:8px;
       overflow:hidden;
     }
     .prep-fill {
@@ -163,18 +172,18 @@
       width:0%;
       transition: width .45s ease;
     }
-    .prep-row { display:flex;align-items:center;justify-content:space-between;gap:10px }
+    .prep-row { display:flex;align-items:center;justify-content:space-between;gap:8px }
     .prep-tasks { display:flex;flex-direction:column;gap:6px; margin-top:6px }
-    .task { display:flex;align-items:center;gap:10px;color:#cfd3ff;font-size:14px }
+    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:13px }
     .task .dot { width:14px;height:14px;border-radius:50%;display:inline-block;text-align:center;line-height:14px;font-weight:800 }
     .task.done .dot { background:#00e676;color:#000 }
     .task.pending .dot { background:#444;color:#999 }
     .task .txt { flex:1 }
-    .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:13px }
+    .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:12px }
 
     @media (max-width:520px){
       .match-card { flex-direction:column; align-items:flex-start }
-      .match-meta { margin-left:0; }
+      .match-meta { margin-left:0; text-align:left; }
     }
   </style>
 </head>
@@ -541,9 +550,12 @@
       if (fixturesRes?.data) fixturesRes.data.forEach(f => combined.push({ ...f, _kind: 'league' }));
       if (friendliesRes?.data) friendliesRes.data.forEach(m => combined.push({ ...m, _kind: 'friendly' }));
 
+      // Only include matches with status 'scheduled' or 'running'
+      const allowed = combined.filter(m => m && (m.status === 'scheduled' || m.status === 'running'));
+
       let nextMatch = null;
       let nextKickoff = null;
-      for (const m of combined) {
+      for (const m of allowed) {
         const kd = parseKickoff(m);
         if (!kd) continue;
         if (!nextKickoff || kd < nextKickoff) {
@@ -591,27 +603,27 @@
           <div class="match-card">
             <div class="team-block">
               <img class="team-logo" src="${homeInfo.logo_url || 'assets/default-logo.png'}" alt="${homeInfo.team_name}" />
-              <div style="min-width:120px">
-                <div style="font-weight:800">${homeInfo.team_name}</div>
-                <div style="font-size:12px;color:#cfd3ff">
-                  <img src="assets/rating/ovr.png" alt="OVR" style="width:18px;height:18px;vertical-align:middle;margin-right:6px" />
-                  ${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}
+              <div class="team-text">
+                <div class="team-name">${homeInfo.team_name}</div>
+                <div class="ovr-row">
+                  <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
+                  <span>${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}</span>
                 </div>
               </div>
             </div>
 
-            <div class="match-meta" style="margin-left:12px">
+            <div class="match-meta">
               <div class="badge">${nextMatch._kind === 'league' ? 'League' : 'Friendly'}</div>
-              <div style="margin-top:8px;font-weight:700">${humanKickoff(kickoffDt)}</div>
-              <div style="margin-top:6px" class="countdown" id="matchCountdown">—</div>
+              <div class="kickoff">${humanKickoff(kickoffDt)}</div>
+              <div class="countdown" id="matchCountdown">—</div>
             </div>
 
             <div class="team-block" style="margin-left:auto">
-              <div style="min-width:120px; text-align:right">
-                <div style="font-weight:800">${awayInfo.team_name}</div>
-                <div style="font-size:12px;color:#cfd3ff">
-                  <img src="assets/rating/ovr.png" alt="OVR" style="width:18px;height:18px;vertical-align:middle;margin-right:6px" />
-                  ${fmtOne(oppRates.ovr)}
+              <div class="team-text" style="text-align:right">
+                <div class="team-name">${awayInfo.team_name}</div>
+                <div class="ovr-row" style="justify-content:flex-end">
+                  <span>${fmtOne(oppRates.ovr)}</span>
+                  <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
                 </div>
               </div>
               <img class="team-logo" src="${awayInfo.logo_url || 'assets/default-logo.png'}" alt="${awayInfo.team_name}" />
