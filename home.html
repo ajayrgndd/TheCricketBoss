@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -126,6 +126,65 @@
     .quick-grid .label {
       font-size: 0.85rem;
     }
+
+    /* NEXT MATCH tweaks: smaller text and smaller logo, no boxed table behind name */
+    .match-card {
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .team-block {
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .team-logo {
+      width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04);
+    }
+    .team-text {
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+    .team-name { font-weight:700; font-size:14px; color:#fff; }
+    .ovr-row { font-size:12px; color:#cfd3ff; display:flex; align-items:center; gap:6px; }
+
+    .match-meta { margin-left:10px; color:#cfd3ff; text-align:center; }
+    .badge { font-size:11px; padding:4px 7px; border-radius:8px; background:#222; color:#cfd3ff; border:1px solid rgba(255,255,255,0.04); display:inline-block }
+    .kickoff { margin-top:6px; font-weight:700; font-size:13px; }
+    .countdown { font-weight:700; font-size:13px; color:#00e676; margin-top:6px; }
+
+    /* NEW: Progress bar & checklist (kept sizes modest) */
+    .prep {
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .prep-bar {
+      height: 12px;
+      background:#333;
+      border-radius:8px;
+      overflow:hidden;
+    }
+    .prep-fill {
+      height:100%;
+      background: linear-gradient(90deg,#00e676,#00c853);
+      width:0%;
+      transition: width .45s ease;
+    }
+    .prep-row { display:flex;align-items:center;justify-content:space-between;gap:8px }
+    .prep-tasks { display:flex;flex-direction:column;gap:6px; margin-top:6px }
+    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:13px }
+    .task .dot { width:14px;height:14px;border-radius:50%;display:inline-block;text-align:center;line-height:14px;font-weight:800 }
+    .task.done .dot { background:#00e676;color:#000 }
+    .task.pending .dot { background:#444;color:#999 }
+    .task .txt { flex:1 }
+    .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:12px }
+
+    @media (max-width:520px){
+      .match-card { flex-direction:column; align-items:flex-start }
+      .match-meta { margin-left:0; text-align:left; }
+    }
   </style>
 </head>
 <body>
@@ -144,17 +203,26 @@
 
     <div class="grid-container">
 
-      <!-- Fixture -->
+      <!-- Fixture (UPDATED) -->
       <div class="grid-item" id="fixture-block">
         <h3>Next Match</h3>
         <div id="fixture-info">Loading...</div>
       </div>
 
-      <!-- Training -->
+      <!-- Match Preparation (MERGED & UPDATED) -->
       <div class="grid-item">
         <h3>Match Preparation</h3>
-        <div id="trainingStatus">Checking training status...</div>
-        <a href="training.html"><button id="goTrainingBtn">Go to Training</button></a>
+        <div id="prepBlock" class="prep">
+          <div class="prep-bar"><div id="prepFill" class="prep-fill"></div></div>
+          <div id="prepPercent" style="font-weight:800;color:#cfd3ff">0%</div>
+          <div class="prep-tasks" id="prepTasks">
+            <!-- tasks will be injected here -->
+            <div class="task pending" data-task="training"><div class="dot">–</div><div class="txt">Training: <strong id="t-training">Pending</strong></div><a href="training.html">Go</a></div>
+            <div class="task pending" data-task="scout"><div class="dot">–</div><div class="txt">Scout (Wed): <strong id="t-scout">Pending</strong></div><a href="scout.html">Go</a></div>
+            <div class="task pending" data-task="lineup"><div class="dot">–</div><div class="txt">Default Lineup: <strong id="t-lineup">Pending</strong></div><a href="set-lineup.html">Go</a></div>
+            <div class="task pending" data-task="fitness"><div class="dot">–</div><div class="txt">Average Fitness > 95: <strong id="t-fitness">Pending</strong></div><a href="team.html">Fix</a></div>
+          </div>
+        </div>
       </div>
 
       <!-- Top 3 Players -->
@@ -209,184 +277,523 @@
       }
     }
 
-   async function main() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return location.href = "login.html";
+    // ----------------------
+    // Helper functions reused/adapted from your profile files
+    // ----------------------
+    const toNum = (v) => (v == null || v === '') ? 0 : Number(v);
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("user_id", user.id)
-    .single();
+    function pickByLineupOrAuto(allPlayers, lineup) {
+      const byId = new Map((allPlayers || []).map(p => [p.id, p]));
+      let xi = [];
 
-  if (!profile?.manager_name || !profile?.team_name)
-    return location.href = "profile-setup.html";
+      if (lineup && Array.isArray(lineup.playing_xi) && lineup.playing_xi.length) {
+        xi = lineup.playing_xi.map(id => byId.get(id)).filter(Boolean);
+      } else {
+        const sorted = [...(allPlayers || [])].sort((a,b) =>
+          (toNum(b.batting)+toNum(b.bowling)+toNum(b.keeping)) - (toNum(a.batting)+toNum(a.bowling)+toNum(a.keeping))
+        );
+        xi = sorted.slice(0, Math.min(11, sorted.length));
+      }
 
-  loadSharedUI({
-    supabase,
-    manager_name: profile.manager_name,
-    xp: profile.xp ?? 0,
-    coins: profile.coins ?? 0,
-    cash: profile.cash ?? 0
-  });
+      const sortBy = (arr, key) => [...arr].sort((a,b) => toNum(b[key]) - toNum(a[key]));
 
-  await distributeDailyLoginXP(user.id);
+      let wk = null;
+      if (lineup && lineup.keeper) {
+        wk = byId.get(lineup.keeper) || null;
+      }
+      if (!wk) {
+        wk = sortBy(xi.length ? xi : allPlayers, 'keeping')[0] || null;
+      }
 
-  const xp = profile.xp ?? 0;
-  const levels = [
-    { name: "Beginner", xp: 0 },
-    { name: "Expert", xp: 250 },
-    { name: "Professional", xp: 750 },
-    { name: "Master", xp: 1750 },
-    { name: "Supreme", xp: 3500 },
-    { name: "World Class", xp: 5500 },
-    { name: "Ultimate", xp: 8500 },
-    { name: "Titan", xp: 13500 },
-    { name: "The Boss", xp: 1500000 },
-  ];
-  let currentLevel = levels[0], nextLevel = levels[1];
-  for (let i = 0; i < levels.length - 1; i++) {
-    if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
-      currentLevel = levels[i];
-      nextLevel = levels[i + 1];
-      break;
-    } else if (xp >= levels[levels.length - 1].xp) {
-      currentLevel = levels[levels.length - 1];
-      nextLevel = { name: "MAX", xp: currentLevel.xp + 1 };
-      break;
+      const poolForAR = (xi.length ? xi : allPlayers).filter(p => !wk || p.id !== wk.id);
+      let ar = null;
+      if (poolForAR.length) {
+        ar = [...poolForAR].sort((a,b) =>
+          (toNum(b.batting)+toNum(b.bowling)) - (toNum(a.batting)+toNum(a.bowling))
+        )[0];
+      }
+
+      const batters = sortBy(xi.length ? xi : allPlayers, 'batting')
+        .filter(p => !wk || p.id !== wk.id)
+        .slice(0, 4);
+
+      const bowlers = sortBy(xi.length ? xi : allPlayers, 'bowling')
+        .filter(p => (!wk || p.id !== wk.id) && (!ar || p.id !== ar.id))
+        .slice(0, 5);
+
+      return { xi, wk, ar, batters, bowlers };
     }
-  }
-  const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
-  document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
-  document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
-  document.getElementById("xp-fill").style.width = `${percent}%`;
 
-  // ✅ Fetch team FIRST
-  const { data: team } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("owner_id", user.id)
-    .single();
+    function computeRatings({ xi, wk, ar, batters, bowlers }) {
+      const batSum =
+        batters.reduce((s,p)=> s + toNum(p.batting), 0) +
+        (wk ? toNum(wk.batting) : 0) +
+        (ar ? toNum(ar.batting) : 0);
+      const batAvg = (batters.length + (wk?1:0) + (ar?1:0)) ? (batSum / 6) : 0;
 
-  if (!team) {
-    console.warn("No team found for user.");
-    return;
-  }
+      const ballSum =
+        bowlers.reduce((s,p)=> s + toNum(p.bowling), 0) +
+        (ar ? toNum(ar.bowling) : 0);
+      const ballAvg = (bowlers.length + (ar?1:0)) ? (ballSum / 6) : 0;
 
-  // ✅ Fetch fixture safely
-  try {
-    const { data: fixture } = await supabase
-      .from("matches")
-      .select("*")
-      .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-      .gte("date", new Date().toISOString())
-      .order("date", { ascending: true })
-      .limit(1)
-      .single();
+      const wkVal = wk ? toNum(wk.keeping) : 0;
 
-    if (fixture) {
-      const opponentId = fixture.home_team_id === team.id ? fixture.away_team_id : fixture.home_team_id;
-      const { data: opponent } = await supabase
-        .from("teams")
-        .select("team_name")
-        .eq("id", opponentId)
+      let ovr = 0;
+      if (xi && xi.length) {
+        const per = xi.map(p => (toNum(p.batting)+toNum(p.bowling)+toNum(p.keeping)) / 3);
+        ovr = per.reduce((s,v)=>s+v,0) / xi.length;
+      }
+
+      return {
+        bat: batAvg,
+        ball: ballAvg,
+        wk: wkVal,
+        ovr: (batAvg + ballAvg + wkVal) / 3,
+        ovrXI: ovr
+      };
+    }
+
+    function fmtOne(val) {
+      if (Number.isNaN(val)) return "–";
+      return (Math.round(val * 10) / 10).toFixed(1);
+    }
+
+    // compute last Wednesday
+    function lastWednesday(reference = new Date()) {
+      const d = new Date(reference);
+      const day = d.getDay();
+      const diff = (day >= 3) ? day - 3 : 7 - (3 - day);
+      d.setDate(d.getDate() - diff);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    // parse kickoff date/time for a match-like record
+    function parseKickoff(m) {
+      if (m.kickoff_at) {
+        return new Date(m.kickoff_at);
+      }
+      if (m.started_at) return new Date(m.started_at);
+      try {
+        const date = m.date;
+        const t = m.start_time || '21:00:00';
+        if (!date) return null;
+        const [y,mo,da] = (typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0]).split('-').map(Number);
+        const [hh,mm,ss] = (t + ':00').split(':').map(Number);
+        const dt = new Date();
+        dt.setFullYear(y, mo-1, da);
+        dt.setHours(hh, mm || 0, ss || 0, 0);
+        return dt;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // human format with IST tag
+    function humanKickoff(dt) {
+      if (!dt) return 'TBA';
+      try {
+        const opts = { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'Asia/Kolkata' };
+        return dt.toLocaleString('en-IN', opts) + ' IST';
+      } catch (e) {
+        return dt.toString();
+      }
+    }
+
+    // countdown formatting
+    function formatCountdown(ms) {
+      if (ms <= 0) return 'LIVE';
+      const sec = Math.floor(ms/1000);
+      const d = Math.floor(sec/86400);
+      const h = Math.floor((sec%86400)/3600);
+      const m = Math.floor((sec%3600)/60);
+      const s = sec%60;
+      if (d>0) return `${d}d ${h}h`;
+      if (h>0) return `${h}h ${m}m`;
+      return `${m}m ${s}s`;
+    }
+
+    // ----------------------
+    // Main logic
+    // ----------------------
+    async function main() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return location.href = "login.html";
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
 
-      document.getElementById("fixture-info").innerHTML = `
-        vs <strong>${opponent?.team_name ?? "Unknown"}</strong><br>${fixture.date.split("T")[0]} @ 9 PM
-      `;
-    } else {
-      document.getElementById("fixture-info").textContent = "No upcoming matches";
-    }
-  } catch (err) {
-    document.getElementById("fixture-info").textContent = "Error loading fixtures";
-  }
+      if (!profile?.manager_name || !profile?.team_name)
+        return location.href = "profile-setup.html";
 
-  // ✅ Training status (always safe)
-  const { data: lastMatch } = await supabase
-    .from("matches")
-    .select("*")
-    .or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`)
-    .order("date", { ascending: false })
-    .limit(1)
-    .single();
+      loadSharedUI({
+        supabase,
+        manager_name: profile.manager_name,
+        xp: profile.xp ?? 0,
+        coins: profile.coins ?? 0,
+        cash: profile.cash ?? 0
+      });
 
-  const lastMatchDate = lastMatch?.date || "1970-01-01";
-  const { data: trainingLogs } = await supabase
-    .from("training_logs")
-    .select("*")
-    .eq("team_id", team.id)
-    .gte("created_at", lastMatchDate);
+      await distributeDailyLoginXP(user.id);
 
-  const trainedPlayers = new Set(trainingLogs?.map(t => t.player_id));
-  document.getElementById("trainingStatus").innerHTML = trainedPlayers.size >= 3
-    ? "✅ <strong>Training Completed</strong> (3+ players trained)"
-    : "❌ <strong>Training Pending</strong> – Train 3 players";
-  document.getElementById("goTrainingBtn").disabled = trainedPlayers.size >= 3;
+      // XP UI unchanged
+      const xp = profile.xp ?? 0;
+      const levels = [
+        { name: "Beginner", xp: 0 },
+        { name: "Expert", xp: 250 },
+        { name: "Professional", xp: 750 },
+        { name: "Master", xp: 1750 },
+        { name: "Supreme", xp: 3500 },
+        { name: "World Class", xp: 5500 },
+        { name: "Ultimate", xp: 8500 },
+        { name: "Titan", xp: 13500 },
+        { name: "The Boss", xp: 1500000 },
+      ];
+      let currentLevel = levels[0], nextLevel = levels[1];
+      for (let i = 0; i < levels.length - 1; i++) {
+        if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
+          currentLevel = levels[i];
+          nextLevel = levels[i + 1];
+          break;
+        } else if (xp >= levels[levels.length - 1].xp) {
+          currentLevel = levels[levels.length - 1];
+          nextLevel = { name: "MAX", xp: currentLevel.xp + 1 };
+          break;
+        }
+      }
+      const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
+      document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
+      document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
+      document.getElementById("xp-fill").style.width = `${percent}%`;
 
-// Top 3 Players
-const { data: players } = await supabase
-  .from("players")
-  .select("name, role, batting, bowling, keeping, image_url")
-  .eq("team_id", team.id);
+      // Fetch team
+      const { data: team, error: teamErr } = await supabase
+        .from("teams")
+        .select("*")
+        .eq("owner_id", user.id)
+        .single();
 
-function getSkillTitle(score) {
-  if (score > 100) return "The Boss";
-  if (score > 80) return "Titan";
-  if (score > 60) return "World Class";
-  if (score > 50) return "Supreme";
-  if (score > 40) return "National";
-  if (score > 30) return "Professional";
-  if (score > 20) return "Domestic";
-  if (score > 10) return "Trainee";
-  return "Newbie";
-}
+      if (teamErr || !team) {
+        console.warn("No team found for user.", teamErr);
+        document.getElementById("fixture-info").textContent = "No team found.";
+        return;
+      }
 
-const topPlayers = (players ?? [])
-  .map(p => {
-    const skills = {
-      Batting: p.batting ?? 0,
-      Bowling: p.bowling ?? 0,
-      Keeping: p.keeping ?? 0
-    };
-    const topSkill = Object.entries(skills).reduce((a, b) => b[1] > a[1] ? b : a);
-    return {
-      ...p,
-      topSkillName: topSkill[0],
-      topSkillValue: topSkill[1],
-      topSkillLevel: getSkillTitle(topSkill[1])
-    };
-  })
-  .sort((a, b) => b.topSkillValue - a.topSkillValue)
-  .slice(0, 3);
+      // Fetch players & lineup (we'll need them for OVR & fitness)
+      const [{ data: players }, { data: lineup }] = await Promise.all([
+        supabase.from("players").select("*").eq("team_id", team.id),
+        supabase.from("lineups").select("playing_xi,keeper,captain,team_id").eq("team_id", team.id).maybeSingle()
+      ]);
 
-document.getElementById("top-players-list").innerHTML = topPlayers.length
-  ? `
-    <div style="display: flex; justify-content: space-around; text-align: center;">
-      ${topPlayers.map(p => `
-        <div>
-          <img src="${p.image_url}" alt="${p.name}" style="width:60px; height:60px; border-radius:50%; object-fit:cover; object-position: top; margin-bottom:8px;" />
-          <div><strong>${p.name}</strong></div>
-          <div style="font-size: 0.85rem;">${p.role}</div>
-          <div style="font-size: 0.85rem; color: #ccc;">${p.topSkillName}: ${p.topSkillLevel}</div>
-        </div>
-          `).join("")}
-        </div>
-        `
-        : "No players found.";
+      // --- Render Top 3 Players (rank by highest of Batting and Bowling ONLY) ---
+      (function renderTop3() {
+        function getSkillTitle(score) {
+          if (score > 100) return "The Boss";
+          if (score > 80) return "Titan";
+          if (score > 60) return "World Class";
+          if (score > 50) return "Supreme";
+          if (score > 40) return "National";
+          if (score > 30) return "Professional";
+          if (score > 20) return "Domestic";
+          if (score > 10) return "Trainee";
+          return "Newbie";
+        }
+
+        const allPlayers = Array.isArray(players) ? players : (players?.data ?? players ?? []);
+        const ranked = (allPlayers || []).map(p => {
+          const bat = toNum(p.batting);
+          const bowl = toNum(p.bowling);
+          const topVal = Math.max(bat, bowl); // ONLY batting vs bowling
+          const topSkillName = (bat >= bowl) ? 'Batting' : 'Bowling';
+          return {
+            ...p,
+            topSkillValue: topVal,
+            topSkillName,
+            topSkillLevel: getSkillTitle(topVal)
+          };
+        })
+        .sort((a,b) => b.topSkillValue - a.topSkillValue)
+        .slice(0,3);
+
+        const topEl = document.getElementById("top-players-list");
+        const fallbackImage = 'assets/default-avatar.png';
+        if (!ranked.length) {
+          topEl.innerHTML = "No players found.";
+          return;
+        }
+
+        topEl.innerHTML = `
+          <div style="display:flex;justify-content:space-around;align-items:center;">
+            ${ranked.map(p => `
+              <div style="text-align:center;max-width:120px;">
+                <img src="${p.image_url || fallbackImage}" alt="${p.name || 'Player'}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;object-position:top;margin-bottom:8px;border:2px solid rgba(255,255,255,0.04);" />
+                <div style="font-weight:700">${p.name || '–'}</div>
+                <div style="font-size:0.85rem;color:#cfd3ff">${p.role || '–'}</div>
+                <div style="font-size:0.85rem;color:#a8f5c6">${p.topSkillName}: ${p.topSkillLevel}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      })();
+      // --- end Top 3 Players ---
+
+      // Fetch next upcoming match across fixtures and friendlies
+      const [fixturesRes, friendliesRes] = await Promise.all([
+        supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5),
+        supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5)
+      ]);
+
+      const combined = [];
+      if (fixturesRes?.data) fixturesRes.data.forEach(f => combined.push({ ...f, _kind: 'league' }));
+      if (friendliesRes?.data) friendliesRes.data.forEach(m => combined.push({ ...m, _kind: 'friendly' }));
+
+      // Only include matches with status 'scheduled' or 'running'
+      const allowed = combined.filter(m => m && (m.status === 'scheduled' || m.status === 'running'));
+
+      let nextMatch = null;
+      let nextKickoff = null;
+      for (const m of allowed) {
+        const kd = parseKickoff(m);
+        if (!kd) continue;
+        if (!nextKickoff || kd < nextKickoff) {
+          nextKickoff = kd;
+          nextMatch = m;
+        }
+      }
+
+      const fixtureInfo = document.getElementById("fixture-info");
+
+      // helper to fetch team info (caching)
+      const teamCache = new Map();
+      async function teamInfo(id) {
+        if (!id) return { team_name: '—', logo_url: null };
+        if (teamCache.has(id)) return teamCache.get(id);
+        const { data: t } = await supabase.from('teams').select('team_name,logo_url').eq('id', id).single();
+        const out = { team_name: t?.team_name ?? '—', logo_url: t?.logo_url ?? null };
+        teamCache.set(id, out);
+        return out;
+      }
+
+      // If no upcoming match found
+      if (!nextMatch) {
+        fixtureInfo.innerHTML = `<div>No upcoming matches</div>`;
+      } else {
+        const homeId = nextMatch.home_team_id;
+        const awayId = nextMatch.away_team_id;
+        const homeInfo = await teamInfo(homeId);
+        const awayInfo = await teamInfo(awayId);
+
+        const opponentId = (homeId === team.id) ? awayId : homeId;
+
+        // compute our OVR & opponent OVR
+        const ourSelection = pickByLineupOrAuto(players || [], lineup || null);
+        const ourRates = computeRatings(ourSelection);
+
+        const oppLineupRes = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', opponentId).maybeSingle();
+        const { data: opponentPlayersData } = await supabase.from('players').select('*').eq('team_id', opponentId);
+        const opponentPlayers = opponentPlayersData || [];
+        const oppSelection = pickByLineupOrAuto(opponentPlayers || [], oppLineupRes?.data || null);
+        const oppRates = computeRatings(oppSelection);
+
+        const kickoffDt = parseKickoff(nextMatch) || new Date();
+        fixtureInfo.innerHTML = `
+          <div class="match-card">
+            <div class="team-block">
+              <img class="team-logo" src="${homeInfo.logo_url || 'assets/default-logo.png'}" alt="${homeInfo.team_name}" />
+              <div class="team-text">
+                <div class="team-name">${homeInfo.team_name}</div>
+                <div class="ovr-row">
+                  <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
+                  <span>${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="match-meta">
+              <div class="badge">${nextMatch._kind === 'league' ? 'League' : 'Friendly'}</div>
+              <div class="kickoff">${humanKickoff(kickoffDt)}</div>
+              <div class="countdown" id="matchCountdown">—</div>
+            </div>
+
+            <div class="team-block" style="margin-left:auto">
+              <div class="team-text" style="text-align:right">
+                <div class="team-name">${awayInfo.team_name}</div>
+                <div class="ovr-row" style="justify-content:flex-end">
+                  <span>${fmtOne(oppRates.ovr)}</span>
+                  <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
+                </div>
+              </div>
+              <img class="team-logo" src="${awayInfo.logo_url || 'assets/default-logo.png'}" alt="${awayInfo.team_name}" />
+            </div>
+          </div>
+        `;
+
+        // Countdown updater
+        const countdownEl = document.getElementById('matchCountdown');
+        function updateCountdown() {
+          const now = new Date();
+          const diff = kickoffDt - now;
+          countdownEl.textContent = formatCountdown(diff);
+        }
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+      }
+
+      // --------------------------
+      // Match Preparation progress (4 tasks x 25%)
+      // --------------------------
+      const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { data: recentTraining } = await supabase
+        .from('training_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('created_at', sevenDaysAgo.toISOString().split('T')[0]);
+
+      const trainingDone = (recentTraining && recentTraining.length > 0);
+
+      const lastWed = lastWednesday(new Date());
+      const scoutedDateStr = profile?.last_scouted_date || profile?.last_scouted || null;
+      let scoutDone = false;
+      if (scoutedDateStr) {
+        const sd = new Date(scoutedDateStr);
+        sd.setHours(0,0,0,0);
+        scoutDone = sd >= lastWed;
+      }
+
+      let lineupDone = false;
+      try {
+        const { data: lu } = await supabase
+          .from('lineups')
+          .select('playing_xi,keeper,captain,locked,team_id')
+          .eq('team_id', team.id)
+          .maybeSingle();
+
+        if (lu?.playing_xi && Array.isArray(lu.playing_xi) && lu.playing_xi.length >= 11) {
+          const xiSet = new Set(lu.playing_xi);
+          const capOk = !lu.captain || xiSet.has(lu.captain);
+          const wkOk = !lu.keeper || xiSet.has(lu.keeper);
+          lineupDone = capOk && wkOk;
+        } else {
+          lineupDone = false;
+        }
+      } catch (e) {
+        lineupDone = false;
+      }
+
+      // compute fitness
+      let fitnessDone = false;
+      let useXI = [];
+      const luRow = await supabase.from('lineups').select('playing_xi').eq('team_id', team.id).maybeSingle();
+      if (luRow?.data?.playing_xi && Array.isArray(luRow.data.playing_xi) && luRow.data.playing_xi.length) {
+        const idset = new Set(luRow.data.playing_xi);
+        useXI = (players || []).filter(p => idset.has(p.id));
+      } else {
+        const all = players || [];
+        const bats = all.filter(p => (p.role || '').toLowerCase().includes('bat') || (p.batting && p.batting>0)).sort((a,b)=>toNum(b.batting)-toNum(a.batting)).slice(0,5);
+        const ars = all.filter(p => (p.role||'').toLowerCase().includes('all') || ((p.batting||0)>0 && (p.bowling||0)>0)).sort((a,b)=> (toNum(b.batting)+toNum(b.bowling))-(toNum(a.batting)+toNum(a.bowling))).slice(0,2);
+        const bowls = all.filter(p => (p.role||'').toLowerCase().includes('bowl') || (p.bowling && p.bowling>0)).sort((a,b)=>toNum(b.bowling)-toNum(a.bowling)).slice(0,5);
+        const byId = new Map();
+        [...bats, ...ars, ...bowls].forEach(p => { if (!byId.has(p.id)) byId.set(p.id, p); });
+        useXI = Array.from(byId.values()).slice(0,11);
+      }
+
+      const fitnessVals = (useXI || []).map(p => toNum(p.fitness));
+      const avgFitness = fitnessVals.length ? (fitnessVals.reduce((s,v)=>s+v,0) / fitnessVals.length) : 0;
+      fitnessDone = avgFitness > 95;
+
+      const tasks = [
+        { id: 'training', ok: trainingDone, label: trainingDone ? 'Completed' : 'Pending', link: 'training.html' },
+        { id: 'scout', ok: scoutDone, label: scoutDone ? 'Completed' : 'Pending', link: 'scout.html' },
+        { id: 'lineup', ok: lineupDone, label: lineupDone ? 'Set' : 'Pending', link: 'set-lineup.html' },
+        { id: 'fitness', ok: fitnessDone, label: fitnessDone ? `${fmtOne(avgFitness)} avg` : `${fmtOne(avgFitness)} avg`, link: 'team.html' }
+      ];
+
+      let score = 0;
+      tasks.forEach(t => {
+        if (t.ok) score += 25;
+        const el = document.querySelector(`.task[data-task="${t.id}"]`);
+        if (el) {
+          el.classList.toggle('done', t.ok);
+          el.classList.toggle('pending', !t.ok);
+          const dot = el.querySelector('.dot');
+          if (dot) dot.textContent = t.ok ? '✓' : '!';
+          const txt = el.querySelector('.txt strong');
+          if (txt) txt.textContent = t.label;
+          const a = el.querySelector('a');
+          if (a) a.href = t.link;
+        }
+      });
+
+      const prepFill = document.getElementById('prepFill');
+      const prepPercent = document.getElementById('prepPercent');
+      prepFill.style.width = score + '%';
+      prepPercent.textContent = `${score}%`;
+      document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
+
+      // periodic refresh every 20s for tasks & countdown is already running
+      setInterval(async () => {
+        try {
+          const { data: rt } = await supabase.from('training_sessions').select('id').eq('user_id', user.id).gte('created_at', sevenDaysAgo.toISOString().split('T')[0]).limit(1);
+          const newTrainingDone = (rt && rt.length>0);
+          const { data: pf } = await supabase.from('profiles').select('last_scouted_date,last_scouted').eq('user_id', user.id).single();
+          let newScoutDone = false;
+          if (pf?.last_scouted_date || pf?.last_scouted) {
+            const sd = new Date(pf.last_scouted_date || pf.last_scouted); sd.setHours(0,0,0,0);
+            newScoutDone = sd >= lastWed;
+          }
+          const { data: lu2 } = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', team.id).maybeSingle();
+          const newLineupDone = (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length >= 11);
+          const { data: playersRef } = await supabase.from('players').select('*').eq('team_id', team.id);
+          let newAvg = 0;
+          if (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length) {
+            const idset = new Set(lu2.playing_xi);
+            const use = (playersRef||[]).filter(p => idset.has(p.id));
+            newAvg = use.length ? (use.reduce((s,p)=>s + toNum(p.fitness),0) / use.length) : 0;
+          } else {
+            const all = playersRef || [];
+            const bats = all.filter(p => (p.role || '').toLowerCase().includes('bat')).sort((a,b)=>toNum(b.batting)-toNum(a.batting)).slice(0,5);
+            const ars = all.filter(p => (p.role||'').toLowerCase().includes('all')).sort((a,b)=> (toNum(b.batting)+toNum(b.bowling))-(toNum(a.batting)+toNum(a.bowling))).slice(0,2);
+            const bowls = all.filter(p => (p.role||'').toLowerCase().includes('bowl')).sort((a,b)=>toNum(b.bowling)-toNum(a.bowling)).slice(0,5);
+            const byId2 = new Map();
+            [...bats,...ars,...bowls].forEach(p=>{ if (!byId2.has(p.id)) byId2.set(p.id,p) });
+            const use = Array.from(byId2.values()).slice(0,11);
+            newAvg = use.length ? (use.reduce((s,p)=>s + toNum(p.fitness),0) / use.length) : 0;
+          }
+
+          let newScore = 0;
+          if (newTrainingDone) newScore += 25;
+          if (newScoutDone) newScore += 25;
+          if (newLineupDone) newScore += 25;
+          if (newAvg > 95) newScore += 25;
+
+          prepFill.style.width = newScore + '%';
+          prepPercent.textContent = `${newScore}%`;
+          const map = { training: newTrainingDone, scout: newScoutDone, lineup: newLineupDone, fitness: newAvg > 95 };
+          Object.keys(map).forEach(k=>{
+            const el = document.querySelector(`.task[data-task="${k}"]`);
+            if (!el) return;
+            el.classList.toggle('done', map[k]);
+            el.classList.toggle('pending', !map[k]);
+            const dot = el.querySelector('.dot');
+            if (dot) dot.textContent = map[k] ? '✓' : '!';
+            const txt = el.querySelector('.txt strong');
+            if (txt) {
+              if (k === 'fitness') txt.textContent = fmtOne(newAvg) + (map[k] ? ' avg' : ' avg');
+              else txt.textContent = map[k] ? 'Completed' : 'Pending';
+            }
+          });
+
+        } catch (e) {
+          console.warn('Periodic prep refresh failed', e);
+        }
+      }, 20000);
     }
 
     main();
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
