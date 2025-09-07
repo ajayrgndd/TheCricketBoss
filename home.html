@@ -16,6 +16,7 @@
 
     .main {
       padding: 20px;
+      padding-top: 80px;
       max-width: 800px;
       margin: auto;
     }
@@ -54,16 +55,23 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
 
+    /* XP bar area */
     .xp-bar-container {
-      margin: 20px 0;
+      margin: 12px 0 20px;
+      position: relative;
       text-align: center;
     }
-
-    .level-text {
-      font-size: 0.95rem;
-      margin-bottom: 6px;
+    .xp-bar-top {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+      font-size:13px;
+      color:#cfd3ff;
+      padding: 0 4px;
     }
-
+    .xp-level-left { font-weight:800; color:#fff; font-size:13px; }
+    .xp-level-right { font-weight:800; color:#fff; font-size:13px; }
     .xp-bar {
       width: 100%;
       height: 18px;
@@ -73,11 +81,12 @@
       margin-bottom: 6px;
     }
 
+    /* New gradient for XP fill */
     .xp-fill {
       height: 100%;
-      background: linear-gradient(to right, #00e676, #00c853);
       width: 0%;
       transition: width 0.4s ease;
+      background: linear-gradient(90deg, #7c4dff 0%, #536dfe 30%, #00e676 60%, #ffd54f 100%);
     }
 
     .xp-count {
@@ -86,12 +95,8 @@
     }
 
     .quick-links {
-      margin-top: 40px;
+      margin-top: 24px;
       text-align: center;
-    }
-
-    .quick-links h3 {
-      margin-bottom: 12px;
     }
 
     .quick-grid {
@@ -158,7 +163,7 @@
     .prep {
       display:flex;
       flex-direction:column;
-      gap:8px;
+      gap:6px;
     }
     .prep-bar {
       height: 8px; /* reduced size */
@@ -178,7 +183,6 @@
       color:#cfd3ff;
       font-size:12px; /* reduced */
     }
-    .prep-row { display:flex;align-items:center;justify-content:space-between;gap:8px }
     .prep-tasks { display:flex;flex-direction:column;gap:6px; margin-top:6px }
     .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px } /* reduced */
     .task .dot { width:12px;height:12px;border-radius:50%;display:inline-block;text-align:center;line-height:12px;font-weight:800; font-size:11px }
@@ -203,11 +207,14 @@
   <!-- Top bar & bottom nav will be injected by shared-ui.js -->
 
   <div class="main">
-    <h2 style="margin-top: 60px;">Welcome back!</h2>
+    <!-- (Welcome header removed as requested) -->
 
     <!-- XP Progress Bar -->
     <div class="xp-bar-container">
-      <div class="level-text" id="level-label">Level: Beginner</div>
+      <div class="xp-bar-top">
+        <div id="level-current" class="xp-level-left">Level: Beginner</div>
+        <div id="level-next" class="xp-level-right">Next: Expert</div>
+      </div>
       <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
       <div class="xp-count" id="xp-label">XP: 0 / 500</div>
     </div>
@@ -244,9 +251,8 @@
 
     </div>
 
-    <!-- Quick Access -->
+    <!-- Quick Access (heading removed as requested) -->
     <div class="quick-links">
-      <h3>Quick Access</h3>
       <div class="quick-grid">
         <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
         <a href="team.html"><div class="icon">🧍‍♂️</div><div class="label">My Team</div></a>
@@ -461,7 +467,7 @@
 
       await distributeDailyLoginXP(user.id);
 
-      // XP UI unchanged
+      // XP UI unchanged but now we show left/right level labels
       const xp = profile.xp ?? 0;
       const levels = [
         { name: "Beginner", xp: 0 },
@@ -487,7 +493,9 @@
         }
       }
       const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
-      document.getElementById("level-label").textContent = `Level: ${currentLevel.name}`;
+      // set left/right labels and xp bar
+      document.getElementById("level-current").textContent = currentLevel.name;
+      document.getElementById("level-next").textContent = `Next: ${nextLevel.name}`;
       document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
       document.getElementById("xp-fill").style.width = `${percent}%`;
 
