@@ -1,6 +1,7 @@
 // shared-ui.js
-// Patched full version — exports retained: getManagerLevel, addManagerXP, loadSharedUI
-// Uses assets:
+// Full patched version per your latest requests.
+// Exports retained: getManagerLevel, addManagerXP, loadSharedUI
+// Assets expected:
 //  - assets/logo.png
 //  - assets/resources/xp.png
 //  - assets/resources/coin.png
@@ -87,18 +88,18 @@ export async function addManagerXP(supabase, userId, eventKey) {
 // UI Updaters
 // -------------------------------
 function updateTopbarXPLevel(xp, level) {
-  const xpEl = document.getElementById("xp");
   const levelEl = document.getElementById("manager-level");
-  if (xpEl) xpEl.innerText = xp;
+  const xpHiddenEl = document.getElementById("xp"); // xp is hidden in UI but kept for programmatic access
+  if (xpHiddenEl) xpHiddenEl.innerText = xp;
   if (levelEl) levelEl.innerText = level;
 }
 function updateTopbarCoins(value) {
   const coinsEl = document.getElementById("coins");
-  if (coinsEl) coinsEl.innerText = value;
+  if (coinsEl) coinsEl.innerText = formatCompactNumber(value);
 }
 function updateTopbarCash(value) {
   const cashEl = document.getElementById("cash");
-  if (cashEl) cashEl.innerText = value;
+  if (cashEl) cashEl.innerText = formatCompactNumber(value);
 }
 
 // -------------------------------
@@ -107,8 +108,53 @@ function updateTopbarCash(value) {
 function goTo(url) { window.location.href = url; }
 
 // -------------------------------
-// Main loader: injects top bar & bottom nav
-// Only file changed in this patch.
+// Helpers
+// -------------------------------
+function formatCompactNumber(n) {
+  const num = Number(n || 0);
+  if (isNaN(num)) return '0';
+  if (Math.abs(num) >= 1e9) return (num / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+  if (Math.abs(num) >= 1e6) return (num / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (Math.abs(num) >= 1e3) return (num / 1e3).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(num);
+}
+
+function escapeHtml(str) {
+  if (typeof str !== "string") return str;
+  return str.replace(/[&<>"'`=\/]/g, function (s) {
+    return ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+      "/": "&#x2F;",
+      "`": "&#x60;",
+      "=": "&#x3D;"
+    })[s];
+  });
+}
+function safeTrimName(name) {
+  try {
+    return String(name || "").trim().slice(0, 80);
+  } catch {
+    return String(name || "");
+  }
+}
+
+// Split manager name: first word on first row, remaining on next row (if any)
+function splitManagerName(displayName) {
+  const safe = safeTrimName(displayName);
+  if (!safe) return { first: "Name", rest: "" };
+  const parts = safe.split(/\s+/);
+  if (parts.length === 1) return { first: parts[0], rest: "" };
+  const first = parts[0];
+  const rest = parts.slice(1).join(' ');
+  return { first, rest };
+}
+
+// -------------------------------
+// Main loader: injects top bar & bottom nav (patched per your last requests)
 // -------------------------------
 export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, cash = 0, user_id }) {
   // remove duplicates if re-initialized
@@ -120,59 +166,170 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
   // compute manager level label (only level name shown)
   const levelText = getManagerLevel(Number(xp || 0));
 
-  // create top bar wrapper with inline styles (keeps change localized to this file)
+  // prepare manager name split
+  const { first: nameFirst, rest: nameRest } = splitManagerName(manager_name);
+
+  // create top bar wrapper
   const topBarWrap = document.createElement("div");
   topBarWrap.className = "tcb-topbar-container";
-  topBarWrap.style.position = "fixed";
-  topBarWrap.style.top = "0";
-  topBarWrap.style.left = "0";
-  topBarWrap.style.right = "0";
-  topBarWrap.style.height = "64px";
-  topBarWrap.style.background = "#2f5596";
-  topBarWrap.style.color = "#fff";
-  topBarWrap.style.display = "flex";
-  topBarWrap.style.alignItems = "center";
-  topBarWrap.style.zIndex = "9999";
-  topBarWrap.style.boxShadow = "0 6px 18px rgba(0,0,0,0.12)";
-  topBarWrap.style.padding = "6px 12px";
-  topBarWrap.style.boxSizing = "border-box";
+  topBarWrap.setAttribute("role", "banner");
 
-  // build inner HTML — no label texts (per request). Manager name reduced in size.
+  // Inline css block (responsive tweaks + matching color combos applied to bottom nav)
+  const inlineStyleId = "tcb-inline-shared-styles";
+  if (!document.getElementById(inlineStyleId)) {
+    const style = document.createElement("style");
+    style.id = inlineStyleId;
+    style.innerHTML = `
+      .tcb-topbar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        background: #2f5596;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        z-index: 9999;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        padding: 6px 12px;
+        box-sizing: border-box;
+      }
+      .tcb-topbar-inner {
+        display:flex;
+        align-items:center;
+        gap:12px;
+        width:100%;
+        max-width:1280px;
+        margin:0 auto;
+      }
+      .tcb-left {
+        display:flex;
+        align-items:center;
+        gap:10px;
+        flex:0 0 auto;
+      }
+      .tcb-logo { height:56px; width:auto; border-radius:4px; display:block; }
+      .tcb-manager {
+        display:flex;
+        flex-direction:column;
+        line-height:1;
+      }
+      .tcb-manager .line1 { font-size:15px; font-weight:700; }
+      .tcb-manager .line2 { font-size:14px; font-weight:700; margin-top:2px; opacity:0.95; }
+      .tcb-stats {
+        display:flex;
+        align-items:center;
+        gap:12px;
+        margin-left:auto;
+        flex:0 0 auto;
+      }
+      /* stat tile */
+      .tcb-stat {
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        width:64px;
+        height:56px;
+        border-radius:999px;
+        background:rgba(255,255,255,0.06);
+        border:none;
+        cursor:pointer;
+        padding:6px;
+        box-sizing:border-box;
+      }
+      .tcb-stat img { width:30px; height:30px; object-fit:contain; display:block; }
+      .tcb-stat .tcb-stat-text { font-size:12px; margin-top:6px; color: #ffd54f; font-weight:800; } /* yellow + bold */
+      .tcb-stat .tcb-stat-sub { font-size:11px; margin-top:3px; color: #ffd54f; font-weight:800; display:block; }
+
+      /* inbox dot */
+      .tcb-unread-dot { position:absolute; top:8px; right:12px; display:none; width:10px; height:10px; border-radius:50%; background:#e53935; border:2px solid #2f5596; }
+
+      /* bottom nav uses same top nav color combos */
+      .tcb-bottomnav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        background: linear-gradient(90deg,#2f5596,#254a80);
+        display:flex;
+        align-items:center;
+        justify-content:space-around;
+        gap:6px;
+        box-shadow: 0 -6px 18px rgba(0,0,0,0.08);
+        z-index: 9998;
+      }
+      .tcb-bottomnav a {
+        color: #fff;
+        text-decoration:none;
+        font-weight:700;
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        gap:4px;
+        font-size:13px;
+      }
+
+      /* responsive: ensure all 4 tiles visible on small screens */
+      @media (max-width:720px) {
+        .tcb-logo { height:48px; }
+        .tcb-manager .line1 { font-size:14px; }
+        .tcb-manager .line2 { font-size:13px; }
+        .tcb-stat { width:56px; height:52px; }
+        .tcb-stat img { width:26px; height:26px; }
+        body { padding-top:84px; padding-bottom:84px; }
+      }
+      @media (max-width:420px) {
+        .tcb-logo { height:44px; }
+        .tcb-manager .line1 { font-size:13px; }
+        .tcb-manager .line2 { font-size:12px; }
+        .tcb-stat { width:52px; height:48px; }
+        .tcb-stat img { width:24px; height:24px; }
+        body { padding-top:94px; padding-bottom:94px; }
+      }
+      /* hide default focus outline but keep accessible focus */
+      .tcb-stat:focus { outline: 2px solid rgba(255,213,79,0.25); outline-offset:2px; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Build HTML
   topBarWrap.innerHTML = `
-    <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:1280px;margin:0 auto;">
-      <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto;">
-        <img id="tcb-logo" src="assets/logo.png" alt="The Cricket Boss" style="height:56px;width:auto;border-radius:4px;" />
-        <div id="managerName" style="font-size:16px;font-weight:700;">
-          <a id="managerProfileLink" href="myprofile.html" style="color:inherit;text-decoration:none;">
-            ${manager_name ? escapeHtml(manufacturerSafe(manager_name)) : "Name"} ▼
-          </a>
+    <div class="tcb-topbar-inner" role="presentation">
+      <div class="tcb-left">
+        <img id="tcb-logo" class="tcb-logo" src="assets/logo.png" alt="The Cricket Boss" />
+        <div class="tcb-manager" id="tcb-manager">
+          <span class="line1">${escapeHtml(nameFirst)}</span>
+          <span class="line2">${escapeHtml(nameRest)}</span>
         </div>
       </div>
 
-      <div id="tcb-stats" style="display:flex;align-items:center;gap:14px;margin-left:auto;flex:0 0 auto;">
+      <div class="tcb-stats" id="tcb-stats">
         <!-- XP Tile: show only level name -->
-        <button class="tcb-stat" id="xpTile" title="Level" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
-          <img src="assets/resources/xp.png" alt="XP" style="width:36px;height:36px;object-fit:contain;" />
-          <div id="manager-level" style="font-size:11px;margin-top:6px;">${escapeHtml(levelText)}</div>
-          <div id="xp" style="display:none;"></div>
+        <button class="tcb-stat" id="xpTile" title="Level" aria-label="Manager level">
+          <img src="assets/resources/xp.png" alt="XP" />
+          <span id="manager-level" class="tcb-stat-text">${escapeHtml(levelText)}</span>
         </button>
 
         <!-- Coin Tile -->
-        <button class="tcb-stat" id="coinTile" title="Coins" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
-          <img src="assets/resources/coin.png" alt="Coin" style="width:36px;height:36px;object-fit:contain;" />
-          <div id="coins" style="font-size:11px;margin-top:6px;">${Number(coins || 0)}</div>
+        <button class="tcb-stat" id="coinTile" title="Coins" aria-label="Coins">
+          <img src="assets/resources/coin.png" alt="Coins" />
+          <span id="coins" class="tcb-stat-text">${escapeHtml(formatCompactNumber(coins))}</span>
         </button>
 
         <!-- Cash Tile -->
-        <button class="tcb-stat" id="cashTile" title="Virtual Cash" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
-          <img src="assets/resources/cash.png" alt="Cash" style="width:36px;height:36px;object-fit:contain;" />
-          <div id="cash" style="font-size:11px;margin-top:6px;">${Number(cash || 0)}</div>
+        <button class="tcb-stat" id="cashTile" title="Virtual Cash" aria-label="Virtual cash">
+          <img src="assets/resources/cash.png" alt="Cash" />
+          <span id="cash" class="tcb-stat-text">${escapeHtml(formatCompactNumber(cash))}</span>
         </button>
 
-        <!-- Inbox Tile (icon + dot only; numeric hidden unless you prefer) -->
-        <button class="tcb-stat" id="inboxTile" title="Inbox" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;position:relative;">
-          <img src="assets/resources/inbox.png" alt="Inbox" style="width:36px;height:36px;object-fit:contain;" />
-          <span id="unreadDot" style="position:absolute; top:8px; right:14px; display:none; width:10px; height:10px; border-radius:50%; background:#e53935; border:2px solid #2f5596;"></span>
+        <!-- Inbox Tile: icon + small text below -->
+        <button class="tcb-stat" id="inboxTile" title="Inbox" aria-label="Inbox" style="position:relative;">
+          <img src="assets/resources/inbox.png" alt="Inbox" />
+          <span class="tcb-stat-sub" id="inboxText">Inbox</span>
+          <span id="unreadDot" class="tcb-unread-dot"></span>
         </button>
       </div>
     </div>
@@ -181,36 +338,27 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
   // prepend to body
   document.body.prepend(topBarWrap);
 
+  // Bottom nav: same color combos as top (gradient) - uses inline links/icons/text
+  const bottomBar = document.createElement("nav");
+  bottomBar.className = "tcb-bottomnav";
+  bottomBar.setAttribute("role", "navigation");
+  bottomBar.setAttribute("aria-label", "Main Navigation");
+  bottomBar.innerHTML = `
+    <a href="team.html" aria-label="Team"><div>🏏</div><div>Team</div></a>
+    <a href="scout.html" aria-label="Scout"><div>🔍</div><div>Scout</div></a>
+    <a href="home.html" aria-label="Home"><div>🏠</div><div>Home</div></a>
+    <a href="auction.html" aria-label="Auction"><div>⚒️</div><div>Auction</div></a>
+    <a href="store.html" aria-label="Store"><div>🛒</div><div>Store</div></a>
+  `;
+  document.body.appendChild(bottomBar);
+
   // Wire tile clicks (coin & cash -> store.html)
   document.getElementById("xpTile")?.addEventListener("click", () => goTo("profile.html"));
   document.getElementById("coinTile")?.addEventListener("click", () => goTo("store.html"));
   document.getElementById("cashTile")?.addEventListener("click", () => goTo("store.html"));
   document.getElementById("inboxTile")?.addEventListener("click", () => goTo("inbox.html"));
 
-  // Bottom nav (kept minimal as before)
-  const bottomBar = document.createElement("div");
-  bottomBar.className = "tcb-bottomnav";
-  bottomBar.style.position = "fixed";
-  bottomBar.style.bottom = "0";
-  bottomBar.style.left = "0";
-  bottomBar.style.right = "0";
-  bottomBar.style.height = "62px";
-  bottomBar.style.background = "rgba(255,255,255,0.98)";
-  bottomBar.style.display = "flex";
-  bottomBar.style.alignItems = "center";
-  bottomBar.style.justifyContent = "space-around";
-  bottomBar.style.boxShadow = "0 -6px 18px rgba(0,0,0,0.08)";
-  bottomBar.style.zIndex = "9998";
-  bottomBar.innerHTML = `
-    <a href="team.html" style="text-decoration:none;color:#333;font-weight:700;">🏏 Team</a>
-    <a href="scout.html" style="text-decoration:none;color:#333;font-weight:700;">🔍 Scout</a>
-    <a href="home.html" style="text-decoration:none;color:#333;font-weight:700;">🏠 Home</a>
-    <a href="auction.html" style="text-decoration:none;color:#333;font-weight:700;">⚒️ Auction</a>
-    <a href="store.html" style="text-decoration:none;color:#333;font-weight:700;">🛒 Store</a>
-  `;
-  document.body.appendChild(bottomBar);
-
-  // Popup menu for manager (minimal)
+  // Manager name dropdown popup (minimal)
   let popupMenu = document.getElementById("tcb-popup-menu");
   if (!popupMenu) {
     popupMenu = document.createElement("div");
@@ -228,21 +376,17 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
     document.body.appendChild(popupMenu);
   }
 
-  // toggle popup when clicking manager name (prevent default nav)
-  const managerProfileLink = document.getElementById("managerProfileLink");
-  managerProfileLink?.addEventListener("click", (e) => {
-    e.preventDefault();
+  // toggle popup when clicking manager name area
+  const managerBlock = document.getElementById("tcb-manager");
+  managerBlock?.addEventListener("click", (e) => {
+    e.stopPropagation();
     popupMenu.style.display = popupMenu.style.display === "flex" ? "none" : "flex";
   });
 
   // close popup when clicking outside
   window.addEventListener("click", (e) => {
     if (!popupMenu) return;
-    const target = e.target;
-    if (managerProfileLink && (target === managerProfileLink || managerProfileLink.contains(target))) {
-      return;
-    }
-    if (!popupMenu.contains(target)) {
+    if (!popupMenu.contains(e.target) && !managerBlock.contains(e.target)) {
       popupMenu.style.display = "none";
     }
   });
@@ -270,67 +414,63 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
       if (!error && Array.isArray(data)) {
         const count = data.length;
         const dot = document.getElementById("unreadDot");
+        const inboxText = document.getElementById("inboxText");
         if (count > 0) {
           if (dot) dot.style.display = "block";
+          // show count next to Inbox text (yellow & bold) while keeping text label below icon
+          if (inboxText) {
+            inboxText.innerText = `${count}`;
+            inboxText.style.color = "#ffd54f";
+            inboxText.style.fontWeight = "800";
+          }
         } else {
           if (dot) dot.style.display = "none";
+          if (inboxText) {
+            inboxText.innerText = "Inbox";
+            inboxText.style.color = "#ffd54f";
+            inboxText.style.fontWeight = "800";
+          }
         }
       }
     } catch (err) {
       console.error("Inbox count fetch failed:", err);
     }
+  } else {
+    // If no supabase, still set Inbox label styling
+    const inboxText = document.getElementById("inboxText");
+    if (inboxText) {
+      inboxText.style.color = "#ffd54f";
+      inboxText.style.fontWeight = "800";
+    }
   }
 
-  // ensure coins/cash elements are available for external updates
+  // Ensure coins/cash elements are available for external updates
   const coinsEl = document.getElementById("coins");
   const cashEl = document.getElementById("cash");
-  if (coinsEl) coinsEl.innerText = Number(coins || 0);
-  if (cashEl) cashEl.innerText = Number(cash || 0);
-  const levelEl = document.getElementById("manager-level");
-  if (levelEl) levelEl.innerText = escapeHtml(levelText);
+  if (coinsEl) coinsEl.innerText = formatCompactNumber(coins || 0);
+  if (cashEl) cashEl.innerText = formatCompactNumber(cash || 0);
 
-  // accessibility labels
-  document.getElementById("xpTile")?.setAttribute("aria-label", `Level ${levelText}`);
-  document.getElementById("coinTile")?.setAttribute("aria-label", `Coins ${coins || 0}`);
-  document.getElementById("cashTile")?.setAttribute("aria-label", `Virtual cash ${cash || 0}`);
+  // set level hidden xp element for programmatic updates (kept hidden)
+  let xpHidden = document.getElementById("xp");
+  if (!xpHidden) {
+    xpHidden = document.createElement("div");
+    xpHidden.id = "xp";
+    xpHidden.style.display = "none";
+    xpHidden.innerText = String(xp || 0);
+    topBarWrap.appendChild(xpHidden);
+  } else {
+    xpHidden.innerText = String(xp || 0);
+  }
+
+  // Accessibility labels
+  document.getElementById("xpTile")?.setAttribute("aria-label", `Level ${escapeHtml(levelText)}`);
+  document.getElementById("coinTile")?.setAttribute("aria-label", `Coins ${formatCompactNumber(coins || 0)}`);
+  document.getElementById("cashTile")?.setAttribute("aria-label", `Virtual cash ${formatCompactNumber(cash || 0)}`);
   document.getElementById("inboxTile")?.setAttribute("aria-label", `Inbox`);
 
-  // ensure body content padding so content not hidden under fixed bars
-  if (!document.querySelector("#tcb-shared-style")) {
-    const styleEl = document.createElement("style");
-    styleEl.id = "tcb-shared-style";
-    styleEl.innerHTML = `
-      body { padding-top: 80px; padding-bottom: 80px; }
-      @media (max-width:640px) { body { padding-top: 94px; } }
-    `;
-    document.head.appendChild(styleEl);
-  }
-}
-
-// -------------------------------
-// Small helper to escape inserted manager name text
-// -------------------------------
-function escapeHtml(str) {
-  if (typeof str !== "string") return str;
-  return str.replace(/[&<>"'`=\/]/g, function (s) {
-    return ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-      "/": "&#x2F;",
-      "`": "&#x60;",
-      "=": "&#x3D;"
-    })[s];
-  });
-}
-
-// defensive helper: if manager_name contains strange characters, trim
-function manufacturerSafe(name) {
-  try {
-    return String(name).trim().slice(0, 64); // limit length
-  } catch {
-    return String(name || "");
-  }
+  // Expose small API on window for runtime updates (optional convenience)
+  if (!window.tcbSharedUI) window.tcbSharedUI = {};
+  window.tcbSharedUI.updateCoins = updateTopbarCoins;
+  window.tcbSharedUI.updateCash = updateTopbarCash;
+  window.tcbSharedUI.updateLevel = updateTopbarXPLevel;
 }
