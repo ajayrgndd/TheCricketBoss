@@ -88,11 +88,12 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
   const existingBottom = document.querySelector(".tcb-bottomnav");
   if (existingBottom) existingBottom.remove();
 
+  // Determine XP level name
+  const levelText = getManagerLevel(xp);
+
   // Top bar container
   const topBarWrap = document.createElement("div");
   topBarWrap.className = "tcb-topbar-container";
-  // Inline minimal styles to match the screenshot and avoid requiring CSS edits.
-  // If you already have CSS classes, you can remove/replace these styles.
   topBarWrap.style.position = "fixed";
   topBarWrap.style.top = "0";
   topBarWrap.style.left = "0";
@@ -107,66 +108,52 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
   topBarWrap.style.padding = "6px 12px";
   topBarWrap.style.boxSizing = "border-box";
 
-  // Build inner HTML structure
   topBarWrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:1280px;margin:0 auto;">
       <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto;">
-        <img id="tcb-logo" src="assets/logo.png" alt="The Cricket Boss" style="height:56px; width:auto; border-radius:4px;" />
-        <div style="line-height:1;">
-          <div style="font-size:14px;font-weight:600;opacity:0.95;">Manager</div>
-          <div id="managerName" style="font-size:18px;font-weight:800;margin-top:2px;">
-            <a id="managerProfileLink" href="myprofile.html" style="color:inherit; text-decoration:none;">${manager_name || "Name"} ▼</a>
-          </div>
+        <img id="tcb-logo" src="assets/logo.png" alt="The Cricket Boss" style="height:56px;width:auto;border-radius:4px;" />
+        <div id="managerName" style="font-size:16px;font-weight:700;">
+          <a id="managerProfileLink" href="myprofile.html" style="color:inherit;text-decoration:none;">
+            ${manager_name || "Name"} ▼
+          </a>
         </div>
       </div>
 
       <div id="tcb-stats" style="display:flex;align-items:center;gap:14px;margin-left:auto;flex:0 0 auto;">
-        <!-- XP Tile -->
-        <button class="tcb-stat" id="xpTile" title="XP" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:76px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
-          <img src="assets/resources/xp.png" alt="XP" style="width:36px;height:36px;object-fit:contain;margin-bottom:4px;" />
-          <div style="font-size:12px;font-weight:700;">XP</div>
-          <div id="xp" style="font-size:11px;margin-top:2px;">${xp}</div>
+        <!-- XP Tile (only level name) -->
+        <button class="tcb-stat" id="xpTile" title="XP" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
+          <img src="assets/resources/xp.png" alt="XP" style="width:36px;height:36px;object-fit:contain;" />
+          <div id="manager-level" style="font-size:11px;margin-top:4px;">${levelText}</div>
         </button>
 
-        <!-- Coin Tile (links to store.html) -->
-        <button class="tcb-stat" id="coinTile" title="Coins" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:76px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
-          <img src="assets/resources/coin.png" alt="Coin" style="width:36px;height:36px;object-fit:contain;margin-bottom:4px;" />
-          <div style="font-size:12px;font-weight:700;">CB</div>
-          <div id="coins" style="font-size:11px;margin-top:2px;">${coins}</div>
+        <!-- Coin Tile -->
+        <button class="tcb-stat" id="coinTile" title="Coins" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
+          <img src="assets/resources/coin.png" alt="Coin" style="width:36px;height:36px;object-fit:contain;" />
+          <div id="coins" style="font-size:11px;margin-top:4px;">${coins}</div>
         </button>
 
-        <!-- Cash Tile (links to store.html) -->
-        <button class="tcb-stat" id="cashTile" title="Virtual Cash" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:76px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
-          <img src="assets/resources/cash.png" alt="Cash" style="width:36px;height:36px;object-fit:contain;margin-bottom:4px;" />
-          <div style="font-size:12px;font-weight:700;">Virtual Cash</div>
-          <div id="cash" style="font-size:11px;margin-top:2px;">${cash}</div>
+        <!-- Cash Tile -->
+        <button class="tcb-stat" id="cashTile" title="Virtual Cash" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
+          <img src="assets/resources/cash.png" alt="Cash" style="width:36px;height:36px;object-fit:contain;" />
+          <div id="cash" style="font-size:11px;margin-top:4px;">${cash}</div>
         </button>
 
         <!-- Inbox Tile -->
-        <button class="tcb-stat" id="inboxTile" title="Inbox" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:76px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;position:relative;">
-          <img src="assets/resources/inbox.png" alt="Inbox" style="width:36px;height:36px;object-fit:contain;margin-bottom:4px;" />
-          <div style="font-size:12px;font-weight:700;">Inbox</div>
-          <div id="unreadCountBadge" style="font-size:11px;margin-top:2px;display:none;">0</div>
-          <span id="unreadDot" style="position:absolute; top:8px; right:12px; display:none; width:10px; height:10px; border-radius:50%; background:#e53935; border:2px solid #2f5596;"></span>
+        <button class="tcb-stat" id="inboxTile" title="Inbox" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;position:relative;">
+          <img src="assets/resources/inbox.png" alt="Inbox" style="width:36px;height:36px;object-fit:contain;" />
+          <span id="unreadDot" style="position:absolute;top:8px;right:14px;display:none;width:10px;height:10px;border-radius:50%;background:#e53935;border:2px solid #2f5596;"></span>
         </button>
       </div>
     </div>
   `;
 
-  // Prepend to body
   document.body.prepend(topBarWrap);
 
   // Wire tile clicks
-  const xpTile = document.getElementById("xpTile");
-  const coinTile = document.getElementById("coinTile");
-  const cashTile = document.getElementById("cashTile");
-  const inboxTile = document.getElementById("inboxTile");
-
-  xpTile?.addEventListener("click", () => goTo("profile.html"));
-  // coin and cash should go to store.html as requested
-  coinTile?.addEventListener("click", () => goTo("store.html"));
-  cashTile?.addEventListener("click", () => goTo("store.html"));
-  inboxTile?.addEventListener("click", () => goTo("inbox.html"));
+  document.getElementById("xpTile")?.addEventListener("click", () => goTo("profile.html"));
+  document.getElementById("coinTile")?.addEventListener("click", () => goTo("store.html"));
+  document.getElementById("cashTile")?.addEventListener("click", () => goTo("store.html"));
+  document.getElementById("inboxTile")?.addEventListener("click", () => goTo("inbox.html"));
 
   // Bottom nav (simple)
   const bottomBar = document.createElement("div");
@@ -321,3 +308,4 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
     style.className = "tcb-content-pad";
   }
 }
+
