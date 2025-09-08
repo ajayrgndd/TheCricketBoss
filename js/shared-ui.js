@@ -1,7 +1,15 @@
 // shared-ui.js
-// Exports retained: getManagerLevel, addManagerXP, loadSharedUI
+// Patched full version — exports retained: getManagerLevel, addManagerXP, loadSharedUI
+// Uses assets:
+//  - assets/logo.png
+//  - assets/resources/xp.png
+//  - assets/resources/coin.png
+//  - assets/resources/cash.png
+//  - assets/resources/inbox.png
 
-// XP → Level mapping  
+// -------------------------------
+// XP → Level mapping
+// -------------------------------
 export function getManagerLevel(xp) {
   if (xp >= 13500) return "The Boss";
   if (xp >= 8500) return "Ultimate";
@@ -13,7 +21,9 @@ export function getManagerLevel(xp) {
   return "Beginner";
 }
 
+// -------------------------------
 // Add XP to manager
+// -------------------------------
 export async function addManagerXP(supabase, userId, eventKey) {
   const XP_REWARDS = {
     daily_login: 10,
@@ -42,56 +52,75 @@ export async function addManagerXP(supabase, userId, eventKey) {
   const xpToAdd = XP_REWARDS[eventKey] || 0;
   if (xpToAdd === 0) return;
 
-  const { data: profile, error: fetchError } = await supabase
-    .from("profiles")
-    .select("xp")
-    .eq("user_id", userId)
-    .single();
+  try {
+    const { data: profile, error: fetchError } = await supabase
+      .from("profiles")
+      .select("xp")
+      .eq("user_id", userId)
+      .single();
 
-  if (fetchError) {
-    console.error("❌ XP Fetch Error:", fetchError.message);
-    return;
-  }
+    if (fetchError) {
+      console.error("❌ XP Fetch Error:", fetchError.message);
+      return;
+    }
 
-  const newXP = (profile?.xp || 0) + xpToAdd;
-  const newLevel = getManagerLevel(newXP);
+    const newXP = (profile?.xp || 0) + xpToAdd;
+    const newLevel = getManagerLevel(newXP);
 
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ xp: newXP, level: newLevel })
-    .eq("user_id", userId);
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ xp: newXP, level: newLevel })
+      .eq("user_id", userId);
 
-  if (updateError) {
-    console.error("❌ XP Update Error:", updateError.message);
-  } else {
-    console.log(`✅ XP +${xpToAdd} → ${newXP} (${newLevel})`);
-    updateTopbarXPLevel(newXP, newLevel);
+    if (updateError) {
+      console.error("❌ XP Update Error:", updateError.message);
+    } else {
+      console.log(`✅ XP +${xpToAdd} → ${newXP} (${newLevel})`);
+      updateTopbarXPLevel(newXP, newLevel);
+    }
+  } catch (err) {
+    console.error("Exception in addManagerXP:", err);
   }
 }
 
-// Optional: update UI top bar
+// -------------------------------
+// UI Updaters
+// -------------------------------
 function updateTopbarXPLevel(xp, level) {
-  const xpSpan = document.getElementById("xp");
-  const levelSpan = document.getElementById("manager-level");
-  if (xpSpan) xpSpan.innerText = xp;
-  if (levelSpan) levelSpan.innerText = level;
+  const xpEl = document.getElementById("xp");
+  const levelEl = document.getElementById("manager-level");
+  if (xpEl) xpEl.innerText = xp;
+  if (levelEl) levelEl.innerText = level;
+}
+function updateTopbarCoins(value) {
+  const coinsEl = document.getElementById("coins");
+  if (coinsEl) coinsEl.innerText = value;
+}
+function updateTopbarCash(value) {
+  const cashEl = document.getElementById("cash");
+  if (cashEl) cashEl.innerText = value;
 }
 
-// Helper navigation
-function goTo(url){ window.location.href = url; }
+// -------------------------------
+// Navigation helper
+// -------------------------------
+function goTo(url) { window.location.href = url; }
 
-// Load top and bottom bars
+// -------------------------------
+// Main loader: injects top bar & bottom nav
+// Only file changed in this patch.
+// -------------------------------
 export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, cash = 0, user_id }) {
-  // Remove any existing top-bar / bottom-nav to avoid duplicates
+  // remove duplicates if re-initialized
   const existingTop = document.querySelector(".tcb-topbar-container");
   if (existingTop) existingTop.remove();
   const existingBottom = document.querySelector(".tcb-bottomnav");
   if (existingBottom) existingBottom.remove();
 
-  // Determine XP level name
-  const levelText = getManagerLevel(xp);
+  // compute manager level label (only level name shown)
+  const levelText = getManagerLevel(Number(xp || 0));
 
-  // Top bar container
+  // create top bar wrapper with inline styles (keeps change localized to this file)
   const topBarWrap = document.createElement("div");
   topBarWrap.className = "tcb-topbar-container";
   topBarWrap.style.position = "fixed";
@@ -108,54 +137,57 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
   topBarWrap.style.padding = "6px 12px";
   topBarWrap.style.boxSizing = "border-box";
 
+  // build inner HTML — no label texts (per request). Manager name reduced in size.
   topBarWrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;width:100%;max-width:1280px;margin:0 auto;">
       <div style="display:flex;align-items:center;gap:10px;flex:0 0 auto;">
         <img id="tcb-logo" src="assets/logo.png" alt="The Cricket Boss" style="height:56px;width:auto;border-radius:4px;" />
         <div id="managerName" style="font-size:16px;font-weight:700;">
           <a id="managerProfileLink" href="myprofile.html" style="color:inherit;text-decoration:none;">
-            ${manager_name || "Name"} ▼
+            ${manager_name ? escapeHtml(manufacturerSafe(manager_name)) : "Name"} ▼
           </a>
         </div>
       </div>
 
       <div id="tcb-stats" style="display:flex;align-items:center;gap:14px;margin-left:auto;flex:0 0 auto;">
-        <!-- XP Tile (only level name) -->
-        <button class="tcb-stat" id="xpTile" title="XP" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
+        <!-- XP Tile: show only level name -->
+        <button class="tcb-stat" id="xpTile" title="Level" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
           <img src="assets/resources/xp.png" alt="XP" style="width:36px;height:36px;object-fit:contain;" />
-          <div id="manager-level" style="font-size:11px;margin-top:4px;">${levelText}</div>
+          <div id="manager-level" style="font-size:11px;margin-top:6px;">${escapeHtml(levelText)}</div>
+          <div id="xp" style="display:none;"></div>
         </button>
 
         <!-- Coin Tile -->
         <button class="tcb-stat" id="coinTile" title="Coins" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
           <img src="assets/resources/coin.png" alt="Coin" style="width:36px;height:36px;object-fit:contain;" />
-          <div id="coins" style="font-size:11px;margin-top:4px;">${coins}</div>
+          <div id="coins" style="font-size:11px;margin-top:6px;">${Number(coins || 0)}</div>
         </button>
 
         <!-- Cash Tile -->
         <button class="tcb-stat" id="cashTile" title="Virtual Cash" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;">
           <img src="assets/resources/cash.png" alt="Cash" style="width:36px;height:36px;object-fit:contain;" />
-          <div id="cash" style="font-size:11px;margin-top:4px;">${cash}</div>
+          <div id="cash" style="font-size:11px;margin-top:6px;">${Number(cash || 0)}</div>
         </button>
 
-        <!-- Inbox Tile -->
+        <!-- Inbox Tile (icon + dot only; numeric hidden unless you prefer) -->
         <button class="tcb-stat" id="inboxTile" title="Inbox" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:72px;height:64px;border-radius:999px;background:rgba(255,255,255,0.06);border:none;cursor:pointer;padding:6px;position:relative;">
           <img src="assets/resources/inbox.png" alt="Inbox" style="width:36px;height:36px;object-fit:contain;" />
-          <span id="unreadDot" style="position:absolute;top:8px;right:14px;display:none;width:10px;height:10px;border-radius:50%;background:#e53935;border:2px solid #2f5596;"></span>
+          <span id="unreadDot" style="position:absolute; top:8px; right:14px; display:none; width:10px; height:10px; border-radius:50%; background:#e53935; border:2px solid #2f5596;"></span>
         </button>
       </div>
     </div>
   `;
 
+  // prepend to body
   document.body.prepend(topBarWrap);
 
-  // Wire tile clicks
+  // Wire tile clicks (coin & cash -> store.html)
   document.getElementById("xpTile")?.addEventListener("click", () => goTo("profile.html"));
   document.getElementById("coinTile")?.addEventListener("click", () => goTo("store.html"));
   document.getElementById("cashTile")?.addEventListener("click", () => goTo("store.html"));
   document.getElementById("inboxTile")?.addEventListener("click", () => goTo("inbox.html"));
 
-  // Bottom nav (simple)
+  // Bottom nav (kept minimal as before)
   const bottomBar = document.createElement("div");
   bottomBar.className = "tcb-bottomnav";
   bottomBar.style.position = "fixed";
@@ -178,8 +210,7 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
   `;
   document.body.appendChild(bottomBar);
 
-  // Dropdown menu under manager name (minimal)
-  // create popup menu element if not exists
+  // Popup menu for manager (minimal)
   let popupMenu = document.getElementById("tcb-popup-menu");
   if (!popupMenu) {
     popupMenu = document.createElement("div");
@@ -197,10 +228,9 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
     document.body.appendChild(popupMenu);
   }
 
-  // toggle popup when clicking manager name link
+  // toggle popup when clicking manager name (prevent default nav)
   const managerProfileLink = document.getElementById("managerProfileLink");
   managerProfileLink?.addEventListener("click", (e) => {
-    // Prevent immediate navigation to profile — toggle dropdown instead.
     e.preventDefault();
     popupMenu.style.display = popupMenu.style.display === "flex" ? "none" : "flex";
   });
@@ -210,7 +240,6 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
     if (!popupMenu) return;
     const target = e.target;
     if (managerProfileLink && (target === managerProfileLink || managerProfileLink.contains(target))) {
-      // already handled
       return;
     }
     if (!popupMenu.contains(target)) {
@@ -218,23 +247,18 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
     }
   });
 
-  // Logout handler
+  // logout handler
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       if (supabase && supabase.auth) {
-        try {
-          await supabase.auth.signOut();
-        } catch (err) {
-          console.warn("Sign out error:", err);
-        }
+        try { await supabase.auth.signOut(); } catch (err) { console.warn("Sign out error:", err); }
       }
-      // redirect to login page
       window.location.href = "login.html";
     });
   }
 
-  // Fetch unread inbox count (if supabase provided)
+  // Fetch unread inbox count (supabase)
   if (supabase && user_id) {
     try {
       const { data, error } = await supabase
@@ -245,16 +269,10 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
 
       if (!error && Array.isArray(data)) {
         const count = data.length;
-        const badge = document.getElementById("unreadCountBadge");
         const dot = document.getElementById("unreadDot");
         if (count > 0) {
-          if (badge) {
-            badge.innerText = count;
-            badge.style.display = "block";
-          }
           if (dot) dot.style.display = "block";
         } else {
-          if (badge) badge.style.display = "none";
           if (dot) dot.style.display = "none";
         }
       }
@@ -263,49 +281,56 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
     }
   }
 
-  // Make sure updateTopbarXPLevel uses the same element IDs (xp, manager-level, coins, cash)
-  // Also set manager-level display near xp for clarity
-  // Create manager-level display element if not present
-  let levelLabel = document.getElementById("manager-level");
-  if (!levelLabel) {
-    levelLabel = document.createElement("div");
-    levelLabel.id = "manager-level";
-    levelLabel.style.fontSize = "12px";
-    levelLabel.style.fontWeight = "700";
-    levelLabel.style.marginLeft = "8px";
-    levelLabel.style.color = "#fff";
-    // place it next to xp tile (insert after xp element)
-    const xpEl = document.getElementById("xp");
-    if (xpEl && xpEl.parentElement) {
-      xpEl.parentElement.appendChild(levelLabel);
-    }
-  }
-  // initialize manager-level text
-  const levelText = getManagerLevel(xp || 0);
-  levelLabel.innerText = levelText;
-
-  // Ensure coins and cash IDs are set so updateTopbarXPLevel and other code can update them
+  // ensure coins/cash elements are available for external updates
   const coinsEl = document.getElementById("coins");
   const cashEl = document.getElementById("cash");
-  if (coinsEl) coinsEl.innerText = coins;
-  if (cashEl) cashEl.innerText = cash;
+  if (coinsEl) coinsEl.innerText = Number(coins || 0);
+  if (cashEl) cashEl.innerText = Number(cash || 0);
+  const levelEl = document.getElementById("manager-level");
+  if (levelEl) levelEl.innerText = escapeHtml(levelText);
 
-  // Accessibility: add aria-labels
-  xpTile?.setAttribute("aria-label", `Experience ${xp}`);
-  coinTile?.setAttribute("aria-label", `Coins ${coins}`);
-  cashTile?.setAttribute("aria-label", `Virtual cash ${cash}`);
-  inboxTile?.setAttribute("aria-label", `Inbox`);
+  // accessibility labels
+  document.getElementById("xpTile")?.setAttribute("aria-label", `Level ${levelText}`);
+  document.getElementById("coinTile")?.setAttribute("aria-label", `Coins ${coins || 0}`);
+  document.getElementById("cashTile")?.setAttribute("aria-label", `Virtual cash ${cash || 0}`);
+  document.getElementById("inboxTile")?.setAttribute("aria-label", `Inbox`);
 
-  // Small responsive fix: ensure body content doesn't hide under top bar
-  // Only add if not already present
-  if (!document.querySelector(".tcb-content-pad")) {
-    const style = document.createElement("style");
-    style.innerHTML = `
+  // ensure body content padding so content not hidden under fixed bars
+  if (!document.querySelector("#tcb-shared-style")) {
+    const styleEl = document.createElement("style");
+    styleEl.id = "tcb-shared-style";
+    styleEl.innerHTML = `
       body { padding-top: 80px; padding-bottom: 80px; }
       @media (max-width:640px) { body { padding-top: 94px; } }
     `;
-    document.head.appendChild(style);
-    style.className = "tcb-content-pad";
+    document.head.appendChild(styleEl);
   }
 }
 
+// -------------------------------
+// Small helper to escape inserted manager name text
+// -------------------------------
+function escapeHtml(str) {
+  if (typeof str !== "string") return str;
+  return str.replace(/[&<>"'`=\/]/g, function (s) {
+    return ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+      "/": "&#x2F;",
+      "`": "&#x60;",
+      "=": "&#x3D;"
+    })[s];
+  });
+}
+
+// defensive helper: if manager_name contains strange characters, trim
+function manufacturerSafe(name) {
+  try {
+    return String(name).trim().slice(0, 64); // limit length
+  } catch {
+    return String(name || "");
+  }
+}
