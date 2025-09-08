@@ -1,7 +1,10 @@
 // shared-ui.js
-// Full patched version per your latest requests.
+// Patched full version to:
+//  - remove translucent shade / circle behind each icon
+//  - normalize icon sizes so XP, Coin, Cash, Inbox images render equally
+//  - darken top and bottom nav backgrounds
 // Exports retained: getManagerLevel, addManagerXP, loadSharedUI
-// Assets expected:
+// Assets expected (unchanged):
 //  - assets/logo.png
 //  - assets/resources/xp.png
 //  - assets/resources/coin.png
@@ -154,7 +157,7 @@ function splitManagerName(displayName) {
 }
 
 // -------------------------------
-// Main loader: injects top bar & bottom nav (patched per your last requests)
+// Main loader: injects top bar & bottom nav
 // -------------------------------
 export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, cash = 0, user_id }) {
   // remove duplicates if re-initialized
@@ -174,7 +177,7 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
   topBarWrap.className = "tcb-topbar-container";
   topBarWrap.setAttribute("role", "banner");
 
-  // Inline css block (responsive tweaks + matching color combos applied to bottom nav)
+  // Inline css block (updates: removed translucent circle, fixed icon sizes, darker backgrounds)
   const inlineStyleId = "tcb-inline-shared-styles";
   if (!document.getElementById(inlineStyleId)) {
     const style = document.createElement("style");
@@ -186,12 +189,13 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
         left: 0;
         right: 0;
         height: 64px;
-        background: #2f5596;
+        /* darker blue */
+        background: linear-gradient(90deg,#203e6f,#1c3562);
         color: #fff;
         display: flex;
         align-items: center;
         z-index: 9999;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.16);
         padding: 6px 12px;
         box-sizing: border-box;
       }
@@ -215,8 +219,8 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
         flex-direction:column;
         line-height:1;
       }
-      .tcb-manager .line1 { font-size:15px; font-weight:700; }
-      .tcb-manager .line2 { font-size:14px; font-weight:700; margin-top:2px; opacity:0.95; }
+      .tcb-manager .line1 { font-size:14px; font-weight:700; } /* reduced */
+      .tcb-manager .line2 { font-size:13px; font-weight:700; margin-top:2px; opacity:0.95; }
       .tcb-stats {
         display:flex;
         align-items:center;
@@ -224,7 +228,8 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
         margin-left:auto;
         flex:0 0 auto;
       }
-      /* stat tile */
+
+      /* stat tile (no translucent shade) */
       .tcb-stat {
         display:flex;
         flex-direction:column;
@@ -232,33 +237,42 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
         justify-content:center;
         width:64px;
         height:56px;
-        border-radius:999px;
-        background:rgba(255,255,255,0.06);
-        border:none;
-        cursor:pointer;
-        padding:6px;
-        box-sizing:border-box;
+        border-radius:10px;
+        background: transparent; /* removed shade behind icon */
+        border: none;
+        cursor: pointer;
+        padding:4px 6px;
+        box-sizing: border-box;
+        position: relative;
       }
-      .tcb-stat img { width:30px; height:30px; object-fit:contain; display:block; }
-      .tcb-stat .tcb-stat-text { font-size:12px; margin-top:6px; color: #ffd54f; font-weight:800; } /* yellow + bold */
-      .tcb-stat .tcb-stat-sub { font-size:11px; margin-top:3px; color: #ffd54f; font-weight:800; display:block; }
+      /* enforce equal icon size for all tiles */
+      .tcb-stat img {
+        width:28px;
+        height:28px;
+        object-fit:contain;
+        display:block;
+      }
+
+      /* yellow bold texts under icons */
+      .tcb-stat .tcb-stat-text { font-size:12px; margin-top:6px; color: #ffd54f; font-weight:800; text-align:center; }
+      .tcb-stat .tcb-stat-sub { font-size:11px; margin-top:3px; color: #ffd54f; font-weight:800; display:block; text-align:center; }
 
       /* inbox dot */
-      .tcb-unread-dot { position:absolute; top:8px; right:12px; display:none; width:10px; height:10px; border-radius:50%; background:#e53935; border:2px solid #2f5596; }
+      .tcb-unread-dot { position:absolute; top:8px; right:10px; display:none; width:10px; height:10px; border-radius:50%; background:#e53935; border:2px solid rgba(0,0,0,0.25); }
 
-      /* bottom nav uses same top nav color combos */
+      /* bottom nav uses same darker combos as top */
       .tcb-bottomnav {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
         height: 64px;
-        background: linear-gradient(90deg,#2f5596,#254a80);
+        background: linear-gradient(90deg,#203e6f,#1c3562);
         display:flex;
         align-items:center;
         justify-content:space-around;
         gap:6px;
-        box-shadow: 0 -6px 18px rgba(0,0,0,0.08);
+        box-shadow: 0 -6px 22px rgba(0,0,0,0.18);
         z-index: 9998;
       }
       .tcb-bottomnav a {
@@ -272,30 +286,29 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
         font-size:13px;
       }
 
-      /* responsive: ensure all 4 tiles visible on small screens */
+      /* responsive: ensure all 4 tiles visible on small screens (shrink icons & tiles) */
       @media (max-width:720px) {
         .tcb-logo { height:48px; }
-        .tcb-manager .line1 { font-size:14px; }
-        .tcb-manager .line2 { font-size:13px; }
+        .tcb-manager .line1 { font-size:13px; }
+        .tcb-manager .line2 { font-size:12px; }
         .tcb-stat { width:56px; height:52px; }
-        .tcb-stat img { width:26px; height:26px; }
+        .tcb-stat img { width:24px; height:24px; }
         body { padding-top:84px; padding-bottom:84px; }
       }
       @media (max-width:420px) {
         .tcb-logo { height:44px; }
-        .tcb-manager .line1 { font-size:13px; }
-        .tcb-manager .line2 { font-size:12px; }
+        .tcb-manager .line1 { font-size:12px; }
+        .tcb-manager .line2 { font-size:11px; }
         .tcb-stat { width:52px; height:48px; }
-        .tcb-stat img { width:24px; height:24px; }
+        .tcb-stat img { width:22px; height:22px; }
         body { padding-top:94px; padding-bottom:94px; }
       }
-      /* hide default focus outline but keep accessible focus */
-      .tcb-stat:focus { outline: 2px solid rgba(255,213,79,0.25); outline-offset:2px; }
+      .tcb-stat:focus { outline: 2px solid rgba(255,213,79,0.18); outline-offset:2px; }
     `;
     document.head.appendChild(style);
   }
 
-  // Build HTML
+  // Build HTML (no translucent circles; icons are same size)
   topBarWrap.innerHTML = `
     <div class="tcb-topbar-inner" role="presentation">
       <div class="tcb-left">
@@ -338,17 +351,17 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
   // prepend to body
   document.body.prepend(topBarWrap);
 
-  // Bottom nav: same color combos as top (gradient) - uses inline links/icons/text
+  // Bottom nav: same darker color combos (gradient) - uses inline links/icons/text
   const bottomBar = document.createElement("nav");
   bottomBar.className = "tcb-bottomnav";
   bottomBar.setAttribute("role", "navigation");
   bottomBar.setAttribute("aria-label", "Main Navigation");
   bottomBar.innerHTML = `
-    <a href="team.html" aria-label="Team"><div>🏏</div><div>Team</div></a>
-    <a href="scout.html" aria-label="Scout"><div>🔍</div><div>Scout</div></a>
-    <a href="home.html" aria-label="Home"><div>🏠</div><div>Home</div></a>
-    <a href="auction.html" aria-label="Auction"><div>⚒️</div><div>Auction</div></a>
-    <a href="store.html" aria-label="Store"><div>🛒</div><div>Store</div></a>
+    <a href="team.html" aria-label="Team"><div style="font-size:20px">🏏</div><div>Team</div></a>
+    <a href="scout.html" aria-label="Scout"><div style="font-size:20px">🔍</div><div>Scout</div></a>
+    <a href="home.html" aria-label="Home"><div style="font-size:20px">🏠</div><div>Home</div></a>
+    <a href="auction.html" aria-label="Auction"><div style="font-size:20px">⚒️</div><div>Auction</div></a>
+    <a href="store.html" aria-label="Store"><div style="font-size:20px">🛒</div><div>Store</div></a>
   `;
   document.body.appendChild(bottomBar);
 
@@ -417,7 +430,6 @@ export async function loadSharedUI({ supabase, manager_name, xp = 0, coins = 0, 
         const inboxText = document.getElementById("inboxText");
         if (count > 0) {
           if (dot) dot.style.display = "block";
-          // show count next to Inbox text (yellow & bold) while keeping text label below icon
           if (inboxText) {
             inboxText.innerText = `${count}`;
             inboxText.style.color = "#ffd54f";
