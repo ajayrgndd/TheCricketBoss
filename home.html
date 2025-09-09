@@ -14,6 +14,7 @@
       padding-bottom: 80px;
     }
 
+    /* ensure content clears top nav */
     .main {
       padding: 20px;
       padding-top: 2px;
@@ -94,97 +95,32 @@
       color: #ccc;
     }
 
-    .quick-links {
-      margin-top: 24px;
-      text-align: center;
-    }
+    .quick-links { margin-top: 24px; text-align: center; }
+    .quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
+    .quick-grid a { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #1e1e1e; padding: 14px 10px; border-radius: 8px; text-decoration: none; color: #00e676; box-shadow: 0 2px 5px rgba(0,0,0,0.4); transition: background 0.2s ease; }
+    .quick-grid a:hover { background-color: #2e2e2e; }
+    .quick-grid .icon { font-size: 24px; margin-bottom: 6px; }
+    .quick-grid .label { font-size: 0.85rem; }
 
-    .quick-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: 12px;
-    }
-
-    .quick-grid a {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background-color: #1e1e1e;
-      padding: 14px 10px;
-      border-radius: 8px;
-      text-decoration: none;
-      color: #00e676;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-      transition: background 0.2s ease;
-    }
-
-    .quick-grid a:hover {
-      background-color: #2e2e2e;
-    }
-
-    .quick-grid .icon {
-      font-size: 24px;
-      margin-bottom: 6px;
-    }
-
-    .quick-grid .label {
-      font-size: 0.85rem;
-    }
-
-    /* NEXT MATCH tweaks: smaller text and smaller logo, no boxed table behind name */
-    .match-card {
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-    .team-block {
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    .team-logo {
-      width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04);
-    }
-    .team-text {
-      display:flex;
-      flex-direction:column;
-      gap:3px;
-    }
+    /* NEXT MATCH tweaks */
+    .match-card { display:flex; gap:10px; align-items:center; }
+    .team-block { display:flex; gap:8px; align-items:center; }
+    .team-logo { width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04); }
+    .team-text { display:flex; flex-direction:column; gap:3px; }
     .team-name { font-weight:700; font-size:14px; color:#fff; }
     .ovr-row { font-size:12px; color:#cfd3ff; display:flex; align-items:center; gap:6px; }
-
     .match-meta { margin-left:10px; color:#cfd3ff; text-align:center; }
     .badge { font-size:11px; padding:4px 7px; border-radius:8px; background:#222; color:#cfd3ff; border:1px solid rgba(255,255,255,0.04); display:inline-block }
     .kickoff { margin-top:6px; font-weight:700; font-size:13px; }
     .countdown { font-weight:700; font-size:13px; color:#00e676; margin-top:6px; }
 
-    /* NEW: Preparation bar — reduced size + multi-color gradient (yellow -> light green -> orange -> red) */
-    .prep {
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .prep-bar {
-      height: 8px; /* reduced size */
-      background:#2b2b2b;
-      border-radius:6px;
-      overflow:hidden;
-    }
-    .prep-fill {
-      height:100%;
-      /* gradient: yellow -> light-green -> orange -> red */
-      background: linear-gradient(90deg, #FFD54F 0%, #C8E6C9 35%, #FFB74D 70%, #FF5252 100%);
-      width:0%;
-      transition: width .45s ease;
-    }
-    .prep-percent {
-      font-weight:800;
-      color:#cfd3ff;
-      font-size:12px; /* reduced */
-    }
+    /* Preparation bar */
+    .prep { display:flex; flex-direction:column; gap:6px; }
+    .prep-bar { height: 8px; background:#2b2b2b; border-radius:6px; overflow:hidden; }
+    .prep-fill { height:100%; background: linear-gradient(90deg, #FFD54F 0%, #C8E6C9 35%, #FFB74D 70%, #FF5252 100%); width:0%; transition: width .45s ease; }
+    .prep-percent { font-weight:800; color:#cfd3ff; font-size:12px; }
     .prep-tasks { display:flex;flex-direction:column;gap:6px; margin-top:6px }
-    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px } /* reduced */
+    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px }
     .task .dot { width:12px;height:12px;border-radius:50%;display:inline-block;text-align:center;line-height:12px;font-weight:800; font-size:11px }
     .task.done .dot { background:#00e676;color:#000 }
     .task.pending .dot { background:#444;color:#999 }
@@ -192,7 +128,7 @@
     .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:11px }
 
     /* Top 3 tweaks */
-    .top-player-name { font-size:13px; font-weight:700; color:#fff; } /* reduced size */
+    .top-player-name { font-size:13px; font-weight:700; color:#fff; }
     .top-player-role { font-size:12px; color:#cfd3ff; }
     .top-player-skill { font-size:12px; color:#a8f5c6; display:flex; align-items:center; gap:8px; justify-content:center; }
 
@@ -207,8 +143,6 @@
   <!-- Top bar & bottom nav will be injected by shared-ui.js -->
 
   <div class="main">
-    <!-- (Welcome header removed as requested) -->
-
     <!-- XP Progress Bar -->
     <div class="xp-bar-container">
       <div class="xp-bar-top">
@@ -221,20 +155,19 @@
 
     <div class="grid-container">
 
-      <!-- Fixture (UPDATED) -->
+      <!-- Fixture -->
       <div class="grid-item" id="fixture-block">
         <h3>Next Match</h3>
         <div id="fixture-info">Loading...</div>
       </div>
 
-      <!-- Match Preparation (MERGED & UPDATED) -->
+      <!-- Match Preparation -->
       <div class="grid-item">
         <h3>Match Preparation</h3>
         <div id="prepBlock" class="prep">
           <div class="prep-bar"><div id="prepFill" class="prep-fill"></div></div>
           <div id="prepPercent" class="prep-percent">0%</div>
           <div class="prep-tasks" id="prepTasks">
-            <!-- tasks will be injected here -->
             <div class="task pending" data-task="training"><div class="dot">–</div><div class="txt">Training: <strong id="t-training">Pending</strong></div><a href="training.html">Go</a></div>
             <div class="task pending" data-task="scout"><div class="dot">–</div><div class="txt">Scout (Wed): <strong id="t-scout">Pending</strong></div><a href="scout.html">Go</a></div>
             <div class="task pending" data-task="lineup"><div class="dot">–</div><div class="txt">Default Lineup: <strong id="t-lineup">Pending</strong></div><a href="set-lineup.html">Go</a></div>
@@ -251,7 +184,7 @@
 
     </div>
 
-    <!-- Quick Access (heading removed as requested) -->
+    <!-- Quick Access -->
     <div class="quick-links">
       <div class="quick-grid">
         <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
@@ -295,7 +228,7 @@
     }
 
     // ----------------------
-    // Helper functions reused/adapted from your profile files
+    // Helpers
     // ----------------------
     const toNum = (v) => (v == null || v === '') ? 0 : Number(v);
 
@@ -442,7 +375,122 @@
     }
 
     // ----------------------
-    // Main logic
+    // New training-window detection using week_anchor + window
+    // ----------------------
+    /**
+     * Compute this week's Monday date (IST wall-clock) as YYYY-MM-DD string (week_anchor).
+     * We'll base week_anchor on Monday's date.
+     */
+    function thisWeekMondayDateIST(reference = new Date()) {
+      // Convert to IST by adding offset from UTC to IST (+5:30)
+      const utc = new Date(reference.getTime() + (reference.getTimezoneOffset() * 60000));
+      const ist = new Date(utc.getTime() + (5.5 * 3600 * 1000));
+
+      const day = ist.getDay(); // 0=Sun..6=Sat
+      const offsetToMon = (day + 6) % 7;
+      const monday = new Date(ist);
+      monday.setDate(ist.getDate() - offsetToMon);
+      // zero time portion
+      monday.setHours(0,0,0,0);
+      // format YYYY-MM-DD
+      const yyyy = monday.getFullYear();
+      const mm = String(monday.getMonth() + 1).padStart(2, '0');
+      const dd = String(monday.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    /**
+     * Determine PREVIOUS training window name ('mon' or 'thu') and its week_anchor date.
+     *
+     * Rules:
+     * - Windows:
+     *    mon-window: Mon 22:00 -> Thu 19:00  (label "mon", week_anchor = this week's Monday)
+     *    thu-window: Thu 22:00 -> next Mon 19:00 (label "thu", week_anchor = this week's Monday)
+     * - "Previous" window is the one that finished most recently.
+     *
+     * We compute current IST time, decide whether current time is inside mon-window or thu-window,
+     * then pick the previous window's name and its week_anchor:
+     *  - If current is inside mon-window => previous = thu-window whose week_anchor is previous week's Monday.
+     *  - Else (current in thu-window) => previous = mon-window whose week_anchor is this week's Monday.
+     */
+    function prevTrainingWindowAnchorAndName(reference = new Date()) {
+      // make IST
+      const utc = new Date(reference.getTime() + (reference.getTimezoneOffset() * 60000));
+      const ist = new Date(utc.getTime() + (5.5 * 3600 * 1000));
+      // this week's Monday (IST date)
+      const thisMonDate = (() => {
+        const day = ist.getDay();
+        const offsetToMon = (day + 6) % 7;
+        const monday = new Date(ist);
+        monday.setDate(ist.getDate() - offsetToMon);
+        monday.setHours(0,0,0,0);
+        return monday;
+      })();
+
+      // build wall-clock moments (IST) for boundaries
+      function makeISTMoment(baseDate /* Date */, hh, mm) {
+        // baseDate is in IST wall-clock (we constructed it that way)
+        const d = new Date(baseDate);
+        d.setHours(hh, mm, 0, 0);
+        return d;
+      }
+
+      const mon22 = makeISTMoment(thisMonDate, 22, 0);                         // this Mon 22:00 IST
+      const thuDate = new Date(thisMonDate); thuDate.setDate(thisMonDate.getDate() + 3);
+      const thu19 = makeISTMoment(thuDate, 19, 0);                              // this Thu 19:00 IST
+      const thu22 = makeISTMoment(thuDate, 22, 0);                              // this Thu 22:00 IST
+      const nextMonDate = new Date(thisMonDate); nextMonDate.setDate(thisMonDate.getDate() + 7);
+      const nextMon19 = makeISTMoment(nextMonDate, 19, 0);                       // next Mon 19:00 IST
+      // previous week's Monday (for prev thu-window)
+      const prevMonDate = new Date(thisMonDate); prevMonDate.setDate(thisMonDate.getDate() - 7);
+
+      // Now decide if current IST is within mon-window (mon22 .. thu19) or within thu-window (thu22 .. nextMon19)
+      const inMonWindow = (ist >= mon22 && ist <= thu19);
+      // There are short gaps (thu19..thu22 and mon19..mon22). We'll treat those as "not in monWindow" (so they fall to thu-window logic).
+      let prevWindowName, prevWeekAnchor;
+      if (inMonWindow) {
+        // previous was thu-window that ended thisMon19 -> that thu-window's week_anchor is previous week's Monday
+        prevWindowName = 'thu';
+        const yyyy = prevMonDate.getFullYear();
+        const mm = String(prevMonDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(prevMonDate.getDate()).padStart(2, '0');
+        prevWeekAnchor = `${yyyy}-${mm}-${dd}`;
+      } else {
+        // current is considered in thu-window => previous was mon-window (this week's Monday anchor)
+        prevWindowName = 'mon';
+        const yyyy = thisMonDate.getFullYear();
+        const mm = String(thisMonDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(thisMonDate.getDate()).padStart(2, '0');
+        prevWeekAnchor = `${yyyy}-${mm}-${dd}`;
+      }
+
+      return { window: prevWindowName, week_anchor: prevWeekAnchor };
+    }
+
+    async function checkTrainingWindowDoneByWeek(supabaseClient, userId) {
+      const { window, week_anchor } = prevTrainingWindowAnchorAndName(new Date());
+      try {
+        const { data, error } = await supabaseClient
+          .from('training_sessions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('window', window)
+          .eq('week_anchor', week_anchor)
+          .limit(1);
+
+        if (error) {
+          console.warn('training_sessions query error', error);
+          return false;
+        }
+        return (data && data.length > 0);
+      } catch (e) {
+        console.warn('training window check failed', e);
+        return false;
+      }
+    }
+
+    // ----------------------
+    // Main
     // ----------------------
     async function main() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -467,7 +515,7 @@
 
       await distributeDailyLoginXP(user.id);
 
-      // XP UI unchanged but now we show left/right level labels
+      // XP UI
       const xp = profile.xp ?? 0;
       const levels = [
         { name: "Beginner", xp: 0 },
@@ -493,7 +541,6 @@
         }
       }
       const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
-      // set left/right labels and xp bar
       document.getElementById("level-current").textContent = currentLevel.name;
       document.getElementById("level-next").textContent = `Next: ${nextLevel.name}`;
       document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
@@ -512,13 +559,13 @@
         return;
       }
 
-      // Fetch players & lineup (we'll need them for OVR & fitness)
+      // Fetch players & lineup
       const [{ data: players }, { data: lineup }] = await Promise.all([
         supabase.from("players").select("*").eq("team_id", team.id),
         supabase.from("lineups").select("playing_xi,keeper,captain,team_id").eq("team_id", team.id).maybeSingle()
       ]);
 
-      // --- Render Top 3 Players (rank by highest of Batting and Bowling ONLY) ---
+      // Render Top 3 Players
       (function renderTop3() {
         function getSkillTitle(score) {
           if (score > 100) return "The Boss";
@@ -536,24 +583,16 @@
         const ranked = (allPlayers || []).map(p => {
           const bat = toNum(p.batting);
           const bowl = toNum(p.bowling);
-          const topVal = Math.max(bat, bowl); // ONLY batting vs bowling
+          const topVal = Math.max(bat, bowl);
           const topSkillName = (bat >= bowl) ? 'Batting' : 'Bowling';
-          return {
-            ...p,
-            topSkillValue: topVal,
-            topSkillName,
-            topSkillLevel: getSkillTitle(topVal)
-          };
+          return { ...p, topSkillValue: topVal, topSkillName, topSkillLevel: getSkillTitle(topVal) };
         })
         .sort((a,b) => b.topSkillValue - a.topSkillValue)
         .slice(0,3);
 
         const topEl = document.getElementById("top-players-list");
         const fallbackImage = 'assets/default-avatar.png';
-        if (!ranked.length) {
-          topEl.innerHTML = "No players found.";
-          return;
-        }
+        if (!ranked.length) { topEl.innerHTML = "No players found."; return; }
 
         topEl.innerHTML = `
           <div style="display:flex;justify-content:space-around;align-items:center;">
@@ -574,9 +613,8 @@
           </div>
         `;
       })();
-      // --- end Top 3 Players ---
 
-      // Fetch next upcoming match across fixtures and friendlies
+      // Fetch upcoming matches (fixtures + friendlies)
       const [fixturesRes, friendliesRes] = await Promise.all([
         supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5),
         supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5)
@@ -586,7 +624,6 @@
       if (fixturesRes?.data) fixturesRes.data.forEach(f => combined.push({ ...f, _kind: 'league' }));
       if (friendliesRes?.data) friendliesRes.data.forEach(m => combined.push({ ...m, _kind: 'friendly' }));
 
-      // Only include matches with status 'scheduled' or 'running'
       const allowed = combined.filter(m => m && (m.status === 'scheduled' || m.status === 'running'));
 
       let nextMatch = null;
@@ -601,8 +638,6 @@
       }
 
       const fixtureInfo = document.getElementById("fixture-info");
-
-      // helper to fetch team info (caching)
       const teamCache = new Map();
       async function teamInfo(id) {
         if (!id) return { team_name: '—', logo_url: null };
@@ -613,7 +648,6 @@
         return out;
       }
 
-      // If no upcoming match found
       if (!nextMatch) {
         fixtureInfo.innerHTML = `<div>No upcoming matches</div>`;
       } else {
@@ -621,10 +655,8 @@
         const awayId = nextMatch.away_team_id;
         const homeInfo = await teamInfo(homeId);
         const awayInfo = await teamInfo(awayId);
-
         const opponentId = (homeId === team.id) ? awayId : homeId;
 
-        // compute our OVR & opponent OVR
         const ourSelection = pickByLineupOrAuto(players || [], lineup || null);
         const ourRates = computeRatings(ourSelection);
 
@@ -667,7 +699,6 @@
           </div>
         `;
 
-        // Countdown updater
         const countdownEl = document.getElementById('matchCountdown');
         function updateCountdown() {
           const now = new Date();
@@ -681,15 +712,8 @@
       // --------------------------
       // Match Preparation progress (4 tasks x 25%)
       // --------------------------
-      const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const { data: recentTraining } = await supabase
-        .from('training_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', sevenDaysAgo.toISOString().split('T')[0]);
-
-      const trainingDone = (recentTraining && recentTraining.length > 0);
+      // TRAINING: check previous window using week_anchor + window
+      const trainingDone = await checkTrainingWindowDoneByWeek(supabase, user.id);
 
       const lastWed = lastWednesday(new Date());
       const scoutedDateStr = profile?.last_scouted_date || profile?.last_scouted || null;
@@ -770,19 +794,24 @@
       prepPercent.textContent = `${score}%`;
       document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
 
-      // periodic refresh every 20s for tasks & countdown is already running
+      // periodic refresh: use same week_anchor/window logic for training
       setInterval(async () => {
         try {
-          const { data: rt } = await supabase.from('training_sessions').select('id').eq('user_id', user.id).gte('created_at', sevenDaysAgo.toISOString().split('T')[0]).limit(1);
-          const newTrainingDone = (rt && rt.length>0);
+          const newTrainingDone = await checkTrainingWindowDoneByWeek(supabase, user.id);
+
+          // scout
           const { data: pf } = await supabase.from('profiles').select('last_scouted_date,last_scouted').eq('user_id', user.id).single();
           let newScoutDone = false;
           if (pf?.last_scouted_date || pf?.last_scouted) {
             const sd = new Date(pf.last_scouted_date || pf.last_scouted); sd.setHours(0,0,0,0);
             newScoutDone = sd >= lastWed;
           }
+
+          // lineup
           const { data: lu2 } = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', team.id).maybeSingle();
           const newLineupDone = (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length >= 11);
+
+          // fitness
           const { data: playersRef } = await supabase.from('players').select('*').eq('team_id', team.id);
           let newAvg = 0;
           if (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length) {
@@ -833,6 +862,3 @@
   </script>
 </body>
 </html>
-
-
-
