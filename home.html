@@ -14,6 +14,7 @@
       padding-bottom: 80px;
     }
 
+    /* ensure content clears top nav */
     .main {
       padding: 20px;
       padding-top: 2px;
@@ -94,97 +95,32 @@
       color: #ccc;
     }
 
-    .quick-links {
-      margin-top: 24px;
-      text-align: center;
-    }
+    .quick-links { margin-top: 24px; text-align: center; }
+    .quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
+    .quick-grid a { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #1e1e1e; padding: 14px 10px; border-radius: 8px; text-decoration: none; color: #00e676; box-shadow: 0 2px 5px rgba(0,0,0,0.4); transition: background 0.2s ease; }
+    .quick-grid a:hover { background-color: #2e2e2e; }
+    .quick-grid .icon { font-size: 24px; margin-bottom: 6px; }
+    .quick-grid .label { font-size: 0.85rem; }
 
-    .quick-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: 12px;
-    }
-
-    .quick-grid a {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background-color: #1e1e1e;
-      padding: 14px 10px;
-      border-radius: 8px;
-      text-decoration: none;
-      color: #00e676;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-      transition: background 0.2s ease;
-    }
-
-    .quick-grid a:hover {
-      background-color: #2e2e2e;
-    }
-
-    .quick-grid .icon {
-      font-size: 24px;
-      margin-bottom: 6px;
-    }
-
-    .quick-grid .label {
-      font-size: 0.85rem;
-    }
-
-    /* NEXT MATCH tweaks: smaller text and smaller logo, no boxed table behind name */
-    .match-card {
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-    .team-block {
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    .team-logo {
-      width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04);
-    }
-    .team-text {
-      display:flex;
-      flex-direction:column;
-      gap:3px;
-    }
+    /* NEXT MATCH tweaks */
+    .match-card { display:flex; gap:10px; align-items:center; }
+    .team-block { display:flex; gap:8px; align-items:center; }
+    .team-logo { width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04); }
+    .team-text { display:flex; flex-direction:column; gap:3px; }
     .team-name { font-weight:700; font-size:14px; color:#fff; }
     .ovr-row { font-size:12px; color:#cfd3ff; display:flex; align-items:center; gap:6px; }
-
     .match-meta { margin-left:10px; color:#cfd3ff; text-align:center; }
     .badge { font-size:11px; padding:4px 7px; border-radius:8px; background:#222; color:#cfd3ff; border:1px solid rgba(255,255,255,0.04); display:inline-block }
     .kickoff { margin-top:6px; font-weight:700; font-size:13px; }
     .countdown { font-weight:700; font-size:13px; color:#00e676; margin-top:6px; }
 
-    /* NEW: Preparation bar — reduced size + multi-color gradient (yellow -> light green -> orange -> red) */
-    .prep {
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .prep-bar {
-      height: 8px; /* reduced size */
-      background:#2b2b2b;
-      border-radius:6px;
-      overflow:hidden;
-    }
-    .prep-fill {
-      height:100%;
-      /* gradient: yellow -> light-green -> orange -> red */
-      background: linear-gradient(90deg, #FFD54F 0%, #C8E6C9 35%, #FFB74D 70%, #FF5252 100%);
-      width:0%;
-      transition: width .45s ease;
-    }
-    .prep-percent {
-      font-weight:800;
-      color:#cfd3ff;
-      font-size:12px; /* reduced */
-    }
+    /* Preparation bar */
+    .prep { display:flex; flex-direction:column; gap:6px; }
+    .prep-bar { height: 8px; background:#2b2b2b; border-radius:6px; overflow:hidden; }
+    .prep-fill { height:100%; background: linear-gradient(90deg, #FFD54F 0%, #C8E6C9 35%, #FFB74D 70%, #FF5252 100%); width:0%; transition: width .45s ease; }
+    .prep-percent { font-weight:800; color:#cfd3ff; font-size:12px; }
     .prep-tasks { display:flex;flex-direction:column;gap:6px; margin-top:6px }
-    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px } /* reduced */
+    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px }
     .task .dot { width:12px;height:12px;border-radius:50%;display:inline-block;text-align:center;line-height:12px;font-weight:800; font-size:11px }
     .task.done .dot { background:#00e676;color:#000 }
     .task.pending .dot { background:#444;color:#999 }
@@ -192,7 +128,7 @@
     .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:11px }
 
     /* Top 3 tweaks */
-    .top-player-name { font-size:13px; font-weight:700; color:#fff; } /* reduced size */
+    .top-player-name { font-size:13px; font-weight:700; color:#fff; }
     .top-player-role { font-size:12px; color:#cfd3ff; }
     .top-player-skill { font-size:12px; color:#a8f5c6; display:flex; align-items:center; gap:8px; justify-content:center; }
 
@@ -207,8 +143,6 @@
   <!-- Top bar & bottom nav will be injected by shared-ui.js -->
 
   <div class="main">
-    <!-- (Welcome header removed as requested) -->
-
     <!-- XP Progress Bar -->
     <div class="xp-bar-container">
       <div class="xp-bar-top">
@@ -251,7 +185,7 @@
 
     </div>
 
-    <!-- Quick Access (heading removed as requested) -->
+    <!-- Quick Access -->
     <div class="quick-links">
       <div class="quick-grid">
         <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
@@ -295,7 +229,7 @@
     }
 
     // ----------------------
-    // Helper functions reused/adapted from your profile files
+    // Helpers
     // ----------------------
     const toNum = (v) => (v == null || v === '') ? 0 : Number(v);
 
@@ -396,6 +330,91 @@
       return d;
     }
 
+    // ---------- training window helpers ----------
+    // Return IST Date object for given UTC date
+    function toIST(date = new Date()) {
+      // create a new date shifted to IST (UTC +5:30)
+      const utc = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
+      return new Date(utc.getTime() + (5.5 * 3600 * 1000));
+    }
+
+    // Returns { window: 'mon'|'thu', week_anchor: 'YYYY-MM-DD' } for the PREVIOUS window (the window that finished most recently)
+    function prevTrainingWindow(reference = new Date()) {
+      // Work in IST wall-clock
+      const ist = toIST(reference);
+      // build this week's Monday (IST) at 00:00
+      const day = ist.getDay(); // 0=Sun..6=Sat
+      const offsetToMon = (day + 6) % 7; // days since Monday
+      const thisMon = new Date(ist);
+      thisMon.setDate(ist.getDate() - offsetToMon);
+      thisMon.setHours(0,0,0,0);
+
+      // helper to build IST time on a base date
+      function make(date, hh, mm=0) {
+        const d = new Date(date);
+        d.setHours(hh, mm, 0, 0);
+        return d;
+      }
+
+      const mon22 = make(thisMon, 22, 0);                          // this Mon 22:00 IST
+      const thu = new Date(thisMon); thu.setDate(thisMon.getDate() + 3);
+      const thu19 = make(thu, 19, 0);                              // this Thu 19:00 IST
+      const thu22 = make(thu, 22, 0);                              // this Thu 22:00 IST
+      const nextMon = new Date(thisMon); nextMon.setDate(thisMon.getDate() + 7);
+      const nextMon19 = make(nextMon, 19, 0);                      // next Mon 19:00 IST
+      const prevMon = new Date(thisMon); prevMon.setDate(thisMon.getDate() - 7);
+
+      // Decide which window the current time is in (we only need previous window)
+      // If current IST is within monWindow (mon22 .. thu19) -> previous = thu-window anchored to PREVIOUS week's Monday
+      // Else -> previous = mon-window anchored to THIS week's Monday
+      const inMonWindow = (ist >= mon22 && ist <= thu19);
+      if (inMonWindow) {
+        // previous window was the thu-window that ran from previous week's Thu22 -> thisMon19: its week_anchor is previous week's Monday
+        const yyyy = prevMon.getFullYear();
+        const mm = String(prevMon.getMonth() + 1).padStart(2, '0');
+        const dd = String(prevMon.getDate()).padStart(2, '0');
+        return { window: 'thu', week_anchor: `${yyyy}-${mm}-${dd}` };
+      } else {
+        // previous window was the mon-window anchored to thisMon
+        const yyyy = thisMon.getFullYear();
+        const mm = String(thisMon.getMonth() + 1).padStart(2, '0');
+        const dd = String(thisMon.getDate()).padStart(2, '0');
+        return { window: 'mon', week_anchor: `${yyyy}-${mm}-${dd}` };
+      }
+    }
+
+    // Check training completion: first check profiles.last_training_window_anchor & which, else check training_sessions
+    async function isTrainingCompletedForPreviousWindow(userId, profileRow) {
+      try {
+        const prev = prevTrainingWindow(new Date());
+        // Fast path: if profile already records that previous window anchor/which matches, treat as done
+        if (profileRow?.last_training_window_anchor && profileRow?.last_training_window_which) {
+          const anchorStr = (typeof profileRow.last_training_window_anchor === 'string') ? profileRow.last_training_window_anchor : (profileRow.last_training_window_anchor ? new Date(profileRow.last_training_window_anchor).toISOString().split('T')[0] : null);
+          if (anchorStr === prev.week_anchor && profileRow.last_training_window_which === prev.window) {
+            return true;
+          }
+        }
+
+        // Fallback: query training_sessions for a row with user_id, week_anchor and window
+        const { data, error } = await supabase
+          .from('training_sessions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('week_anchor', prev.week_anchor)
+          .eq('window', prev.window)
+          .limit(1);
+
+        if (error) {
+          console.warn('training_sessions lookup failed', error);
+          return false;
+        }
+        return (data && data.length > 0);
+      } catch (e) {
+        console.warn('training check error', e);
+        return false;
+      }
+    }
+
     // parse kickoff date/time for a match-like record
     function parseKickoff(m) {
       if (m.kickoff_at) {
@@ -441,8 +460,20 @@
       return `${m}m ${s}s`;
     }
 
+    // Short name formatter reused (S V Samson etc.)
+    // e.g. "Sanju Viswanathan Samson" -> "S V Samson"; "Rohit Sharma" -> "R Sharma"
+    function shortNameDisplay(full) {
+      if (!full) return '–';
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '–';
+      if (parts.length === 1) return parts[0];
+      const last = parts[parts.length - 1];
+      const initials = parts.slice(0, parts.length - 1).map(p => p[0].toUpperCase()).join(' ');
+      return `${initials} ${last}`;
+    }
+
     // ----------------------
-    // Main logic
+    // Main logic (only changed areas: Next Match + Match Preparation)
     // ----------------------
     async function main() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -559,7 +590,7 @@
           <div style="display:flex;justify-content:space-around;align-items:center;">
             ${ranked.map(p => {
               const icon = (p.topSkillName === 'Batting') ? 'assets/rating/bat.png' : 'assets/rating/ball.png';
-              const displayName = shortName(p.name);
+              const displayName = shortNameDisplay(p.name);
               return `
               <div style="text-align:center;max-width:120px;">
                 <img src="${p.image_url || fallbackImage}" alt="${p.name || 'Player'}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;object-position:top;margin-bottom:8px;border:2px solid rgba(255,255,255,0.04);" />
@@ -578,8 +609,8 @@
 
       // Fetch next upcoming match across fixtures and friendlies
       const [fixturesRes, friendliesRes] = await Promise.all([
-        supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5),
-        supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5)
+        supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(10),
+        supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(10)
       ]);
 
       const combined = [];
@@ -681,16 +712,11 @@
       // --------------------------
       // Match Preparation progress (4 tasks x 25%)
       // --------------------------
-      const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      const { data: recentTraining } = await supabase
-        .from('training_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', sevenDaysAgo.toISOString().split('T')[0]);
+      // TRAINING: check previous window using profile or training_sessions exactly as per schema
+      const trainingDone = await isTrainingCompletedForPreviousWindow(user.id, profile);
 
-      const trainingDone = (recentTraining && recentTraining.length > 0);
-
+      // Scout: last_scouted_date or last_scouted must be >= last Wednesday
       const lastWed = lastWednesday(new Date());
       const scoutedDateStr = profile?.last_scouted_date || profile?.last_scouted || null;
       let scoutDone = false;
@@ -700,6 +726,7 @@
         scoutDone = sd >= lastWed;
       }
 
+      // Lineup
       let lineupDone = false;
       try {
         const { data: lu } = await supabase
@@ -720,7 +747,7 @@
         lineupDone = false;
       }
 
-      // compute fitness
+      // compute fitness: use lineup XI if present, else auto-pick 5 bats, 1 ar, 5 bowlers
       let fitnessDone = false;
       let useXI = [];
       const luRow = await supabase.from('lineups').select('playing_xi').eq('team_id', team.id).maybeSingle();
@@ -770,19 +797,25 @@
       prepPercent.textContent = `${score}%`;
       document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
 
-      // periodic refresh every 20s for tasks & countdown is already running
+      // periodic refresh every 20s for tasks & countdown
       setInterval(async () => {
         try {
-          const { data: rt } = await supabase.from('training_sessions').select('id').eq('user_id', user.id).gte('created_at', sevenDaysAgo.toISOString().split('T')[0]).limit(1);
-          const newTrainingDone = (rt && rt.length>0);
+          // re-check training using same logic (profile fast path + training_sessions fallback)
+          const newTraining = await isTrainingCompletedForPreviousWindow(user.id, profile);
+
+          // scout
           const { data: pf } = await supabase.from('profiles').select('last_scouted_date,last_scouted').eq('user_id', user.id).single();
           let newScoutDone = false;
           if (pf?.last_scouted_date || pf?.last_scouted) {
             const sd = new Date(pf.last_scouted_date || pf.last_scouted); sd.setHours(0,0,0,0);
             newScoutDone = sd >= lastWed;
           }
+
+          // lineup
           const { data: lu2 } = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', team.id).maybeSingle();
           const newLineupDone = (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length >= 11);
+
+          // fitness
           const { data: playersRef } = await supabase.from('players').select('*').eq('team_id', team.id);
           let newAvg = 0;
           if (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length) {
@@ -801,14 +834,14 @@
           }
 
           let newScore = 0;
-          if (newTrainingDone) newScore += 25;
+          if (newTraining) newScore += 25;
           if (newScoutDone) newScore += 25;
           if (newLineupDone) newScore += 25;
           if (newAvg > 95) newScore += 25;
 
           prepFill.style.width = newScore + '%';
           prepPercent.textContent = `${newScore}%`;
-          const map = { training: newTrainingDone, scout: newScoutDone, lineup: newLineupDone, fitness: newAvg > 95 };
+          const map = { training: newTraining, scout: newScoutDone, lineup: newLineupDone, fitness: newAvg > 95 };
           Object.keys(map).forEach(k=>{
             const el = document.querySelector(`.task[data-task="${k}"]`);
             if (!el) return;
@@ -833,6 +866,3 @@
   </script>
 </body>
 </html>
-
-
-
