@@ -6,59 +6,52 @@
   <title>Home – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    /* (styles identical to your previous file) */
-    body {
-      background-color: #121212;
-      color: #fff;
-      font-family: sans-serif;
-      margin: 0;
-      padding-bottom: 80px;
-    }
-    .main { padding: 20px; padding-top: 2px; max-width: 800px; margin: auto; }
-    h2, h3 { text-align: center; margin-bottom: 20px; }
-    .grid-container { display: grid; grid-template-columns: 1fr; gap: 20px; }
-    .grid-item { background-color: #1e1e1e; padding: 16px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-    .xp-bar-container { margin: 12px 0 20px; position: relative; text-align: center; }
-    .xp-bar-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; color:#cfd3ff; padding: 0 4px; }
-    .xp-level-left { font-weight:800; color:#fff; font-size:13px; }
-    .xp-level-right { font-weight:800; color:#fff; font-size:13px; }
-    .xp-bar { width: 100%; height: 18px; background-color: #333; border-radius: 10px; overflow: hidden; margin-bottom: 6px; }
-    .xp-fill { height: 100%; width: 0%; transition: width 0.4s ease; background: linear-gradient(90deg, #7c4dff 0%, #536dfe 30%, #00e676 60%, #ffd54f 100%); }
-    .xp-count { font-size: 0.85rem; color: #ccc; }
-    .quick-links { margin-top: 24px; text-align: center; }
-    .quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
-    .quick-grid a { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #1e1e1e; padding: 14px 10px; border-radius: 8px; text-decoration: none; color: #00e676; box-shadow: 0 2px 5px rgba(0,0,0,0.4); transition: background 0.2s ease; }
-    .quick-grid a:hover { background-color: #2e2e2e; }
-    .quick-grid .icon { font-size: 24px; margin-bottom: 6px; }
-    .quick-grid .label { font-size: 0.85rem; }
-    .match-card { display:flex; gap:10px; align-items:center; }
-    .team-block { display:flex; gap:8px; align-items:center; }
-    .team-logo { width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04); }
-    .team-text { display:flex; flex-direction:column; gap:3px; }
-    .team-name { font-weight:700; font-size:14px; color:#fff; }
-    .ovr-row { font-size:12px; color:#cfd3ff; display:flex; align-items:center; gap:6px; }
-    .match-meta { margin-left:10px; color:#cfd3ff; text-align:center; }
-    .badge { font-size:11px; padding:4px 7px; border-radius:8px; background:#222; color:#cfd3ff; border:1px solid rgba(255,255,255,0.04); display:inline-block }
-    .kickoff { margin-top:6px; font-weight:700; font-size:13px; }
-    .countdown { font-weight:700; font-size:13px; color:#00e676; margin-top:6px; }
-    .prep { display:flex; flex-direction:column; gap:6px; }
-    .prep-bar { height: 8px; background:#2b2b2b; border-radius:6px; overflow:hidden; }
-    .prep-fill { height:100%; background: linear-gradient(90deg, #FFD54F 0%, #C8E6C9 35%, #FFB74D 70%, #FF5252 100%); width:0%; transition: width .45s ease; }
-    .prep-percent { font-weight:800; color:#cfd3ff; font-size:12px; }
-    .prep-tasks { display:flex;flex-direction:column;gap:6px; margin-top:6px }
-    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px }
-    .task .dot { width:12px;height:12px;border-radius:50%;display:inline-block;text-align:center;line-height:12px;font-weight:800; font-size:11px }
-    .task.done .dot { background:#00e676;color:#000 }
-    .task.pending .dot { background:#444;color:#999 }
-    .task .txt { flex:1 }
-    .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:11px }
-    .top-player-name { font-size:13px; font-weight:700; color:#fff; }
-    .top-player-role { font-size:12px; color:#cfd3ff; }
-    .top-player-skill { font-size:12px; color:#a8f5c6; display:flex; align-items:center; gap:8px; justify-content:center; }
-    @media (max-width:520px){
-      .match-card { flex-direction:column; align-items:flex-start }
-      .match-meta { margin-left:0; text-align:left; }
-    }
+    /* (styles same as your file) */
+    body { background-color:#121212; color:#fff; font-family:sans-serif; margin:0; padding-bottom:80px; }
+    .main{padding:20px;padding-top:80px;max-width:800px;margin:auto;}
+    h2,h3{text-align:center;margin-bottom:20px;}
+    button{padding:12px 24px;font-size:16px;background:#00e676;color:black;border:none;border-radius:6px;cursor:pointer;margin-top:10px;}
+    button:disabled{background:gray;cursor:not-allowed;}
+    .grid-container{display:grid;grid-template-columns:1fr;gap:20px;}
+    .grid-item{background-color:#1e1e1e;padding:16px;border-radius:10px;box-shadow:0 2px 5px rgba(0,0,0,0.3);}
+    .xp-bar-container{margin:12px 0 20px;position:relative;text-align:center;}
+    .xp-bar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13px;color:#cfd3ff;padding:0 4px;}
+    .xp-level-left{font-weight:800;color:#fff;font-size:13px;}
+    .xp-level-right{font-weight:800;color:#fff;font-size:13px;}
+    .xp-bar{width:100%;height:18px;background-color:#333;border-radius:10px;overflow:hidden;margin-bottom:6px;}
+    .xp-fill{height:100%;width:0%;transition:width 0.4s ease;background:linear-gradient(90deg,#7c4dff 0%,#536dfe 30%,#00e676 60%,#ffd54f 100%);}
+    .xp-count{font-size:0.85rem;color:#ccc;}
+    .quick-links{margin-top:24px;text-align:center;}
+    .quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;}
+    .quick-grid a{display:flex;flex-direction:column;align-items:center;justify-content:center;background-color:#1e1e1e;padding:14px 10px;border-radius:8px;text-decoration:none;color:#00e676;box-shadow:0 2px 5px rgba(0,0,0,0.4);transition:background 0.2s ease;}
+    .quick-grid a:hover{background-color:#2e2e2e;}
+    .quick-grid .icon{font-size:24px;margin-bottom:6px;}
+    .quick-grid .label{font-size:0.85rem;}
+    .match-card{display:flex;gap:10px;align-items:center;}
+    .team-block{display:flex;gap:8px;align-items:center;}
+    .team-logo{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#222;border:1px solid rgba(255,255,255,0.04);}
+    .team-text{display:flex;flex-direction:column;gap:3px;}
+    .team-name{font-weight:700;font-size:14px;color:#fff;}
+    .ovr-row{font-size:12px;color:#cfd3ff;display:flex;align-items:center;gap:6px;}
+    .match-meta{margin-left:10px;color:#cfd3ff;text-align:center;}
+    .badge{font-size:11px;padding:4px 7px;border-radius:8px;background:#222;color:#cfd3ff;border:1px solid rgba(255,255,255,0.04);display:inline-block}
+    .kickoff{margin-top:6px;font-weight:700;font-size:13px;}
+    .countdown{font-weight:700;font-size:13px;color:#00e676;margin-top:6px;}
+    .prep{display:flex;flex-direction:column;gap:6px;}
+    .prep-bar{height:8px;background:#2b2b2b;border-radius:6px;overflow:hidden;}
+    .prep-fill{height:100%;background:linear-gradient(90deg,#FFD54F 0%,#C8E6C9 35%,#FFB74D 70%,#FF5252 100%);width:0%;transition:width .45s ease;}
+    .prep-percent{font-weight:800;color:#cfd3ff;font-size:12px;}
+    .prep-tasks{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+    .task{display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px}
+    .task .dot{width:12px;height:12px;border-radius:50%;display:inline-block;text-align:center;line-height:12px;font-weight:800;font-size:11px}
+    .task.done .dot{background:#00e676;color:#000}
+    .task.pending .dot{background:#444;color:#999}
+    .task .txt{flex:1}
+    .task a{color:#00e676;text-decoration:none;font-weight:700;font-size:11px}
+    .top-player-name{font-size:13px;font-weight:700;color:#fff;}
+    .top-player-role{font-size:12px;color:#cfd3ff;}
+    .top-player-skill{font-size:12px;color:#a8f5c6;display:flex;align-items:center;gap:8px;justify-content:center;}
+    @media (max-width:520px){ .match-card{flex-direction:column;align-items:flex-start} .match-meta{margin-left:0;text-align:left;} }
   </style>
 </head>
 <body>
@@ -78,20 +71,19 @@
 
     <div class="grid-container">
 
-      <!-- Fixture (UPDATED) -->
+      <!-- Fixture -->
       <div class="grid-item" id="fixture-block">
         <h3>Next Match</h3>
         <div id="fixture-info">Loading...</div>
       </div>
 
-      <!-- Match Preparation (MERGED & UPDATED) -->
+      <!-- Match Preparation -->
       <div class="grid-item">
         <h3>Match Preparation</h3>
         <div id="prepBlock" class="prep">
           <div class="prep-bar"><div id="prepFill" class="prep-fill"></div></div>
           <div id="prepPercent" class="prep-percent">0%</div>
           <div class="prep-tasks" id="prepTasks">
-            <!-- tasks will be injected here -->
             <div class="task pending" data-task="training"><div class="dot">–</div><div class="txt">Training: <strong id="t-training">Pending</strong></div><a href="training.html">Go</a></div>
             <div class="task pending" data-task="scout"><div class="dot">–</div><div class="txt">Scout (Wed): <strong id="t-scout">Pending</strong></div><a href="scout.html">Go</a></div>
             <div class="task pending" data-task="lineup"><div class="dot">–</div><div class="txt">Default Lineup: <strong id="t-lineup">Pending</strong></div><a href="set-lineup.html">Go</a></div>
@@ -152,7 +144,7 @@
     }
 
     // ----------------------
-    // Helpers
+    // Helpers (kept as in your file)
     // ----------------------
     const toNum = (v) => (v == null || v === '') ? 0 : Number(v);
 
@@ -232,8 +224,7 @@
       return (Math.round(val * 10) / 10).toFixed(1);
     }
 
-    // Short name formatter: all parts except last -> initials, last part full.
-    function shortName(full) {
+    function shortNameDisplay(full) {
       if (!full) return '–';
       const parts = String(full).trim().split(/\s+/).filter(Boolean);
       if (parts.length === 0) return '–';
@@ -254,17 +245,15 @@
     }
 
     // ---------- training window helpers ----------
-    // Return IST Date object for given UTC date
     function toIST(date = new Date()) {
-      // create a new date shifted to IST (UTC +5:30)
       const utc = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
       return new Date(utc.getTime() + (5.5 * 3600 * 1000));
     }
 
     function thisWeekMondayIST(reference = new Date()) {
       const ist = toIST(reference);
-      const day = ist.getDay(); // 0=Sun..6=Sat
-      const offsetToMon = (day + 6) % 7; // days since Monday
+      const day = ist.getDay();
+      const offsetToMon = (day + 6) % 7;
       const monday = new Date(ist);
       monday.setDate(ist.getDate() - offsetToMon);
       monday.setHours(0,0,0,0);
@@ -277,7 +266,6 @@
       return d;
     }
 
-    // compute current training window (name + week_anchor)
     function currentTrainingWindow(reference = new Date()) {
       const thisMon = thisWeekMondayIST(reference);
       const mon22 = makeIST(thisMon, 22, 0);
@@ -294,7 +282,7 @@
       } else if (ist >= thu22 && ist <= nextMon19) {
         windowName = 'thu';
       } else {
-        // small gaps (thu19..thu22, mon19..mon22) - pick deterministic fallback
+        // small gaps: deterministic fallback
         if (ist > thu19 && ist < thu22) windowName = 'mon'; else windowName = 'thu';
       }
       const yyyy = thisMon.getFullYear();
@@ -316,9 +304,7 @@
       }
     }
 
-    // Accept anchor plus/minus one day to tolerate UTC/IST off-by-one anchors we see in DB
     function anchorVariants(anchorStr) {
-      // anchorStr expected "YYYY-MM-DD"
       if (!anchorStr) return [];
       const d = new Date(anchorStr + 'T00:00:00');
       const fmt = (dt) => dt.toISOString().split('T')[0];
@@ -333,85 +319,65 @@
       try { return new Date(val).toISOString().split('T')[0]; } catch(e) { return null; }
     }
 
-    // Robust training check: profile fast-path OR training_sessions for current/previous window, using small anchor tolerance
-    async function isTrainingCompletedEitherWindow(userId, profileRow) {
+    // ---------- NEW: strictly check PREVIOUS window only ----------
+    async function isTrainingCompletedPreviousWindow(userId, profileRow) {
       try {
-        const curr = currentTrainingWindow(new Date());
         const prev = previousTrainingWindow(new Date());
-
-        console.log('Training debug: computed current window ->', curr);
-        console.log('Training debug: computed previous window ->', prev);
+        console.log('Training debug: previous window ->', prev);
         console.log('Training debug: profile last_training_window_anchor/which ->', profileRow?.last_training_window_anchor, profileRow?.last_training_window_which);
 
-        // Fast path: if profile recorded last_training_window_anchor/which matching current or previous (normalize anchor)
+        // Fast path: profile recorded the previous window
         if (profileRow?.last_training_window_anchor && profileRow?.last_training_window_which) {
           const anchorStr = normalizeAnchorVal(profileRow.last_training_window_anchor);
-          if ((anchorStr === curr.week_anchor && profileRow.last_training_window_which === curr.window) ||
-              (anchorStr === prev.week_anchor && profileRow.last_training_window_which === prev.window)) {
-            console.log('Training debug: fast-path profile indicates training done.');
+          if (anchorStr === prev.week_anchor && profileRow.last_training_window_which === prev.window) {
+            console.log('Training debug: fast-path profile indicates previous window training done.');
             return true;
           }
         }
 
-        // Build candidate week_anchor list for BOTH current and previous windows, with +/-1 day tolerance
-        const candidates = new Set();
-        anchorVariants(curr.week_anchor).forEach(a => candidates.add(a));
-        anchorVariants(prev.week_anchor).forEach(a => candidates.add(a));
-
-        // also include profile's anchor variants if present
+        // Build candidate anchors for previous window with small tolerance
+        const candidates = anchorVariants(prev.week_anchor);
         const profileAnchor = normalizeAnchorVal(profileRow?.last_training_window_anchor);
-        if (profileAnchor) anchorVariants(profileAnchor).forEach(a => candidates.add(a));
+        if (profileAnchor) anchorVariants(profileAnchor).forEach(a => { if (!candidates.includes(a)) candidates.push(a); });
 
-        const anchorsArray = Array.from(candidates);
-        console.log('Training debug: candidate anchors for DB lookup ->', anchorsArray);
+        console.log('Training debug: candidate anchors for PREVIOUS window ->', candidates);
 
-        // Query training_sessions where user_id matches AND window is either curr.window or prev.window AND week_anchor in anchorsArray
-        // We'll perform two queries (explicit) — one for curr.window and one for prev.window — to avoid or() syntax ambiguity
-        const checkWindow = async (w) => {
-          if (!anchorsArray.length) return [];
-          const { data, error } = await supabase
-            .from('training_sessions')
-            .select('id,week_anchor,window,created_at')
-            .eq('user_id', userId)
-            .eq('window', w)
-            .in('week_anchor', anchorsArray)
-            .limit(1);
-          if (error) {
-            console.warn('Training debug: training_sessions lookup error', error);
-            return [];
-          }
-          return data || [];
-        };
+        if (!candidates.length) {
+          console.log('Training debug: no anchors to query for previous window.');
+          return false;
+        }
 
-        const foundCurr = await checkWindow(curr.window);
-        console.log('Training debug: query current window result count:', (foundCurr || []).length, foundCurr);
+        // Query training_sessions only for previous window name + candidate anchors
+        const { data, error } = await supabase
+          .from('training_sessions')
+          .select('id,week_anchor,window,created_at')
+          .eq('user_id', userId)
+          .eq('window', prev.window)
+          .in('week_anchor', candidates)
+          .limit(1);
 
-        if (foundCurr && foundCurr.length > 0) {
-          console.log('Training debug: found training_sessions row for CURRENT window ->', foundCurr[0]);
+        if (error) {
+          console.warn('Training debug: training_sessions lookup error', error);
+          return false;
+        }
+
+        console.log('Training debug: query previous window result count ->', (data || []).length, data);
+        if (data && data.length > 0) {
+          console.log('Training debug: found training_sessions row for PREVIOUS window ->', data[0]);
           return true;
         }
 
-        const foundPrev = await checkWindow(prev.window);
-        console.log('Training debug: query previous window result count:', (foundPrev || []).length, foundPrev);
-
-        if (foundPrev && foundPrev.length > 0) {
-          console.log('Training debug: found training_sessions row for PREVIOUS window ->', foundPrev[0]);
-          return true;
-        }
-
-        console.log('Training debug: no training_sessions found for candidate anchors & windows.');
+        console.log('Training debug: no training_sessions found for previous window candidates.');
         return false;
       } catch (e) {
-        console.warn('Training debug: exception while checking training', e);
+        console.warn('Training debug: exception while checking previous window training', e);
         return false;
       }
     }
 
     // parse kickoff date/time for a match-like record
     function parseKickoff(m) {
-      if (m.kickoff_at) {
-        return new Date(m.kickoff_at);
-      }
+      if (m.kickoff_at) return new Date(m.kickoff_at);
       if (m.started_at) return new Date(m.started_at);
       try {
         const date = m.date;
@@ -428,7 +394,6 @@
       }
     }
 
-    // human format with IST tag
     function humanKickoff(dt) {
       if (!dt) return 'TBA';
       try {
@@ -439,7 +404,6 @@
       }
     }
 
-    // countdown formatting
     function formatCountdown(ms) {
       if (ms <= 0) return 'LIVE';
       const sec = Math.floor(ms/1000);
@@ -452,19 +416,8 @@
       return `${m}m ${s}s`;
     }
 
-    // Short name formatter reused
-    function shortNameDisplay(full) {
-      if (!full) return '–';
-      const parts = String(full).trim().split(/\s+/).filter(Boolean);
-      if (parts.length === 0) return '–';
-      if (parts.length === 1) return parts[0];
-      const last = parts[parts.length - 1];
-      const initials = parts.slice(0, parts.length - 1).map(p => p[0].toUpperCase()).join(' ');
-      return `${initials} ${last}`;
-    }
-
     // ----------------------
-    // Main logic (only changed areas: training check isTrainingCompletedEitherWindow)
+    // Main (only changed training check usage)
     // ----------------------
     async function main() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -489,7 +442,7 @@
 
       await distributeDailyLoginXP(user.id);
 
-      // XP UI unchanged but now we show left/right level labels
+      // XP UI
       const xp = profile.xp ?? 0;
       const levels = [
         { name: "Beginner", xp: 0 },
@@ -533,13 +486,13 @@
         return;
       }
 
-      // Fetch players & lineup (we'll need them for OVR & fitness)
+      // players & lineup
       const [{ data: players }, { data: lineup }] = await Promise.all([
         supabase.from("players").select("*").eq("team_id", team.id),
         supabase.from("lineups").select("playing_xi,keeper,captain,team_id").eq("team_id", team.id).maybeSingle()
       ]);
 
-      // --- Render Top 3 Players (rank by highest of Batting and Bowling ONLY) ---
+      // Top 3 players (same)
       (function renderTop3() {
         function getSkillTitle(score) {
           if (score > 100) return "The Boss";
@@ -557,24 +510,14 @@
         const ranked = (allPlayers || []).map(p => {
           const bat = toNum(p.batting);
           const bowl = toNum(p.bowling);
-          const topVal = Math.max(bat, bowl); // ONLY batting vs bowling
+          const topVal = Math.max(bat, bowl);
           const topSkillName = (bat >= bowl) ? 'Batting' : 'Bowling';
-          return {
-            ...p,
-            topSkillValue: topVal,
-            topSkillName,
-            topSkillLevel: getSkillTitle(topVal)
-          };
-        })
-        .sort((a,b) => b.topSkillValue - a.topSkillValue)
-        .slice(0,3);
+          return { ...p, topSkillValue: topVal, topSkillName, topSkillLevel: getSkillTitle(topVal) };
+        }).sort((a,b)=>b.topSkillValue - a.topSkillValue).slice(0,3);
 
         const topEl = document.getElementById("top-players-list");
         const fallbackImage = 'assets/default-avatar.png';
-        if (!ranked.length) {
-          topEl.innerHTML = "No players found.";
-          return;
-        }
+        if (!ranked.length) { topEl.innerHTML = "No players found."; return; }
 
         topEl.innerHTML = `
           <div style="display:flex;justify-content:space-around;align-items:center;">
@@ -595,35 +538,27 @@
           </div>
         `;
       })();
-      // --- end Top 3 Players ---
 
-      // Fetch next upcoming match across fixtures and friendlies
+      // Fetch upcoming matches
       const [fixturesRes, friendliesRes] = await Promise.all([
-        supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(10),
-        supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(10)
+        supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date",{ascending:true}).limit(10),
+        supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date",{ascending:true}).limit(10)
       ]);
 
       const combined = [];
       if (fixturesRes?.data) fixturesRes.data.forEach(f => combined.push({ ...f, _kind: 'league' }));
       if (friendliesRes?.data) friendliesRes.data.forEach(m => combined.push({ ...m, _kind: 'friendly' }));
 
-      // Only include matches with status 'scheduled' or 'running'
       const allowed = combined.filter(m => m && (m.status === 'scheduled' || m.status === 'running'));
 
-      let nextMatch = null;
-      let nextKickoff = null;
+      let nextMatch = null; let nextKickoff = null;
       for (const m of allowed) {
         const kd = parseKickoff(m);
         if (!kd) continue;
-        if (!nextKickoff || kd < nextKickoff) {
-          nextKickoff = kd;
-          nextMatch = m;
-        }
+        if (!nextKickoff || kd < nextKickoff) { nextKickoff = kd; nextMatch = m; }
       }
 
       const fixtureInfo = document.getElementById("fixture-info");
-
-      // helper to fetch team info (caching)
       const teamCache = new Map();
       async function teamInfo(id) {
         if (!id) return { team_name: '—', logo_url: null };
@@ -637,10 +572,8 @@
       if (!nextMatch) {
         fixtureInfo.innerHTML = `<div>No upcoming matches</div>`;
       } else {
-        const homeId = nextMatch.home_team_id;
-        const awayId = nextMatch.away_team_id;
-        const homeInfo = await teamInfo(homeId);
-        const awayInfo = await teamInfo(awayId);
+        const homeId = nextMatch.home_team_id; const awayId = nextMatch.away_team_id;
+        const homeInfo = await teamInfo(homeId); const awayInfo = await teamInfo(awayId);
         const opponentId = (homeId === team.id) ? awayId : homeId;
 
         const ourSelection = pickByLineupOrAuto(players || [], lineup || null);
@@ -661,7 +594,7 @@
                 <div class="team-name">${homeInfo.team_name}</div>
                 <div class="ovr-row">
                   <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
-                  <span>${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}</span>
+                  <span>${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers),(homeId===team.id?lineup:oppLineupRes?.data))).ovr)}</span>
                 </div>
               </div>
             </div>
@@ -685,58 +618,41 @@
           </div>
         `;
 
-        // Countdown updater
         const countdownEl = document.getElementById('matchCountdown');
-        function updateCountdown() {
-          const now = new Date();
-          const diff = kickoffDt - now;
-          countdownEl.textContent = formatCountdown(diff);
-        }
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
+        function updateCountdown() { const now = new Date(); const diff = kickoffDt - now; countdownEl.textContent = formatCountdown(diff); }
+        updateCountdown(); setInterval(updateCountdown, 1000);
       }
 
       // --------------------------
       // Match Preparation progress (4 tasks x 25%)
       // --------------------------
 
-      // TRAINING: robust check (profile fast path OR training_sessions for current/previous windows with +/-1 day tolerance)
-      const trainingDone = await isTrainingCompletedEitherWindow(user.id, profile);
+      // TRAINING: check PREVIOUS window only (profile fast-path -> previous window; fallback -> training_sessions for previous window)
+      const trainingDone = await isTrainingCompletedPreviousWindow(user.id, profile);
 
-      // Scout: last_scouted_date or last_scouted must be >= last Wednesday
+      // Scout
       const lastWed = lastWednesday(new Date());
       const scoutedDateStr = profile?.last_scouted_date || profile?.last_scouted || null;
       let scoutDone = false;
       if (scoutedDateStr) {
-        const sd = new Date(scoutedDateStr);
-        sd.setHours(0,0,0,0);
+        const sd = new Date(scoutedDateStr); sd.setHours(0,0,0,0);
         scoutDone = sd >= lastWed;
       }
 
       // Lineup
       let lineupDone = false;
       try {
-        const { data: lu } = await supabase
-          .from('lineups')
-          .select('playing_xi,keeper,captain,locked,team_id')
-          .eq('team_id', team.id)
-          .maybeSingle();
-
+        const { data: lu } = await supabase.from('lineups').select('playing_xi,keeper,captain,locked,team_id').eq('team_id', team.id).maybeSingle();
         if (lu?.playing_xi && Array.isArray(lu.playing_xi) && lu.playing_xi.length >= 11) {
           const xiSet = new Set(lu.playing_xi);
           const capOk = !lu.captain || xiSet.has(lu.captain);
           const wkOk = !lu.keeper || xiSet.has(lu.keeper);
           lineupDone = capOk && wkOk;
-        } else {
-          lineupDone = false;
-        }
-      } catch (e) {
-        lineupDone = false;
-      }
+        } else { lineupDone = false; }
+      } catch (e) { lineupDone = false; }
 
-      // compute fitness
-      let fitnessDone = false;
-      let useXI = [];
+      // fitness
+      let fitnessDone = false; let useXI = [];
       const luRow = await supabase.from('lineups').select('playing_xi').eq('team_id', team.id).maybeSingle();
       if (luRow?.data?.playing_xi && Array.isArray(luRow.data.playing_xi) && luRow.data.playing_xi.length) {
         const idset = new Set(luRow.data.playing_xi);
@@ -746,8 +662,7 @@
         const bats = all.filter(p => (p.role || '').toLowerCase().includes('bat') || (p.batting && p.batting>0)).sort((a,b)=>toNum(b.batting)-toNum(a.batting)).slice(0,5);
         const ars = all.filter(p => (p.role||'').toLowerCase().includes('all') || ((p.batting||0)>0 && (p.bowling||0)>0)).sort((a,b)=> (toNum(b.batting)+toNum(b.bowling))-(toNum(a.batting)+toNum(a.bowling))).slice(0,2);
         const bowls = all.filter(p => (p.role||'').toLowerCase().includes('bowl') || (p.bowling && p.bowling>0)).sort((a,b)=>toNum(b.bowling)-toNum(a.bowling)).slice(0,5);
-        const byId = new Map();
-        [...bats, ...ars, ...bowls].forEach(p => { if (!byId.has(p.id)) byId.set(p.id, p); });
+        const byId = new Map(); [...bats, ...ars, ...bowls].forEach(p => { if (!byId.has(p.id)) byId.set(p.id, p); });
         useXI = Array.from(byId.values()).slice(0,11);
       }
 
@@ -784,14 +699,14 @@
       prepPercent.textContent = `${score}%`;
       document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
 
-      // periodic refresh every 20s for tasks & countdown
+      // periodic refresh
       setInterval(async () => {
         try {
-          // re-fetch profile for last_training_window_anchor/which changes
+          // re-fetch profile (to pick up last_training_window_* updates)
           const { data: freshProfile } = await supabase.from('profiles').select('last_training_window_anchor,last_training_window_which,last_scouted,last_scouted_date').eq('user_id', user.id).single();
           console.log('Training debug: periodic refresh profile ->', freshProfile);
 
-          const newTraining = await isTrainingCompletedEitherWindow(user.id, freshProfile);
+          const newTraining = await isTrainingCompletedPreviousWindow(user.id, freshProfile);
 
           // scout
           let newScoutDone = false;
