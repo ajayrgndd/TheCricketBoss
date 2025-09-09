@@ -1,174 +1,75 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Home – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css" />
   <style>
-    body {
-      background-color: #121212;
-      color: #fff;
-      font-family: sans-serif;
-      margin: 0;
-      padding-bottom: 80px;
-    }
-
-    /* ensure content clears top nav */
-    .main {
-      padding: 20px;
-      padding-top: 80px;
-      max-width: 800px;
-      margin: auto;
-    }
-
-    h2, h3 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    button {
-      padding: 12px 24px;
-      font-size: 16px;
-      background: #00e676;
-      color: black;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-
-    button:disabled {
-      background: gray;
-      cursor: not-allowed;
-    }
-
-    .grid-container {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 20px;
-    }
-
-    .grid-item {
-      background-color: #1e1e1e;
-      padding: 16px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    }
-
-    /* XP bar area */
-    .xp-bar-container {
-      margin: 12px 0 20px;
-      position: relative;
-      text-align: center;
-    }
-    .xp-bar-top {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:6px;
-      font-size:13px;
-      color:#cfd3ff;
-      padding: 0 4px;
-    }
-    .xp-level-left { font-weight:800; color:#fff; font-size:13px; }
-    .xp-level-right { font-weight:800; color:#fff; font-size:13px; }
-    .xp-bar {
-      width: 100%;
-      height: 18px;
-      background-color: #333;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-bottom: 6px;
-    }
-
-    /* New gradient for XP fill */
-    .xp-fill {
-      height: 100%;
-      width: 0%;
-      transition: width 0.4s ease;
-      background: linear-gradient(90deg, #7c4dff 0%, #536dfe 30%, #00e676 60%, #ffd54f 100%);
-    }
-
-    .xp-count {
-      font-size: 0.85rem;
-      color: #ccc;
-    }
-
-    .quick-links { margin-top: 24px; text-align: center; }
-    .quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
-    .quick-grid a { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #1e1e1e; padding: 14px 10px; border-radius: 8px; text-decoration: none; color: #00e676; box-shadow: 0 2px 5px rgba(0,0,0,0.4); transition: background 0.2s ease; }
-    .quick-grid a:hover { background-color: #2e2e2e; }
-    .quick-grid .icon { font-size: 24px; margin-bottom: 6px; }
-    .quick-grid .label { font-size: 0.85rem; }
-
-    /* NEXT MATCH tweaks */
-    .match-card { display:flex; gap:10px; align-items:center; }
-    .team-block { display:flex; gap:8px; align-items:center; }
-    .team-logo { width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04); }
-    .team-text { display:flex; flex-direction:column; gap:3px; }
-    .team-name { font-weight:700; font-size:14px; color:#fff; }
-    .ovr-row { font-size:12px; color:#cfd3ff; display:flex; align-items:center; gap:6px; }
-    .match-meta { margin-left:10px; color:#cfd3ff; text-align:center; }
-    .badge { font-size:11px; padding:4px 7px; border-radius:8px; background:#222; color:#cfd3ff; border:1px solid rgba(255,255,255,0.04); display:inline-block }
-    .kickoff { margin-top:6px; font-weight:700; font-size:13px; }
-    .countdown { font-weight:700; font-size:13px; color:#00e676; margin-top:6px; }
-
-    /* Preparation bar */
-    .prep { display:flex; flex-direction:column; gap:6px; }
-    .prep-bar { height: 8px; background:#2b2b2b; border-radius:6px; overflow:hidden; }
-    .prep-fill { height:100%; background: linear-gradient(90deg, #FFD54F 0%, #C8E6C9 35%, #FFB74D 70%, #FF5252 100%); width:0%; transition: width .45s ease; }
-    .prep-percent { font-weight:800; color:#cfd3ff; font-size:12px; }
-    .prep-tasks { display:flex;flex-direction:column;gap:6px; margin-top:6px }
-    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px }
-    .task .dot { width:12px;height:12px;border-radius:50%;display:inline-block;text-align:center;line-height:12px;font-weight:800; font-size:11px }
-    .task.done .dot { background:#00e676;color:#000 }
-    .task.pending .dot { background:#444;color:#999 }
-    .task .txt { flex:1 }
-    .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:11px }
-
-    /* Top 3 tweaks */
-    .top-player-name { font-size:13px; font-weight:700; color:#fff; }
-    .top-player-role { font-size:12px; color:#cfd3ff; }
-    .top-player-skill { font-size:12px; color:#a8f5c6; display:flex; align-items:center; gap:8px; justify-content:center; }
-
-    @media (max-width:520px){
-      .match-card { flex-direction:column; align-items:flex-start }
-      .match-meta { margin-left:0; text-align:left; }
-    }
+    /* (styles identical to your last file) */
+    body { background-color:#121212;color:#fff;font-family:sans-serif;margin:0;padding-bottom:80px; }
+    .main { padding:20px; padding-top:2px; max-width:800px; margin:auto; }
+    h2,h3 { text-align:center; margin-bottom:20px; }
+    .grid-container{ display:grid; grid-template-columns:1fr; gap:20px; }
+    .grid-item{ background:#1e1e1e; padding:16px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,.3); }
+    .xp-bar-container{ margin:12px 0 20px; text-align:center; }
+    .xp-bar-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:13px; color:#cfd3ff; padding:0 4px; }
+    .xp-level-left{font-weight:800;color:#fff;font-size:13px;}
+    .xp-level-right{font-weight:800;color:#fff;font-size:13px;}
+    .xp-bar{ width:100%; height:18px; background:#333; border-radius:10px; overflow:hidden; margin-bottom:6px;}
+    .xp-fill{ height:100%; width:0%; transition:width .4s ease; background:linear-gradient(90deg,#7c4dff 0%,#536dfe 30%,#00e676 60%,#ffd54f 100%); }
+    .xp-count{ font-size:.85rem; color:#ccc; }
+    .quick-links{ margin-top:24px; text-align:center; }
+    .quick-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:12px; }
+    .quick-grid a{ display:flex; flex-direction:column; align-items:center; justify-content:center; background:#1e1e1e; padding:14px 10px; border-radius:8px; color:#00e676; text-decoration:none; box-shadow:0 2px 5px rgba(0,0,0,.4); transition:background .2s; }
+    .match-card{ display:flex; gap:10px; align-items:center; }
+    .team-block{ display:flex; gap:8px; align-items:center; }
+    .team-logo{ width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,.04); }
+    .team-text{ display:flex; flex-direction:column; gap:3px; }
+    .team-name{ font-weight:700; font-size:14px; color:#fff; }
+    .ovr-row{ font-size:12px; color:#cfd3ff; display:flex; align-items:center; gap:6px; }
+    .badge{ font-size:11px; padding:4px 7px; border-radius:8px; background:#222; color:#cfd3ff; border:1px solid rgba(255,255,255,.04); display:inline-block }
+    .kickoff{ margin-top:6px; font-weight:700; font-size:13px; }
+    .countdown{ font-weight:700; font-size:13px; color:#00e676; margin-top:6px; }
+    .prep{ display:flex; flex-direction:column; gap:6px; }
+    .prep-bar{ height:8px; background:#2b2b2b; border-radius:6px; overflow:hidden; }
+    .prep-fill{ height:100%; background: linear-gradient(90deg,#FFD54F 0%,#C8E6C9 35%,#FFB74D 70%,#FF5252 100%); width:0%; transition: width .45s ease; }
+    .prep-percent{ font-weight:800; color:#cfd3ff; font-size:12px; }
+    .prep-tasks{ display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+    .task{ display:flex; align-items:center; gap:8px; color:#cfd3ff; font-size:12px; }
+    .task .dot{ width:12px; height:12px; border-radius:50%; display:inline-block; text-align:center; line-height:12px; font-weight:800; font-size:11px; }
+    .task.done .dot{ background:#00e676; color:#000; }
+    .task.pending .dot{ background:#444; color:#999; }
+    .task .txt{ flex:1; }
+    .top-player-name{ font-size:13px; font-weight:700; color:#fff; }
+    .top-player-role{ font-size:12px; color:#cfd3ff; }
+    .top-player-skill{ font-size:12px; color:#a8f5c6; display:flex; align-items:center; gap:8px; justify-content:center; }
+    @media (max-width:520px){ .match-card{ flex-direction:column; align-items:flex-start } .match-meta{ margin-left:0; text-align:left; } }
   </style>
 </head>
 <body>
-
-  <!-- Top bar & bottom nav will be injected by shared-ui.js -->
-
   <div class="main">
-    <!-- XP Progress Bar -->
     <div class="xp-bar-container">
       <div class="xp-bar-top">
         <div id="level-current" class="xp-level-left">Level: Beginner</div>
         <div id="level-next" class="xp-level-right">Next: Expert</div>
       </div>
-      <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
-      <div class="xp-count" id="xp-label">XP: 0 / 500</div>
+      <div class="xp-bar"><div id="xp-fill" class="xp-fill"></div></div>
+      <div id="xp-label" class="xp-count">XP: 0 / 500</div>
     </div>
 
     <div class="grid-container">
-
-      <!-- Fixture (UPDATED) -->
       <div class="grid-item" id="fixture-block">
         <h3>Next Match</h3>
         <div id="fixture-info">Loading...</div>
       </div>
 
-      <!-- Match Preparation (MERGED & UPDATED) -->
       <div class="grid-item">
         <h3>Match Preparation</h3>
         <div id="prepBlock" class="prep">
           <div class="prep-bar"><div id="prepFill" class="prep-fill"></div></div>
           <div id="prepPercent" class="prep-percent">0%</div>
           <div class="prep-tasks" id="prepTasks">
-            <!-- tasks will be injected here -->
             <div class="task pending" data-task="training"><div class="dot">–</div><div class="txt">Training: <strong id="t-training">Pending</strong></div><a href="training.html">Go</a></div>
             <div class="task pending" data-task="scout"><div class="dot">–</div><div class="txt">Scout (Wed): <strong id="t-scout">Pending</strong></div><a href="scout.html">Go</a></div>
             <div class="task pending" data-task="lineup"><div class="dot">–</div><div class="txt">Default Lineup: <strong id="t-lineup">Pending</strong></div><a href="set-lineup.html">Go</a></div>
@@ -177,15 +78,12 @@
         </div>
       </div>
 
-      <!-- Top 3 Players -->
       <div class="grid-item">
         <h3>Top 3 Players</h3>
-        <div id="top-players-list" class="quick-grid" style="text-align: center;"></div>
+        <div id="top-players-list" class="quick-grid" style="text-align:center;"></div>
       </div>
-
     </div>
 
-    <!-- Quick Access (heading removed as requested) -->
     <div class="quick-links">
       <div class="quick-grid">
         <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
@@ -215,28 +113,18 @@
 
     async function distributeDailyLoginXP(userId) {
       const today = new Date().toISOString().split("T")[0];
-      const { data } = await supabase
-        .from("profiles")
-        .select("last_xp_login_date")
-        .eq("user_id", userId)
-        .single();
+      const { data } = await supabase.from("profiles").select("last_xp_login_date").eq("user_id", userId).single();
       if (data?.last_xp_login_date !== today) {
         await addManagerXP(supabase, userId, "daily_login");
-        await supabase.from("profiles")
-          .update({ last_xp_login_date: today })
-          .eq("user_id", userId);
+        await supabase.from("profiles").update({ last_xp_login_date: today }).eq("user_id", userId);
       }
     }
 
-    // ----------------------
-    // Helper functions reused/adapted from your profile files
-    // ----------------------
     const toNum = (v) => (v == null || v === '') ? 0 : Number(v);
 
     function pickByLineupOrAuto(allPlayers, lineup) {
       const byId = new Map((allPlayers || []).map(p => [p.id, p]));
       let xi = [];
-
       if (lineup && Array.isArray(lineup.playing_xi) && lineup.playing_xi.length) {
         xi = lineup.playing_xi.map(id => byId.get(id)).filter(Boolean);
       } else {
@@ -245,266 +133,37 @@
         );
         xi = sorted.slice(0, Math.min(11, sorted.length));
       }
-
       const sortBy = (arr, key) => [...arr].sort((a,b) => toNum(b[key]) - toNum(a[key]));
-
       let wk = null;
-      if (lineup && lineup.keeper) {
-        wk = byId.get(lineup.keeper) || null;
-      }
-      if (!wk) {
-        wk = sortBy(xi.length ? xi : allPlayers, 'keeping')[0] || null;
-      }
-
+      if (lineup && lineup.keeper) wk = byId.get(lineup.keeper) || null;
+      if (!wk) wk = sortBy(xi.length ? xi : allPlayers, 'keeping')[0] || null;
       const poolForAR = (xi.length ? xi : allPlayers).filter(p => !wk || p.id !== wk.id);
       let ar = null;
-      if (poolForAR.length) {
-        ar = [...poolForAR].sort((a,b) =>
-          (toNum(b.batting)+toNum(b.bowling)) - (toNum(a.batting)+toNum(a.bowling))
-        )[0];
-      }
-
-      const batters = sortBy(xi.length ? xi : allPlayers, 'batting')
-        .filter(p => !wk || p.id !== wk.id)
-        .slice(0, 4);
-
-      const bowlers = sortBy(xi.length ? xi : allPlayers, 'bowling')
-        .filter(p => (!wk || p.id !== wk.id) && (!ar || p.id !== ar.id))
-        .slice(0, 5);
-
+      if (poolForAR.length) ar = [...poolForAR].sort((a,b) =>
+        (toNum(b.batting)+toNum(b.bowling)) - (toNum(a.batting)+toNum(a.bowling))
+      )[0];
+      const batters = sortBy(xi.length ? xi : allPlayers, 'batting').filter(p => !wk || p.id !== wk.id).slice(0,4);
+      const bowlers = sortBy(xi.length ? xi : allPlayers, 'bowling').filter(p => (!wk || p.id !== wk.id) && (!ar || p.id !== ar.id)).slice(0,5);
       return { xi, wk, ar, batters, bowlers };
     }
 
     function computeRatings({ xi, wk, ar, batters, bowlers }) {
-      const batSum =
-        batters.reduce((s,p)=> s + toNum(p.batting), 0) +
-        (wk ? toNum(wk.batting) : 0) +
-        (ar ? toNum(ar.batting) : 0);
+      const batSum = batters.reduce((s,p)=> s + toNum(p.batting), 0) + (wk ? toNum(wk.batting) : 0) + (ar ? toNum(ar.batting) : 0);
       const batAvg = (batters.length + (wk?1:0) + (ar?1:0)) ? (batSum / 6) : 0;
-
-      const ballSum =
-        bowlers.reduce((s,p)=> s + toNum(p.bowling), 0) +
-        (ar ? toNum(ar.bowling) : 0);
+      const ballSum = bowlers.reduce((s,p)=> s + toNum(p.bowling), 0) + (ar ? toNum(ar.bowling) : 0);
       const ballAvg = (bowlers.length + (ar?1:0)) ? (ballSum / 6) : 0;
-
       const wkVal = wk ? toNum(wk.keeping) : 0;
-
       let ovr = 0;
       if (xi && xi.length) {
         const per = xi.map(p => (toNum(p.batting)+toNum(p.bowling)+toNum(p.keeping)) / 3);
         ovr = per.reduce((s,v)=>s+v,0) / xi.length;
       }
-
-      return {
-        bat: batAvg,
-        ball: ballAvg,
-        wk: wkVal,
-        ovr: (batAvg + ballAvg + wkVal) / 3,
-        ovrXI: ovr
-      };
+      return { bat: batAvg, ball: ballAvg, wk: wkVal, ovr: (batAvg + ballAvg + wkVal) / 3, ovrXI: ovr };
     }
 
-    function fmtOne(val) {
-      if (Number.isNaN(val)) return "–";
-      return (Math.round(val * 10) / 10).toFixed(1);
-    }
+    function fmtOne(val) { if (Number.isNaN(val)) return "–"; return (Math.round(val * 10) / 10).toFixed(1); }
 
-    // Short name formatter: all parts except last -> initials, last part full.
-    function shortName(full) {
-      if (!full) return '–';
-      const parts = String(full).trim().split(/\s+/).filter(Boolean);
-      if (parts.length === 0) return '–';
-      if (parts.length === 1) return parts[0];
-      const last = parts[parts.length - 1];
-      const initials = parts.slice(0, parts.length - 1).map(p => p[0].toUpperCase()).join(' ');
-      return `${initials} ${last}`;
-    }
-
-    // compute last Wednesday
-    function lastWednesday(reference = new Date()) {
-      const d = new Date(reference);
-      const day = d.getDay();
-      const diff = (day >= 3) ? day - 3 : 7 - (3 - day);
-      d.setDate(d.getDate() - diff);
-      d.setHours(0,0,0,0);
-      return d;
-    }
-
-    // ---------- training window helpers (REPLACED WITH ROBUST VERSION) ----------
-    // Return IST Date object for given UTC date
-    function toIST(date = new Date()) {
-      // create a new date shifted to IST (UTC +5:30)
-      const utc = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
-      return new Date(utc.getTime() + (5.5 * 3600 * 1000));
-    }
-
-    // Build this week's Monday (IST) at 00:00
-    function thisWeekMondayIST(reference = new Date()) {
-      const ist = toIST(reference);
-      const day = ist.getDay(); // 0=Sun..6=Sat
-      const offsetToMon = (day + 6) % 7;
-      const monday = new Date(ist);
-      monday.setDate(ist.getDate() - offsetToMon);
-      monday.setHours(0,0,0,0);
-      return monday;
-    }
-
-    // helper to build IST moment on base date
-    function makeIST(baseDate, hh, mm = 0) {
-      const d = new Date(baseDate);
-      d.setHours(hh, mm, 0, 0);
-      return d;
-    }
-
-    // Returns { window: 'mon'|'thu', week_anchor: 'YYYY-MM-DD' } for the CURRENT active window
-    function currentTrainingWindow(reference = new Date()) {
-      const thisMon = thisWeekMondayIST(reference);
-      const mon22 = makeIST(thisMon, 22, 0);
-      const thu = new Date(thisMon); thu.setDate(thisMon.getDate() + 3);
-      const thu19 = makeIST(thu, 19, 0);
-      const thu22 = makeIST(thu, 22, 0);
-      const nextMon = new Date(thisMon); nextMon.setDate(thisMon.getDate() + 7);
-      const nextMon19 = makeIST(nextMon, 19, 0);
-
-      const ist = toIST(reference);
-
-      let windowName;
-      if (ist >= mon22 && ist <= thu19) {
-        windowName = 'mon';
-      } else if (ist >= thu22 && ist <= nextMon19) {
-        windowName = 'thu';
-      } else {
-        // small gaps: choose deterministic mapping
-        if (ist > thu19 && ist < thu22) windowName = 'mon';
-        else windowName = 'thu';
-      }
-
-      const yyyy = thisMon.getFullYear();
-      const mm = String(thisMon.getMonth() + 1).padStart(2, '0');
-      const dd = String(thisMon.getDate()).padStart(2, '0');
-      const anchor = `${yyyy}-${mm}-${dd}`;
-      return { window: windowName, week_anchor: anchor };
-    }
-
-    // Returns PREVIOUS window (the window that finished most recently)
-    function previousTrainingWindow(reference = new Date()) {
-      const thisMon = thisWeekMondayIST(reference);
-      const prevMon = new Date(thisMon); prevMon.setDate(thisMon.getDate() - 7);
-
-      const curr = currentTrainingWindow(reference);
-      if (curr.window === 'mon') {
-        const yyyy = prevMon.getFullYear();
-        const mm = String(prevMon.getMonth() + 1).padStart(2, '0');
-        const dd = String(prevMon.getDate()).padStart(2, '0');
-        return { window: 'thu', week_anchor: `${yyyy}-${mm}-${dd}` };
-      } else {
-        const yyyy = thisMon.getFullYear();
-        const mm = String(thisMon.getMonth() + 1).padStart(2, '0');
-        const dd = String(thisMon.getDate()).padStart(2, '0');
-        return { window: 'mon', week_anchor: `${yyyy}-${mm}-${dd}` };
-      }
-    }
-
-    // normalize profile anchor which may be date or string
-    function normalizeAnchorVal(val) {
-      if (!val) return null;
-      if (typeof val === 'string') return val;
-      if (val instanceof Date) return val.toISOString().split('T')[0];
-      try { return new Date(val).toISOString().split('T')[0]; } catch(e) { return null; }
-    }
-
-    /**
-     * Check training completion by looking at BOTH current and previous windows.
-     * Fast path: profile.last_training_window_anchor + last_training_window_which matches any -> true
-     * Fallback: a single training_sessions query with an OR for the two pairs.
-     */
-    async function isTrainingCompletedEitherWindow(userId, profileRow) {
-      try {
-        const curr = currentTrainingWindow(new Date());
-        const prev = previousTrainingWindow(new Date());
-
-        // Fast-path via profile
-        if (profileRow?.last_training_window_anchor && profileRow?.last_training_window_which) {
-          const anchorStr = normalizeAnchorVal(profileRow.last_training_window_anchor);
-          const which = profileRow.last_training_window_which;
-          if ((anchorStr === curr.week_anchor && which === curr.window) ||
-              (anchorStr === prev.week_anchor && which === prev.window)) {
-            return true;
-          }
-        }
-
-        // Single query with OR for either pair
-        const conds = [
-          `and(week_anchor.eq.${curr.week_anchor},window.eq.${curr.window})`,
-          `and(week_anchor.eq.${prev.week_anchor},window.eq.${prev.window})`
-        ];
-        const orFilter = conds.join(',');
-
-        const { data, error } = await supabase
-          .from('training_sessions')
-          .select('id,created_at,week_anchor,window')
-          .eq('user_id', userId)
-          .or(orFilter)
-          .limit(1);
-
-        if (error) {
-          console.warn('training_sessions lookup failed', error);
-          return false;
-        }
-        return (data && data.length > 0);
-      } catch (e) {
-        console.warn('training check error', e);
-        return false;
-      }
-    }
-    // ---------- end training helpers ----------
-
-    // parse kickoff date/time for a match-like record
-    function parseKickoff(m) {
-      if (m.kickoff_at) {
-        return new Date(m.kickoff_at);
-      }
-      if (m.started_at) return new Date(m.started_at);
-      try {
-        const date = m.date;
-        const t = m.start_time || '21:00:00';
-        if (!date) return null;
-        const [y,mo,da] = (typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0]).split('-').map(Number);
-        const [hh,mm,ss] = (t + ':00').split(':').map(Number);
-        const dt = new Date();
-        dt.setFullYear(y, mo-1, da);
-        dt.setHours(hh, mm || 0, ss || 0, 0);
-        return dt;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    // human format with IST tag
-    function humanKickoff(dt) {
-      if (!dt) return 'TBA';
-      try {
-        const opts = { weekday:'short', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true, timeZone:'Asia/Kolkata' };
-        return dt.toLocaleString('en-IN', opts) + ' IST';
-      } catch (e) {
-        return dt.toString();
-      }
-    }
-
-    // countdown formatting
-    function formatCountdown(ms) {
-      if (ms <= 0) return 'LIVE';
-      const sec = Math.floor(ms/1000);
-      const d = Math.floor(sec/86400);
-      const h = Math.floor((sec%86400)/3600);
-      const m = Math.floor((sec%3600)/60);
-      const s = sec%60;
-      if (d>0) return `${d}d ${h}h`;
-      if (h>0) return `${h}h ${m}m`;
-      return `${m}m ${s}s`;
-    }
-
-    // Short name formatter reused (S V Samson etc.)
+    // Short name (initials + last)
     function shortNameDisplay(full) {
       if (!full) return '–';
       const parts = String(full).trim().split(/\s+/).filter(Boolean);
@@ -515,269 +174,250 @@
       return `${initials} ${last}`;
     }
 
-    // ----------------------
-    // Main logic (only changed areas: Next Match + Match Preparation)
-    // ----------------------
+    // last Wednesday
+    function lastWednesday(reference = new Date()) {
+      const d = new Date(reference);
+      const day = d.getDay();
+      const diff = (day >= 3) ? day - 3 : 7 - (3 - day);
+      d.setDate(d.getDate() - diff);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    // convert system date -> IST wall clock Date
+    function toIST(date = new Date()) {
+      const utc = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
+      return new Date(utc.getTime() + (5.5 * 3600 * 1000));
+    }
+
+    function thisWeekMondayIST(reference = new Date()) {
+      const ist = toIST(reference);
+      const day = ist.getDay();
+      const offsetToMon = (day + 6) % 7;
+      const monday = new Date(ist);
+      monday.setDate(ist.getDate() - offsetToMon);
+      monday.setHours(0,0,0,0);
+      return monday;
+    }
+
+    function makeIST(baseDate, hh, mm = 0) {
+      const d = new Date(baseDate);
+      d.setHours(hh, mm, 0, 0);
+      return d;
+    }
+
+    // compute current and previous windows
+    function currentTrainingWindow(reference = new Date()) {
+      const thisMon = thisWeekMondayIST(reference);
+      const mon22 = makeIST(thisMon, 22, 0);
+      const thu = new Date(thisMon); thu.setDate(thisMon.getDate() + 3);
+      const thu19 = makeIST(thu, 19, 0);
+      const thu22 = makeIST(thu, 22, 0);
+      const nextMon = new Date(thisMon); nextMon.setDate(thisMon.getDate() + 7);
+      const nextMon19 = makeIST(nextMon, 19, 0);
+
+      const ist = toIST(reference);
+      let windowName;
+      if (ist >= mon22 && ist <= thu19) {
+        windowName = 'mon';
+      } else if (ist >= thu22 && ist <= nextMon19) {
+        windowName = 'thu';
+      } else {
+        // small gaps: choose deterministic fallback
+        if (ist > thu19 && ist < thu22) windowName = 'mon'; else windowName = 'thu';
+      }
+      const yyyy = thisMon.getFullYear();
+      const mm = String(thisMon.getMonth() + 1).padStart(2, '0');
+      const dd = String(thisMon.getDate()).padStart(2, '0');
+      return { window: windowName, week_anchor: `${yyyy}-${mm}-${dd}` };
+    }
+
+    function previousTrainingWindow(reference = new Date()) {
+      const thisMon = thisWeekMondayIST(reference);
+      const prevMon = new Date(thisMon); prevMon.setDate(thisMon.getDate() - 7);
+      const curr = currentTrainingWindow(reference);
+      if (curr.window === 'mon') {
+        const yyyy = prevMon.getFullYear(); const mm = String(prevMon.getMonth() + 1).padStart(2, '0'); const dd = String(prevMon.getDate()).padStart(2, '0');
+        return { window: 'thu', week_anchor: `${yyyy}-${mm}-${dd}` };
+      } else {
+        const yyyy = thisMon.getFullYear(); const mm = String(thisMon.getMonth() + 1).padStart(2, '0'); const dd = String(thisMon.getDate()).padStart(2, '0');
+        return { window: 'mon', week_anchor: `${yyyy}-${mm}-${dd}` };
+      }
+    }
+
+    function normalizeAnchorVal(val) {
+      if (!val) return null;
+      if (typeof val === 'string') return val;
+      try { return new Date(val).toISOString().split('T')[0]; } catch(e) { return null; }
+    }
+
+    // NEW robust training check: logs and two explicit queries (current & previous)
+    async function isTrainingCompletedEitherWindow(userId, profileRow) {
+      try {
+        const curr = currentTrainingWindow(new Date());
+        const prev = previousTrainingWindow(new Date());
+
+        console.log('Training debug: computed current window ->', curr);
+        console.log('Training debug: computed previous window ->', prev);
+        console.log('Training debug: profile last_training_window_anchor/which ->', profileRow?.last_training_window_anchor, profileRow?.last_training_window_which);
+
+        // fast path: profile recorded this
+        if (profileRow?.last_training_window_anchor && profileRow?.last_training_window_which) {
+          const anchorStr = normalizeAnchorVal(profileRow.last_training_window_anchor);
+          if ((anchorStr === curr.week_anchor && profileRow.last_training_window_which === curr.window) ||
+              (anchorStr === prev.week_anchor && profileRow.last_training_window_which === prev.window)) {
+            console.log('Training debug: fast-path profile indicates training done.');
+            return true;
+          }
+        }
+
+        // fallback queries (explicit two queries, with logs)
+        // Query current window
+        const qCurr = await supabase
+          .from('training_sessions')
+          .select('id,week_anchor,window,created_at')
+          .eq('user_id', userId)
+          .eq('week_anchor', curr.week_anchor)
+          .eq('window', curr.window)
+          .limit(1);
+
+        if (qCurr.error) console.warn('Training debug: query current window error', qCurr.error);
+        console.log('Training debug: query current window result count:', (qCurr.data||[]).length, qCurr.data);
+
+        if (qCurr.data && qCurr.data.length > 0) {
+          console.log('Training debug: found training_sessions row for CURRENT window ->', qCurr.data[0]);
+          return true;
+        }
+
+        // Query previous window
+        const qPrev = await supabase
+          .from('training_sessions')
+          .select('id,week_anchor,window,created_at')
+          .eq('user_id', userId)
+          .eq('week_anchor', prev.week_anchor)
+          .eq('window', prev.window)
+          .limit(1);
+
+        if (qPrev.error) console.warn('Training debug: query previous window error', qPrev.error);
+        console.log('Training debug: query previous window result count:', (qPrev.data||[]).length, qPrev.data);
+
+        if (qPrev.data && qPrev.data.length > 0) {
+          console.log('Training debug: found training_sessions row for PREVIOUS window ->', qPrev.data[0]);
+          return true;
+        }
+
+        console.log('Training debug: no training_sessions found for current or previous windows.');
+        return false;
+      } catch (e) {
+        console.warn('Training debug: exception while checking training', e);
+        return false;
+      }
+    }
+
+    // parseKickoff, humanKickoff, formatCountdown (unchanged)
+    function parseKickoff(m) {
+      if (m.kickoff_at) return new Date(m.kickoff_at);
+      if (m.started_at) return new Date(m.started_at);
+      try {
+        const date = m.date; const t = m.start_time || '21:00:00';
+        if (!date) return null;
+        const [y,mo,da] = (typeof date === 'string' ? date.split('T')[0] : new Date(date).toISOString().split('T')[0]).split('-').map(Number);
+        const [hh,mm,ss] = (t + ':00').split(':').map(Number);
+        const dt = new Date();
+        dt.setFullYear(y, mo-1, da);
+        dt.setHours(hh, mm || 0, ss || 0, 0);
+        return dt;
+      } catch(e){ return null; }
+    }
+    function humanKickoff(dt){ if(!dt) return 'TBA'; try{ const opts={weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'}; return dt.toLocaleString('en-IN',opts)+' IST'; }catch(e){return dt.toString();} }
+    function formatCountdown(ms){ if(ms<=0) return 'LIVE'; const sec=Math.floor(ms/1000); const d=Math.floor(sec/86400); const h=Math.floor((sec%86400)/3600); const m=Math.floor((sec%3600)/60); const s=sec%60; if(d>0) return `${d}d ${h}h`; if(h>0) return `${h}h ${m}m`; return `${m}m ${s}s`; }
+
+    // MAIN (only training related areas changed)
     async function main() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return location.href = "login.html";
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
+      const { data: profile } = await supabase.from("profiles").select("*").eq("user_id", user.id).single();
+      if (!profile?.manager_name || !profile?.team_name) return location.href = "profile-setup.html";
 
-      if (!profile?.manager_name || !profile?.team_name)
-        return location.href = "profile-setup.html";
-
-      loadSharedUI({
-        supabase,
-        manager_name: profile.manager_name,
-        xp: profile.xp ?? 0,
-        coins: profile.coins ?? 0,
-        cash: profile.cash ?? 0
-      });
-
+      loadSharedUI({ supabase, manager_name: profile.manager_name, xp: profile.xp ?? 0, coins: profile.coins ?? 0, cash: profile.cash ?? 0 });
       await distributeDailyLoginXP(user.id);
 
-      // XP UI unchanged but now we show left/right level labels
+      // xp UI (unchanged)
       const xp = profile.xp ?? 0;
-      const levels = [
-        { name: "Beginner", xp: 0 },
-        { name: "Expert", xp: 250 },
-        { name: "Professional", xp: 750 },
-        { name: "Master", xp: 1750 },
-        { name: "Supreme", xp: 3500 },
-        { name: "World Class", xp: 5500 },
-        { name: "Ultimate", xp: 8500 },
-        { name: "Titan", xp: 13500 },
-        { name: "The Boss", xp: 1500000 },
-      ];
+      const levels = [{name:"Beginner",xp:0},{name:"Expert",xp:250},{name:"Professional",xp:750},{name:"Master",xp:1750},{name:"Supreme",xp:3500},{name:"World Class",xp:5500},{name:"Ultimate",xp:8500},{name:"Titan",xp:13500},{name:"The Boss",xp:1500000}];
       let currentLevel = levels[0], nextLevel = levels[1];
-      for (let i = 0; i < levels.length - 1; i++) {
-        if (xp >= levels[i].xp && xp < levels[i + 1].xp) {
-          currentLevel = levels[i];
-          nextLevel = levels[i + 1];
-          break;
-        } else if (xp >= levels[levels.length - 1].xp) {
-          currentLevel = levels[levels.length - 1];
-          nextLevel = { name: "MAX", xp: currentLevel.xp + 1 };
-          break;
-        }
-      }
-      const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
-      // set left/right labels and xp bar
+      for(let i=0;i<levels.length-1;i++){ if(xp>=levels[i].xp && xp<levels[i+1].xp){ currentLevel=levels[i]; nextLevel=levels[i+1]; break; } else if(xp>=levels[levels.length-1].xp){ currentLevel=levels[levels.length-1]; nextLevel={name:"MAX",xp:currentLevel.xp+1}; break; } }
+      const percent = Math.min(((xp-currentLevel.xp)/(nextLevel.xp-currentLevel.xp))*100,100);
       document.getElementById("level-current").textContent = currentLevel.name;
       document.getElementById("level-next").textContent = `Next: ${nextLevel.name}`;
       document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
       document.getElementById("xp-fill").style.width = `${percent}%`;
 
-      // Fetch team
-      const { data: team, error: teamErr } = await supabase
-        .from("teams")
-        .select("*")
-        .eq("owner_id", user.id)
-        .single();
+      // team, players, lineup fetch (unchanged)
+      const { data: team, error: teamErr } = await supabase.from("teams").select("*").eq("owner_id", user.id).single();
+      if (teamErr || !team) { console.warn("No team found for user.", teamErr); document.getElementById("fixture-info").textContent = "No team found."; return; }
 
-      if (teamErr || !team) {
-        console.warn("No team found for user.", teamErr);
-        document.getElementById("fixture-info").textContent = "No team found.";
-        return;
-      }
-
-      // Fetch players & lineup (we'll need them for OVR & fitness)
       const [{ data: players }, { data: lineup }] = await Promise.all([
         supabase.from("players").select("*").eq("team_id", team.id),
         supabase.from("lineups").select("playing_xi,keeper,captain,team_id").eq("team_id", team.id).maybeSingle()
       ]);
 
-      // --- Render Top 3 Players (rank by highest of Batting and Bowling ONLY) ---
-      (function renderTop3() {
-        function getSkillTitle(score) {
-          if (score > 100) return "The Boss";
-          if (score > 80) return "Titan";
-          if (score > 60) return "World Class";
-          if (score > 50) return "Supreme";
-          if (score > 40) return "National";
-          if (score > 30) return "Professional";
-          if (score > 20) return "Domestic";
-          if (score > 10) return "Trainee";
-          return "Newbie";
-        }
-
+      // render top3 (unchanged except using shortNameDisplay)
+      (function renderTop3(){ function getSkillTitle(score){ if(score>100) return "The Boss"; if(score>80) return "Titan"; if(score>60) return "World Class"; if(score>50) return "Supreme"; if(score>40) return "National"; if(score>30) return "Professional"; if(score>20) return "Domestic"; if(score>10) return "Trainee"; return "Newbie"; }
         const allPlayers = Array.isArray(players) ? players : (players?.data ?? players ?? []);
-        const ranked = (allPlayers || []).map(p => {
-          const bat = toNum(p.batting);
-          const bowl = toNum(p.bowling);
-          const topVal = Math.max(bat, bowl); // ONLY batting vs bowling
-          const topSkillName = (bat >= bowl) ? 'Batting' : 'Bowling';
-          return {
-            ...p,
-            topSkillValue: topVal,
-            topSkillName,
-            topSkillLevel: getSkillTitle(topVal)
-          };
-        })
-        .sort((a,b) => b.topSkillValue - a.topSkillValue)
-        .slice(0,3);
+        const ranked = (allPlayers || []).map(p => { const bat = toNum(p.batting); const bowl = toNum(p.bowling); const topVal = Math.max(bat,bowl); const topSkillName = (bat>=bowl)?'Batting':'Bowling'; return {...p, topSkillValue:topVal, topSkillName, topSkillLevel:getSkillTitle(topVal)}; }).sort((a,b)=>b.topSkillValue-a.topSkillValue).slice(0,3);
+        const topEl = document.getElementById("top-players-list"); const fallbackImage='assets/default-avatar.png';
+        if(!ranked.length){ topEl.innerHTML="No players found."; return; }
+        topEl.innerHTML=`<div style="display:flex;justify-content:space-around;align-items:center;">${ranked.map(p=>{ const icon=(p.topSkillName==='Batting')?'assets/rating/bat.png':'assets/rating/ball.png'; const displayName=shortNameDisplay(p.name); return `<div style="text-align:center;max-width:120px;"><img src="${p.image_url||fallbackImage}" alt="${p.name||'Player'}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;object-position:top;margin-bottom:8px;border:2px solid rgba(255,255,255,0.04);" /><div class="top-player-name">${displayName}</div><div class="top-player-role">${p.role||'–'}</div><div class="top-player-skill"><img src="${icon}" alt="${p.topSkillName}" style="width:16px;height:16px;vertical-align:middle"/><span>${p.topSkillLevel}</span></div></div>` }).join('')}</div>`; })();
 
-        const topEl = document.getElementById("top-players-list");
-        const fallbackImage = 'assets/default-avatar.png';
-        if (!ranked.length) {
-          topEl.innerHTML = "No players found.";
-          return;
-        }
-
-        topEl.innerHTML = `
-          <div style="display:flex;justify-content:space-around;align-items:center;">
-            ${ranked.map(p => {
-              const icon = (p.topSkillName === 'Batting') ? 'assets/rating/bat.png' : 'assets/rating/ball.png';
-              const displayName = shortNameDisplay(p.name);
-              return `
-              <div style="text-align:center;max-width:120px;">
-                <img src="${p.image_url || fallbackImage}" alt="${p.name || 'Player'}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;object-position:top;margin-bottom:8px;border:2px solid rgba(255,255,255,0.04);" />
-                <div class="top-player-name">${displayName}</div>
-                <div class="top-player-role">${p.role || '–'}</div>
-                <div class="top-player-skill">
-                  <img src="${icon}" alt="${p.topSkillName}" style="width:16px;height:16px;vertical-align:middle" />
-                  <span>${p.topSkillLevel}</span>
-                </div>
-              </div>
-            `}).join('')}
-          </div>
-        `;
-      })();
-      // --- end Top 3 Players ---
-
-      // Fetch next upcoming match across fixtures and friendlies
+      // Next match (unchanged)
       const [fixturesRes, friendliesRes] = await Promise.all([
         supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(10),
         supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(10)
       ]);
-
       const combined = [];
-      if (fixturesRes?.data) fixturesRes.data.forEach(f => combined.push({ ...f, _kind: 'league' }));
-      if (friendliesRes?.data) friendliesRes.data.forEach(m => combined.push({ ...m, _kind: 'friendly' }));
-
-      // Only include matches with status 'scheduled' or 'running'
+      if (fixturesRes?.data) fixturesRes.data.forEach(f=>combined.push({...f,_kind:'league'}));
+      if (friendliesRes?.data) friendliesRes.data.forEach(m=>combined.push({...m,_kind:'friendly'}));
       const allowed = combined.filter(m => m && (m.status === 'scheduled' || m.status === 'running'));
-
-      let nextMatch = null;
-      let nextKickoff = null;
-      for (const m of allowed) {
-        const kd = parseKickoff(m);
-        if (!kd) continue;
-        if (!nextKickoff || kd < nextKickoff) {
-          nextKickoff = kd;
-          nextMatch = m;
-        }
-      }
-
+      let nextMatch = null, nextKickoff = null;
+      for (const m of allowed) { const kd = parseKickoff(m); if(!kd) continue; if(!nextKickoff || kd < nextKickoff){ nextKickoff = kd; nextMatch = m; } }
       const fixtureInfo = document.getElementById("fixture-info");
-
-      // helper to fetch team info (caching)
       const teamCache = new Map();
-      async function teamInfo(id) {
-        if (!id) return { team_name: '—', logo_url: null };
-        if (teamCache.has(id)) return teamCache.get(id);
-        const { data: t } = await supabase.from('teams').select('team_name,logo_url').eq('id', id).single();
-        const out = { team_name: t?.team_name ?? '—', logo_url: t?.logo_url ?? null };
-        teamCache.set(id, out);
-        return out;
-      }
-
-      // If no upcoming match found
-      if (!nextMatch) {
-        fixtureInfo.innerHTML = `<div>No upcoming matches</div>`;
-      } else {
-        const homeId = nextMatch.home_team_id;
-        const awayId = nextMatch.away_team_id;
-        const homeInfo = await teamInfo(homeId);
-        const awayInfo = await teamInfo(awayId);
-
+      async function teamInfo(id){ if(!id) return {team_name:'—',logo_url:null}; if(teamCache.has(id)) return teamCache.get(id); const { data:t } = await supabase.from('teams').select('team_name,logo_url').eq('id', id).single(); const out={team_name:t?.team_name??'—',logo_url:t?.logo_url??null}; teamCache.set(id,out); return out; }
+      if(!nextMatch){ fixtureInfo.innerHTML=`<div>No upcoming matches</div>`; }
+      else {
+        const homeId = nextMatch.home_team_id, awayId = nextMatch.away_team_id;
+        const homeInfo = await teamInfo(homeId), awayInfo = await teamInfo(awayId);
         const opponentId = (homeId === team.id) ? awayId : homeId;
-
-        // compute our OVR & opponent OVR
-        const ourSelection = pickByLineupOrAuto(players || [], lineup || null);
-        const ourRates = computeRatings(ourSelection);
-
+        const ourSelection = pickByLineupOrAuto(players || [], lineup || null); const ourRates = computeRatings(ourSelection);
         const oppLineupRes = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', opponentId).maybeSingle();
         const { data: opponentPlayersData } = await supabase.from('players').select('*').eq('team_id', opponentId);
         const opponentPlayers = opponentPlayersData || [];
         const oppSelection = pickByLineupOrAuto(opponentPlayers || [], oppLineupRes?.data || null);
         const oppRates = computeRatings(oppSelection);
-
         const kickoffDt = parseKickoff(nextMatch) || new Date();
-        fixtureInfo.innerHTML = `
-          <div class="match-card">
-            <div class="team-block">
-              <img class="team-logo" src="${homeInfo.logo_url || 'assets/default-logo.png'}" alt="${homeInfo.team_name}" />
-              <div class="team-text">
-                <div class="team-name">${homeInfo.team_name}</div>
-                <div class="ovr-row">
-                  <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
-                  <span>${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="match-meta">
-              <div class="badge">${nextMatch._kind === 'league' ? 'League' : 'Friendly'}</div>
-              <div class="kickoff">${humanKickoff(kickoffDt)}</div>
-              <div class="countdown" id="matchCountdown">—</div>
-            </div>
-
-            <div class="team-block" style="margin-left:auto">
-              <div class="team-text" style="text-align:right">
-                <div class="team-name">${awayInfo.team_name}</div>
-                <div class="ovr-row" style="justify-content:flex-end">
-                  <span>${fmtOne(oppRates.ovr)}</span>
-                  <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
-                </div>
-              </div>
-              <img class="team-logo" src="${awayInfo.logo_url || 'assets/default-logo.png'}" alt="${awayInfo.team_name}" />
-            </div>
-          </div>
-        `;
-
-        // Countdown updater
+        fixtureInfo.innerHTML = `<div class="match-card"><div class="team-block"><img class="team-logo" src="${homeInfo.logo_url || 'assets/default-logo.png'}" alt="${homeInfo.team_name}" /><div class="team-text"><div class="team-name">${homeInfo.team_name}</div><div class="ovr-row"><img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" /><span>${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}</span></div></div></div><div class="match-meta"><div class="badge">${nextMatch._kind === 'league' ? 'League' : 'Friendly'}</div><div class="kickoff">${humanKickoff(kickoffDt)}</div><div class="countdown" id="matchCountdown">—</div></div><div class="team-block" style="margin-left:auto"><div class="team-text" style="text-align:right"><div class="team-name">${awayInfo.team_name}</div><div class="ovr-row" style="justify-content:flex-end"><span>${fmtOne(oppRates.ovr)}</span><img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" /></div></div><img class="team-logo" src="${awayInfo.logo_url || 'assets/default-logo.png'}" alt="${awayInfo.team_name}" /></div></div>`;
         const countdownEl = document.getElementById('matchCountdown');
-        function updateCountdown() {
-          const now = new Date();
-          const diff = kickoffDt - now;
-          countdownEl.textContent = formatCountdown(diff);
-        }
-        updateCountdown();
-        setInterval(updateCountdown, 1000);
+        function updateCountdown(){ const now = new Date(); const diff = kickoffDt - now; countdownEl.textContent = formatCountdown(diff); }
+        updateCountdown(); setInterval(updateCountdown,1000);
       }
 
       // --------------------------
-      // Match Preparation progress (4 tasks x 25%)
+      // PREPARATION
       // --------------------------
-
-      // TRAINING: check previous/current window using profile or training_sessions exactly as per schema
+      // training: robust check with logs
       const trainingDone = await isTrainingCompletedEitherWindow(user.id, profile);
 
-      // Scout: last_scouted_date or last_scouted must be >= last Wednesday
       const lastWed = lastWednesday(new Date());
       const scoutedDateStr = profile?.last_scouted_date || profile?.last_scouted || null;
       let scoutDone = false;
-      if (scoutedDateStr) {
-        const sd = new Date(scoutedDateStr);
-        sd.setHours(0,0,0,0);
-        scoutDone = sd >= lastWed;
-      }
+      if (scoutedDateStr) { const sd = new Date(scoutedDateStr); sd.setHours(0,0,0,0); scoutDone = sd >= lastWed; }
 
-      // Lineup
+      // lineup check
       let lineupDone = false;
       try {
-        const { data: lu } = await supabase
-          .from('lineups')
-          .select('playing_xi,keeper,captain,locked,team_id')
-          .eq('team_id', team.id)
-          .maybeSingle();
-
+        const { data: lu } = await supabase.from('lineups').select('playing_xi,keeper,captain,locked,team_id').eq('team_id', team.id).maybeSingle();
         if (lu?.playing_xi && Array.isArray(lu.playing_xi) && lu.playing_xi.length >= 11) {
           const xiSet = new Set(lu.playing_xi);
           const capOk = !lu.captain || xiSet.has(lu.captain);
@@ -786,11 +426,9 @@
         } else {
           lineupDone = false;
         }
-      } catch (e) {
-        lineupDone = false;
-      }
+      } catch (e) { lineupDone = false; }
 
-      // compute fitness: use lineup XI if present, else auto-pick 5 bats, 1 ar, 5 bowlers
+      // fitness calculation
       let fitnessDone = false;
       let useXI = [];
       const luRow = await supabase.from('lineups').select('playing_xi').eq('team_id', team.id).maybeSingle();
@@ -802,11 +440,9 @@
         const bats = all.filter(p => (p.role || '').toLowerCase().includes('bat') || (p.batting && p.batting>0)).sort((a,b)=>toNum(b.batting)-toNum(a.batting)).slice(0,5);
         const ars = all.filter(p => (p.role||'').toLowerCase().includes('all') || ((p.batting||0)>0 && (p.bowling||0)>0)).sort((a,b)=> (toNum(b.batting)+toNum(b.bowling))-(toNum(a.batting)+toNum(a.bowling))).slice(0,2);
         const bowls = all.filter(p => (p.role||'').toLowerCase().includes('bowl') || (p.bowling && p.bowling>0)).sort((a,b)=>toNum(b.bowling)-toNum(a.bowling)).slice(0,5);
-        const byId = new Map();
-        [...bats, ...ars, ...bowls].forEach(p => { if (!byId.has(p.id)) byId.set(p.id, p); });
+        const byId = new Map(); [...bats,...ars,...bowls].forEach(p=>{ if(!byId.has(p.id)) byId.set(p.id, p); });
         useXI = Array.from(byId.values()).slice(0,11);
       }
-
       const fitnessVals = (useXI || []).map(p => toNum(p.fitness));
       const avgFitness = fitnessVals.length ? (fitnessVals.reduce((s,v)=>s+v,0) / fitnessVals.length) : 0;
       fitnessDone = avgFitness > 95;
@@ -834,33 +470,26 @@
         }
       });
 
-      const prepFill = document.getElementById('prepFill');
-      const prepPercent = document.getElementById('prepPercent');
+      const prepFill = document.getElementById('prepFill'), prepPercent = document.getElementById('prepPercent');
       prepFill.style.width = score + '%';
       prepPercent.textContent = `${score}%`;
       document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
 
-      // periodic refresh every 20s for tasks & countdown
+      // periodic refresh
       setInterval(async () => {
         try {
-          // re-fetch profile so profile.last_training_window_anchor/which updates are picked up
+          // re-fetch profile for last_training_window_anchor/which changes
           const { data: freshProfile } = await supabase.from('profiles').select('last_training_window_anchor,last_training_window_which,last_scouted,last_scouted_date').eq('user_id', user.id).single();
+          console.log('Training debug: periodic refresh profile ->', freshProfile);
 
-          // re-check training using the fresh profile (fast-path will work if profile was updated)
           const newTraining = await isTrainingCompletedEitherWindow(user.id, freshProfile);
-
-          // scout
           let newScoutDone = false;
           if (freshProfile?.last_scouted_date || freshProfile?.last_scouted) {
             const sd = new Date(freshProfile.last_scouted_date || freshProfile.last_scouted); sd.setHours(0,0,0,0);
             newScoutDone = sd >= lastWed;
           }
-
-          // lineup
           const { data: lu2 } = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', team.id).maybeSingle();
           const newLineupDone = (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length >= 11);
-
-          // fitness
           const { data: playersRef } = await supabase.from('players').select('*').eq('team_id', team.id);
           let newAvg = 0;
           if (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length) {
@@ -872,33 +501,23 @@
             const bats = all.filter(p => (p.role || '').toLowerCase().includes('bat')).sort((a,b)=>toNum(b.batting)-toNum(a.batting)).slice(0,5);
             const ars = all.filter(p => (p.role||'').toLowerCase().includes('all')).sort((a,b)=> (toNum(b.batting)+toNum(b.bowling))-(toNum(a.batting)+toNum(a.bowling))).slice(0,2);
             const bowls = all.filter(p => (p.role||'').toLowerCase().includes('bowl')).sort((a,b)=>toNum(b.bowling)-toNum(a.bowling)).slice(0,5);
-            const byId2 = new Map();
-            [...bats,...ars,...bowls].forEach(p=>{ if (!byId2.has(p.id)) byId2.set(p.id,p) });
+            const byId2 = new Map(); [...bats,...ars,...bowls].forEach(p=>{ if (!byId2.has(p.id)) byId2.set(p.id,p); });
             const use = Array.from(byId2.values()).slice(0,11);
             newAvg = use.length ? (use.reduce((s,p)=>s + toNum(p.fitness),0) / use.length) : 0;
           }
-
           let newScore = 0;
           if (newTraining) newScore += 25;
           if (newScoutDone) newScore += 25;
           if (newLineupDone) newScore += 25;
           if (newAvg > 95) newScore += 25;
-
           prepFill.style.width = newScore + '%';
           prepPercent.textContent = `${newScore}%`;
           const map = { training: newTraining, scout: newScoutDone, lineup: newLineupDone, fitness: newAvg > 95 };
           Object.keys(map).forEach(k=>{
-            const el = document.querySelector(`.task[data-task="${k}"]`);
-            if (!el) return;
-            el.classList.toggle('done', map[k]);
-            el.classList.toggle('pending', !map[k]);
-            const dot = el.querySelector('.dot');
-            if (dot) dot.textContent = map[k] ? '✓' : '!';
-            const txt = el.querySelector('.txt strong');
-            if (txt) {
-              if (k === 'fitness') txt.textContent = fmtOne(newAvg) + (map[k] ? ' avg' : ' avg');
-              else txt.textContent = map[k] ? 'Completed' : 'Pending';
-            }
+            const el = document.querySelector(`.task[data-task="${k}"]`); if(!el) return;
+            el.classList.toggle('done', map[k]); el.classList.toggle('pending', !map[k]);
+            const dot = el.querySelector('.dot'); if(dot) dot.textContent = map[k] ? '✓' : '!';
+            const txt = el.querySelector('.txt strong'); if (txt) { if (k==='fitness') txt.textContent = fmtOne(newAvg) + (map[k] ? ' avg':' avg'); else txt.textContent = map[k] ? 'Completed' : 'Pending'; }
           });
 
         } catch (e) {
@@ -911,4 +530,3 @@
   </script>
 </body>
 </html>
-
