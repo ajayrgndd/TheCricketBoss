@@ -14,6 +14,7 @@
       padding-bottom: 80px;
     }
 
+    /* ensure content clears top nav */
     .main {
       padding: 20px;
       padding-top: 80px;
@@ -207,8 +208,6 @@
   <!-- Top bar & bottom nav will be injected by shared-ui.js -->
 
   <div class="main">
-    <!-- (Welcome header removed as requested) -->
-
     <!-- XP Progress Bar -->
     <div class="xp-bar-container">
       <div class="xp-bar-top">
@@ -295,7 +294,7 @@
     }
 
     // ----------------------
-    // Helper functions reused/adapted from your profile files
+    // Helpers
     // ----------------------
     const toNum = (v) => (v == null || v === '') ? 0 : Number(v);
 
@@ -442,7 +441,111 @@
     }
 
     // ----------------------
-    // Main logic
+    // Training window logic (previous window)
+    // ----------------------
+    /**
+     * Determine the PREVIOUS training window range (IST) as ISO strings.
+     * Windows:
+     *  - "mon": Mon 22:00 -> Thu 19:00
+     *  - "thu": Thu 22:00 -> next Mon 19:00
+     *
+     * Returns { startISO, endISO, windowName }
+     */
+    function prevTrainingWindowRangeIST(now = new Date()) {
+      // Convert now to IST by adding offset from UTC to IST (UTC +5:30)
+      const utc = new Date(now.getTime() + (now.getTimezoneOffset() * 60000));
+      const ist = new Date(utc.getTime() + (5.5 * 3600 * 1000));
+
+      // helper to create IST Date with given components (year, monthIndex, day, hh, mm)
+      function makeIST(year, monthIndex, day, hh, mm) {
+        // Make a Date that represents that IST wall-clock time by creating a UTC date
+        // equal to IST time minus offset (so toISOString yields correct UTC moment).
+        // Simpler approach: create a Date in UTC for the same wall time minus 5.5 hours.
+        const dtUtc = new Date(Date.UTC(year, monthIndex, day, hh - 5, mm - 30, 0));
+        return dtUtc;
+      }
+
+      // get monday of this week (IST)
+      const day = ist.getDay(); // 0=Sun ... 6=Sat
+      const offsetToMon = (day + 6) % 7; // days since Monday
+      const monday = new Date(ist);
+      monday.setDate(ist.getDate() - offsetToMon);
+      monday.setHours(0,0,0,0);
+
+      // this week's mon22 (IST)
+      const mon22_ist = makeIST(monday.getFullYear(), monday.getMonth(), monday.getDate(), 22, 0);
+
+      // this week's thu19 and thu22 (IST)
+      const thursdayDate = new Date(monday);
+      thursdayDate.setDate(monday.getDate() + 3);
+      const thu19_ist = makeIST(thursdayDate.getFullYear(), thursdayDate.getMonth(), thursdayDate.getDate(), 19, 0);
+      const thu22_ist = makeIST(thursdayDate.getFullYear(), thursdayDate.getMonth(), thursdayDate.getDate(), 22, 0);
+
+      // next week's mon19 (IST) (end of thu-window)
+      const nextMonDate = new Date(monday);
+      nextMonDate.setDate(monday.getDate() + 7);
+      const nextMon19_ist = makeIST(nextMonDate.getFullYear(), nextMonDate.getMonth(), nextMonDate.getDate(), 19, 0);
+
+      // previous week's thu22 (start of previous thu-window)
+      const prevThuDate = new Date(monday);
+      prevThuDate.setDate(monday.getDate() - 4); // previous week Thursday
+      const prevThu22_ist = makeIST(prevThuDate.getFullYear(), prevThuDate.getMonth(), prevThuDate.getDate(), 22, 0);
+
+      // Compare current IST (we need to compare with the moments created)
+      // Convert 'ist' to equivalent UTC timestamp for comparison with dtUtc values
+      const istUtcEquivalent = new Date(ist.getTime() - (5.5 * 3600 * 1000));
+
+      // Now decide current window and hence the previous window
+      // If IST is between mon22 .. thu19 => current is mon-window, previous = previous thu-window (prevThu22 .. thisMon19)
+      // Else => current is thu-window, previous = thisMon22 .. thisThu19
+      let prevStartUTC, prevEndUTC, prevName;
+
+      if (ist >= new Date(mon22_ist.getTime() + (5.5 * 3600 * 1000)) && ist <= new Date(thu19_ist.getTime() + (5.5 * 3600 * 1000))) {
+        // inside mon-window: previous was thu-window (prevThu22 -> thisMon19)
+        prevStartUTC = prevThu22_ist;
+        // thisMon19: monday date at 19:00 IST
+        const thisMon19_ist = makeIST(monday.getFullYear(), monday.getMonth(), monday.getDate(), 19, 0);
+        prevEndUTC = thisMon19_ist;
+        prevName = 'thu';
+      } else {
+        // treat as inside thu-window (includes times after thu22 upto nextMon19)
+        prevStartUTC = mon22_ist;
+        prevEndUTC = thu19_ist;
+        prevName = 'mon';
+      }
+
+      return {
+        startISO: prevStartUTC.toISOString(),
+        endISO: prevEndUTC.toISOString(),
+        windowName: prevName
+      };
+    }
+
+    // Query training_sessions inside the PREVIOUS window
+    async function checkTrainingWindowDone(supabaseClient, userId) {
+      const { startISO, endISO } = prevTrainingWindowRangeIST(new Date());
+      try {
+        const { data, error } = await supabaseClient
+          .from('training_sessions')
+          .select('id')
+          .eq('user_id', userId)
+          .gte('created_at', startISO)
+          .lte('created_at', endISO)
+          .limit(1);
+
+        if (error) {
+          console.warn('training window query error', error);
+          return false;
+        }
+        return (data && data.length > 0);
+      } catch (e) {
+        console.warn('training window check failed', e);
+        return false;
+      }
+    }
+
+    // ----------------------
+    // Main
     // ----------------------
     async function main() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -467,7 +570,7 @@
 
       await distributeDailyLoginXP(user.id);
 
-      // XP UI unchanged but now we show left/right level labels
+      // XP UI
       const xp = profile.xp ?? 0;
       const levels = [
         { name: "Beginner", xp: 0 },
@@ -493,7 +596,6 @@
         }
       }
       const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
-      // set left/right labels and xp bar
       document.getElementById("level-current").textContent = currentLevel.name;
       document.getElementById("level-next").textContent = `Next: ${nextLevel.name}`;
       document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
@@ -512,13 +614,13 @@
         return;
       }
 
-      // Fetch players & lineup (we'll need them for OVR & fitness)
+      // Fetch players & lineup
       const [{ data: players }, { data: lineup }] = await Promise.all([
         supabase.from("players").select("*").eq("team_id", team.id),
         supabase.from("lineups").select("playing_xi,keeper,captain,team_id").eq("team_id", team.id).maybeSingle()
       ]);
 
-      // --- Render Top 3 Players (rank by highest of Batting and Bowling ONLY) ---
+      // --- Render Top 3 Players (Bat/Bowl only) ---
       (function renderTop3() {
         function getSkillTitle(score) {
           if (score > 100) return "The Boss";
@@ -681,15 +783,8 @@
       // --------------------------
       // Match Preparation progress (4 tasks x 25%)
       // --------------------------
-      const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const { data: recentTraining } = await supabase
-        .from('training_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', sevenDaysAgo.toISOString().split('T')[0]);
-
-      const trainingDone = (recentTraining && recentTraining.length > 0);
+      // TRAINING: check previous training window (the one that just finished)
+      const trainingDone = await checkTrainingWindowDone(supabase, user.id);
 
       const lastWed = lastWednesday(new Date());
       const scoutedDateStr = profile?.last_scouted_date || profile?.last_scouted || null;
@@ -770,19 +865,24 @@
       prepPercent.textContent = `${score}%`;
       document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
 
-      // periodic refresh every 20s for tasks & countdown is already running
+      // periodic refresh: training uses previous-window check too
       setInterval(async () => {
         try {
-          const { data: rt } = await supabase.from('training_sessions').select('id').eq('user_id', user.id).gte('created_at', sevenDaysAgo.toISOString().split('T')[0]).limit(1);
-          const newTrainingDone = (rt && rt.length>0);
+          const newTrainingDone = await checkTrainingWindowDone(supabase, user.id);
+
+          // scout
           const { data: pf } = await supabase.from('profiles').select('last_scouted_date,last_scouted').eq('user_id', user.id).single();
           let newScoutDone = false;
           if (pf?.last_scouted_date || pf?.last_scouted) {
             const sd = new Date(pf.last_scouted_date || pf.last_scouted); sd.setHours(0,0,0,0);
             newScoutDone = sd >= lastWed;
           }
+
+          // lineup
           const { data: lu2 } = await supabase.from('lineups').select('playing_xi,keeper,captain').eq('team_id', team.id).maybeSingle();
           const newLineupDone = (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length >= 11);
+
+          // fitness
           const { data: playersRef } = await supabase.from('players').select('*').eq('team_id', team.id);
           let newAvg = 0;
           if (lu2?.playing_xi && Array.isArray(lu2.playing_xi) && lu2.playing_xi.length) {
