@@ -330,7 +330,7 @@
       return d;
     }
 
-    // ---------- training window helpers ----------
+    // ---------- training window helpers (REPLACED WITH ROBUST VERSION) ----------
     // Return IST Date object for given UTC date
     function toIST(date = new Date()) {
       // create a new date shifted to IST (UTC +5:30)
@@ -338,92 +338,113 @@
       return new Date(utc.getTime() + (5.5 * 3600 * 1000));
     }
 
-    // Compute the CURRENT active training window and its week_anchor (YYYY-MM-DD)
-    // Windows:
-    //  - mon window: Mon 22:00 IST -> Thu 19:00 IST (anchor = that Mon's date)
-    //  - thu window: Thu 22:00 IST -> next Mon 19:00 IST (anchor = that Mon's date)
+    // Build this week's Monday (IST) at 00:00
+    function thisWeekMondayIST(reference = new Date()) {
+      const ist = toIST(reference);
+      const day = ist.getDay(); // 0=Sun..6=Sat
+      const offsetToMon = (day + 6) % 7;
+      const monday = new Date(ist);
+      monday.setDate(ist.getDate() - offsetToMon);
+      monday.setHours(0,0,0,0);
+      return monday;
+    }
+
+    // helper to build IST moment on base date
+    function makeIST(baseDate, hh, mm = 0) {
+      const d = new Date(baseDate);
+      d.setHours(hh, mm, 0, 0);
+      return d;
+    }
+
+    // Returns { window: 'mon'|'thu', week_anchor: 'YYYY-MM-DD' } for the CURRENT active window
     function currentTrainingWindow(reference = new Date()) {
+      const thisMon = thisWeekMondayIST(reference);
+      const mon22 = makeIST(thisMon, 22, 0);
+      const thu = new Date(thisMon); thu.setDate(thisMon.getDate() + 3);
+      const thu19 = makeIST(thu, 19, 0);
+      const thu22 = makeIST(thu, 22, 0);
+      const nextMon = new Date(thisMon); nextMon.setDate(thisMon.getDate() + 7);
+      const nextMon19 = makeIST(nextMon, 19, 0);
+
       const ist = toIST(reference);
 
-      // build this week's Monday (IST) at 00:00
-      const day = ist.getDay(); // 0=Sun..6=Sat
-      const offsetToMon = (day + 6) % 7; // days since Monday
-      const thisMon = new Date(ist);
-      thisMon.setDate(ist.getDate() - offsetToMon);
-      thisMon.setHours(0,0,0,0);
-
-      // helper to build IST time on a base date
-      function make(date, hh, mm=0) {
-        const d = new Date(date);
-        d.setHours(hh, mm, 0, 0);
-        return d;
-      }
-
-      const mon22 = make(thisMon, 22, 0);                          // this Mon 22:00 IST
-      const thu = new Date(thisMon); thu.setDate(thisMon.getDate() + 3);
-      const thu19 = make(thu, 19, 0);                              // this Thu 19:00 IST
-      const thu22 = make(thu, 22, 0);                              // this Thu 22:00 IST
-      const nextMon = new Date(thisMon); nextMon.setDate(thisMon.getDate() + 7);
-      const nextMon19 = make(nextMon, 19, 0);                      // next Mon 19:00 IST
-
-      // Determine current active window:
-      // If IST is in mon-window (mon22 .. thu19): window = 'mon'
-      // Else if IST is in thu-window (thu22 .. nextMon19): window = 'thu'
-      // Note: small gaps (thu19..thu22 and mon19..mon22) will be considered outside a window;
-      // in those gaps we'll consider 'thu' as active by default (so week_anchor remains thisMon).
       let windowName;
       if (ist >= mon22 && ist <= thu19) {
         windowName = 'mon';
       } else if (ist >= thu22 && ist <= nextMon19) {
         windowName = 'thu';
       } else {
-        // If in the small gaps, decide by proximity: if ist < thu22 then treat as 'mon' (we're between thu19..thu22)
-        // if ist < mon22 (i.e. mon19..mon22) treat as 'thu' (we're between mon19..mon22 of same week)
-        if (ist > thu19 && ist < thu22) {
-          // between thu19..thu22 -> treat as 'mon' window has finished; previous training window is mon, but
-          // for our purposes, treat active as 'mon' or 'thu'? Earlier errors came from checking previous window;
-          // to be consistent and safer, treat this small gap as still part of 'mon' window end. We'll pick 'mon'.
-          windowName = 'mon';
-        } else {
-          // between mon19..mon22 or any other gap -> choose 'thu'
-          windowName = 'thu';
-        }
+        // small gaps: choose deterministic mapping
+        if (ist > thu19 && ist < thu22) windowName = 'mon';
+        else windowName = 'thu';
       }
 
-      // week_anchor is thisMon's date (YYYY-MM-DD)
       const yyyy = thisMon.getFullYear();
       const mm = String(thisMon.getMonth() + 1).padStart(2, '0');
       const dd = String(thisMon.getDate()).padStart(2, '0');
       const anchor = `${yyyy}-${mm}-${dd}`;
-
       return { window: windowName, week_anchor: anchor };
     }
 
-    // Check training completion for the CURRENT window.
-    // Fast path: if profiles.last_training_window_anchor + last_training_window_which matches current window => true
-    // Fallback: query training_sessions for a row with user_id, week_anchor and window
-    async function isTrainingCompletedForCurrentWindow(userId, profileRow) {
+    // Returns PREVIOUS window (the window that finished most recently)
+    function previousTrainingWindow(reference = new Date()) {
+      const thisMon = thisWeekMondayIST(reference);
+      const prevMon = new Date(thisMon); prevMon.setDate(thisMon.getDate() - 7);
+
+      const curr = currentTrainingWindow(reference);
+      if (curr.window === 'mon') {
+        const yyyy = prevMon.getFullYear();
+        const mm = String(prevMon.getMonth() + 1).padStart(2, '0');
+        const dd = String(prevMon.getDate()).padStart(2, '0');
+        return { window: 'thu', week_anchor: `${yyyy}-${mm}-${dd}` };
+      } else {
+        const yyyy = thisMon.getFullYear();
+        const mm = String(thisMon.getMonth() + 1).padStart(2, '0');
+        const dd = String(thisMon.getDate()).padStart(2, '0');
+        return { window: 'mon', week_anchor: `${yyyy}-${mm}-${dd}` };
+      }
+    }
+
+    // normalize profile anchor which may be date or string
+    function normalizeAnchorVal(val) {
+      if (!val) return null;
+      if (typeof val === 'string') return val;
+      if (val instanceof Date) return val.toISOString().split('T')[0];
+      try { return new Date(val).toISOString().split('T')[0]; } catch(e) { return null; }
+    }
+
+    /**
+     * Check training completion by looking at BOTH current and previous windows.
+     * Fast path: profile.last_training_window_anchor + last_training_window_which matches any -> true
+     * Fallback: a single training_sessions query with an OR for the two pairs.
+     */
+    async function isTrainingCompletedEitherWindow(userId, profileRow) {
       try {
         const curr = currentTrainingWindow(new Date());
+        const prev = previousTrainingWindow(new Date());
 
-        // Fast path: profile markers (could be string or date)
+        // Fast-path via profile
         if (profileRow?.last_training_window_anchor && profileRow?.last_training_window_which) {
-          const anchorVal = profileRow.last_training_window_anchor;
-          const anchorStr = (typeof anchorVal === 'string')
-            ? anchorVal
-            : (anchorVal ? new Date(anchorVal).toISOString().split('T')[0] : null);
-          if (anchorStr === curr.week_anchor && profileRow.last_training_window_which === curr.window) {
+          const anchorStr = normalizeAnchorVal(profileRow.last_training_window_anchor);
+          const which = profileRow.last_training_window_which;
+          if ((anchorStr === curr.week_anchor && which === curr.window) ||
+              (anchorStr === prev.week_anchor && which === prev.window)) {
             return true;
           }
         }
 
-        // Fallback: check training_sessions table
+        // Single query with OR for either pair
+        const conds = [
+          `and(week_anchor.eq.${curr.week_anchor},window.eq.${curr.window})`,
+          `and(week_anchor.eq.${prev.week_anchor},window.eq.${prev.window})`
+        ];
+        const orFilter = conds.join(',');
+
         const { data, error } = await supabase
           .from('training_sessions')
           .select('id,created_at,week_anchor,window')
           .eq('user_id', userId)
-          .eq('week_anchor', curr.week_anchor)
-          .eq('window', curr.window)
+          .or(orFilter)
           .limit(1);
 
         if (error) {
@@ -436,6 +457,7 @@
         return false;
       }
     }
+    // ---------- end training helpers ----------
 
     // parse kickoff date/time for a match-like record
     function parseKickoff(m) {
@@ -483,7 +505,6 @@
     }
 
     // Short name formatter reused (S V Samson etc.)
-    // e.g. "Sanju Viswanathan Samson" -> "S V Samson"; "Rohit Sharma" -> "R Sharma"
     function shortNameDisplay(full) {
       if (!full) return '–';
       const parts = String(full).trim().split(/\s+/).filter(Boolean);
@@ -735,8 +756,8 @@
       // Match Preparation progress (4 tasks x 25%)
       // --------------------------
 
-      // TRAINING: check current active window using profile fast-path or training_sessions fallback
-      const trainingDone = await isTrainingCompletedForCurrentWindow(user.id, profile);
+      // TRAINING: check previous/current window using profile or training_sessions exactly as per schema
+      const trainingDone = await isTrainingCompletedEitherWindow(user.id, profile);
 
       // Scout: last_scouted_date or last_scouted must be >= last Wednesday
       const lastWed = lastWednesday(new Date());
@@ -822,14 +843,16 @@
       // periodic refresh every 20s for tasks & countdown
       setInterval(async () => {
         try {
-          // re-check training using same logic (profile fast path + training_sessions fallback)
-          const newTraining = await isTrainingCompletedForCurrentWindow(user.id, profile);
+          // re-fetch profile so profile.last_training_window_anchor/which updates are picked up
+          const { data: freshProfile } = await supabase.from('profiles').select('last_training_window_anchor,last_training_window_which,last_scouted,last_scouted_date').eq('user_id', user.id).single();
+
+          // re-check training using the fresh profile (fast-path will work if profile was updated)
+          const newTraining = await isTrainingCompletedEitherWindow(user.id, freshProfile);
 
           // scout
-          const { data: pf } = await supabase.from('profiles').select('last_scouted_date,last_scouted').eq('user_id', user.id).single();
           let newScoutDone = false;
-          if (pf?.last_scouted_date || pf?.last_scouted) {
-            const sd = new Date(pf.last_scouted_date || pf.last_scouted); sd.setHours(0,0,0,0);
+          if (freshProfile?.last_scouted_date || freshProfile?.last_scouted) {
+            const sd = new Date(freshProfile.last_scouted_date || freshProfile.last_scouted); sd.setHours(0,0,0,0);
             newScoutDone = sd >= lastWed;
           }
 
