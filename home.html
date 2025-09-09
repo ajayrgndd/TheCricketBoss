@@ -17,7 +17,7 @@
     /* ensure content clears top nav */
     .main {
       padding: 20px;
-      padding-top: 80px;
+      padding-top: 2px;
       max-width: 800px;
       margin: auto;
     }
@@ -155,20 +155,19 @@
 
     <div class="grid-container">
 
-      <!-- Fixture (UPDATED) -->
+      <!-- Fixture -->
       <div class="grid-item" id="fixture-block">
         <h3>Next Match</h3>
         <div id="fixture-info">Loading...</div>
       </div>
 
-      <!-- Match Preparation (MERGED & UPDATED) -->
+      <!-- Match Preparation -->
       <div class="grid-item">
         <h3>Match Preparation</h3>
         <div id="prepBlock" class="prep">
           <div class="prep-bar"><div id="prepFill" class="prep-fill"></div></div>
           <div id="prepPercent" class="prep-percent">0%</div>
           <div class="prep-tasks" id="prepTasks">
-            <!-- tasks will be injected here -->
             <div class="task pending" data-task="training"><div class="dot">–</div><div class="txt">Training: <strong id="t-training">Pending</strong></div><a href="training.html">Go</a></div>
             <div class="task pending" data-task="scout"><div class="dot">–</div><div class="txt">Scout (Wed): <strong id="t-scout">Pending</strong></div><a href="scout.html">Go</a></div>
             <div class="task pending" data-task="lineup"><div class="dot">–</div><div class="txt">Default Lineup: <strong id="t-lineup">Pending</strong></div><a href="set-lineup.html">Go</a></div>
@@ -185,7 +184,7 @@
 
     </div>
 
-    <!-- Quick Access (heading removed as requested) -->
+    <!-- Quick Access -->
     <div class="quick-links">
       <div class="quick-grid">
         <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
@@ -376,97 +375,104 @@
     }
 
     // ----------------------
-    // Training-window detection using window + week_anchor
+    // New training-window detection using week_anchor + window
     // ----------------------
+    /**
+     * Compute this week's Monday date (IST wall-clock) as YYYY-MM-DD string (week_anchor).
+     * We'll base week_anchor on Monday's date.
+     */
+    function thisWeekMondayDateIST(reference = new Date()) {
+      // Convert to IST by adding offset from UTC to IST (+5:30)
+      const utc = new Date(reference.getTime() + (reference.getTimezoneOffset() * 60000));
+      const ist = new Date(utc.getTime() + (5.5 * 3600 * 1000));
 
-    // Helper: get IST date object equivalent from JS Date (so we reason in IST wall-clock)
-    function toIST(date = new Date()) {
-      // Return a Date representing the same wall clock time in IST as a JS Date object in local time.
-      // Simpler: compute UTC time then add 5.5 hours to get IST moment.
-      const utc = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
-      return new Date(utc.getTime() + (5.5 * 3600 * 1000));
-    }
-
-    // Format a Date (assumed IST wall-clock moment) to YYYY-MM-DD
-    function formatYYYYMMDDIST(d) {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${dd}`;
+      const day = ist.getDay(); // 0=Sun..6=Sat
+      const offsetToMon = (day + 6) % 7;
+      const monday = new Date(ist);
+      monday.setDate(ist.getDate() - offsetToMon);
+      // zero time portion
+      monday.setHours(0,0,0,0);
+      // format YYYY-MM-DD
+      const yyyy = monday.getFullYear();
+      const mm = String(monday.getMonth() + 1).padStart(2, '0');
+      const dd = String(monday.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
     }
 
     /**
-     * Determine the PREVIOUS training window's 'window' and 'week_anchor'.
+     * Determine PREVIOUS training window name ('mon' or 'thu') and its week_anchor date.
      *
-     * Windows (IST wall-clock):
-     *  - 'mon' window => Mon 22:00 -> Thu 19:00 (week_anchor = Monday's date)
-     *  - 'thu' window => Thu 22:00 -> next Mon 19:00 (week_anchor = Monday's date of that week)
+     * Rules:
+     * - Windows:
+     *    mon-window: Mon 22:00 -> Thu 19:00  (label "mon", week_anchor = this week's Monday)
+     *    thu-window: Thu 22:00 -> next Mon 19:00 (label "thu", week_anchor = this week's Monday)
+     * - "Previous" window is the one that finished most recently.
      *
-     * Previous window rules (simpler and robust):
-     *  - If current IST is in Mon22 .. Thu19 => current window is 'mon' => previous was 'thu' of previous week (week_anchor = thisMonday - 7d)
-     *  - If current IST is in Thu22 .. nextMon19 => current window is 'thu' => previous was 'mon' of this week (week_anchor = thisMonday)
-     *  - If in gap Thu19..Thu22 => previous finished was 'mon' (week_anchor = thisMonday)
-     *  - If in gap Mon19..Mon22 => previous finished was 'thu' (week_anchor = thisMonday -7)
-     *  - Else (before Mon22 same week) => previous was 'thu' (week_anchor = thisMonday -7)
+     * We compute current IST time, decide whether current time is inside mon-window or thu-window,
+     * then pick the previous window's name and its week_anchor:
+     *  - If current is inside mon-window => previous = thu-window whose week_anchor is previous week's Monday.
+     *  - Else (current in thu-window) => previous = mon-window whose week_anchor is this week's Monday.
      */
-    function prevTrainingWindow(reference = new Date()) {
-      const ist = toIST(reference);
+    function prevTrainingWindowAnchorAndName(reference = new Date()) {
+      // make IST
+      const utc = new Date(reference.getTime() + (reference.getTimezoneOffset() * 60000));
+      const ist = new Date(utc.getTime() + (5.5 * 3600 * 1000));
+      // this week's Monday (IST date)
+      const thisMonDate = (() => {
+        const day = ist.getDay();
+        const offsetToMon = (day + 6) % 7;
+        const monday = new Date(ist);
+        monday.setDate(ist.getDate() - offsetToMon);
+        monday.setHours(0,0,0,0);
+        return monday;
+      })();
 
-      // compute this week's Monday IST midnight
-      const day = ist.getDay(); // 0=Sun..6=Sat
-      const offsetToMon = (day + 6) % 7;
-      const thisMonday = new Date(ist);
-      thisMonday.setDate(ist.getDate() - offsetToMon);
-      thisMonday.setHours(0,0,0,0);
-
-      // moments (IST wall-clock) for boundaries
-      const mon22 = new Date(thisMonday); mon22.setHours(22,0,0,0);
-      const mon19 = new Date(thisMonday); mon19.setHours(19,0,0,0);
-      const thu = new Date(thisMonday); thu.setDate(thisMonday.getDate() + 3);
-      const thu19 = new Date(thu); thu19.setHours(19,0,0,0);
-      const thu22 = new Date(thu); thu22.setHours(22,0,0,0);
-      const nextMonday = new Date(thisMonday); nextMonday.setDate(thisMonday.getDate() + 7);
-      const nextMon19 = new Date(nextMonday); nextMon19.setHours(19,0,0,0);
-
-      // Determine previous window:
-      let prevWindow, prevWeekAnchorDate;
-
-      if (ist >= mon22 && ist < thu19) {
-        // inside mon window -> previous was thu-window of previous week
-        prevWindow = 'thu';
-        const prevMonday = new Date(thisMonday); prevMonday.setDate(thisMonday.getDate() - 7);
-        prevWeekAnchorDate = prevMonday;
-      } else if (ist >= thu22 && ist < nextMon19) {
-        // inside thu window -> previous was mon-window of this week
-        prevWindow = 'mon';
-        prevWeekAnchorDate = thisMonday;
-      } else if (ist >= thu19 && ist < thu22) {
-        // small gap after mon-window -> previous ended = mon-window of this week
-        prevWindow = 'mon';
-        prevWeekAnchorDate = thisMonday;
-      } else if (ist >= mon19 && ist < mon22) {
-        // small gap after thu-window end -> previous ended = thu-window of previous week
-        prevWindow = 'thu';
-        const prevMonday = new Date(thisMonday); prevMonday.setDate(thisMonday.getDate() - 7);
-        prevWeekAnchorDate = prevMonday;
-      } else {
-        // everything else (early week before Mon22) -> previous was thu-window previous week
-        prevWindow = 'thu';
-        const prevMonday = new Date(thisMonday); prevMonday.setDate(thisMonday.getDate() - 7);
-        prevWeekAnchorDate = prevMonday;
+      // build wall-clock moments (IST) for boundaries
+      function makeISTMoment(baseDate /* Date */, hh, mm) {
+        // baseDate is in IST wall-clock (we constructed it that way)
+        const d = new Date(baseDate);
+        d.setHours(hh, mm, 0, 0);
+        return d;
       }
 
-      const week_anchor = formatYYYYMMDDIST(prevWeekAnchorDate);
-      return { window: prevWindow, week_anchor };
+      const mon22 = makeISTMoment(thisMonDate, 22, 0);                         // this Mon 22:00 IST
+      const thuDate = new Date(thisMonDate); thuDate.setDate(thisMonDate.getDate() + 3);
+      const thu19 = makeISTMoment(thuDate, 19, 0);                              // this Thu 19:00 IST
+      const thu22 = makeISTMoment(thuDate, 22, 0);                              // this Thu 22:00 IST
+      const nextMonDate = new Date(thisMonDate); nextMonDate.setDate(thisMonDate.getDate() + 7);
+      const nextMon19 = makeISTMoment(nextMonDate, 19, 0);                       // next Mon 19:00 IST
+      // previous week's Monday (for prev thu-window)
+      const prevMonDate = new Date(thisMonDate); prevMonDate.setDate(thisMonDate.getDate() - 7);
+
+      // Now decide if current IST is within mon-window (mon22 .. thu19) or within thu-window (thu22 .. nextMon19)
+      const inMonWindow = (ist >= mon22 && ist <= thu19);
+      // There are short gaps (thu19..thu22 and mon19..mon22). We'll treat those as "not in monWindow" (so they fall to thu-window logic).
+      let prevWindowName, prevWeekAnchor;
+      if (inMonWindow) {
+        // previous was thu-window that ended thisMon19 -> that thu-window's week_anchor is previous week's Monday
+        prevWindowName = 'thu';
+        const yyyy = prevMonDate.getFullYear();
+        const mm = String(prevMonDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(prevMonDate.getDate()).padStart(2, '0');
+        prevWeekAnchor = `${yyyy}-${mm}-${dd}`;
+      } else {
+        // current is considered in thu-window => previous was mon-window (this week's Monday anchor)
+        prevWindowName = 'mon';
+        const yyyy = thisMonDate.getFullYear();
+        const mm = String(thisMonDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(thisMonDate.getDate()).padStart(2, '0');
+        prevWeekAnchor = `${yyyy}-${mm}-${dd}`;
+      }
+
+      return { window: prevWindowName, week_anchor: prevWeekAnchor };
     }
 
-    // Query training_sessions for previous window by window + week_anchor
     async function checkTrainingWindowDoneByWeek(supabaseClient, userId) {
-      const { window, week_anchor } = prevTrainingWindow(new Date());
+      const { window, week_anchor } = prevTrainingWindowAnchorAndName(new Date());
       try {
         const { data, error } = await supabaseClient
           .from('training_sessions')
-          .select('id,week_anchor,window,created_at')
+          .select('id')
           .eq('user_id', userId)
           .eq('window', window)
           .eq('week_anchor', week_anchor)
@@ -559,7 +565,7 @@
         supabase.from("lineups").select("playing_xi,keeper,captain,team_id").eq("team_id", team.id).maybeSingle()
       ]);
 
-      // --- Render Top 3 Players (Bat/Bowl only) ---
+      // Render Top 3 Players
       (function renderTop3() {
         function getSkillTitle(score) {
           if (score > 100) return "The Boss";
@@ -577,24 +583,16 @@
         const ranked = (allPlayers || []).map(p => {
           const bat = toNum(p.batting);
           const bowl = toNum(p.bowling);
-          const topVal = Math.max(bat, bowl); // ONLY batting vs bowling
+          const topVal = Math.max(bat, bowl);
           const topSkillName = (bat >= bowl) ? 'Batting' : 'Bowling';
-          return {
-            ...p,
-            topSkillValue: topVal,
-            topSkillName,
-            topSkillLevel: getSkillTitle(topVal)
-          };
+          return { ...p, topSkillValue: topVal, topSkillName, topSkillLevel: getSkillTitle(topVal) };
         })
         .sort((a,b) => b.topSkillValue - a.topSkillValue)
         .slice(0,3);
 
         const topEl = document.getElementById("top-players-list");
         const fallbackImage = 'assets/default-avatar.png';
-        if (!ranked.length) {
-          topEl.innerHTML = "No players found.";
-          return;
-        }
+        if (!ranked.length) { topEl.innerHTML = "No players found."; return; }
 
         topEl.innerHTML = `
           <div style="display:flex;justify-content:space-around;align-items:center;">
@@ -615,9 +613,8 @@
           </div>
         `;
       })();
-      // --- end Top 3 Players ---
 
-      // Fetch next upcoming match across fixtures and friendlies
+      // Fetch upcoming matches (fixtures + friendlies)
       const [fixturesRes, friendliesRes] = await Promise.all([
         supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5),
         supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5)
@@ -627,7 +624,6 @@
       if (fixturesRes?.data) fixturesRes.data.forEach(f => combined.push({ ...f, _kind: 'league' }));
       if (friendliesRes?.data) friendliesRes.data.forEach(m => combined.push({ ...m, _kind: 'friendly' }));
 
-      // Only include matches with status 'scheduled' or 'running'
       const allowed = combined.filter(m => m && (m.status === 'scheduled' || m.status === 'running'));
 
       let nextMatch = null;
@@ -642,8 +638,6 @@
       }
 
       const fixtureInfo = document.getElementById("fixture-info");
-
-      // helper to fetch team info (caching)
       const teamCache = new Map();
       async function teamInfo(id) {
         if (!id) return { team_name: '—', logo_url: null };
@@ -654,7 +648,6 @@
         return out;
       }
 
-      // If no upcoming match found
       if (!nextMatch) {
         fixtureInfo.innerHTML = `<div>No upcoming matches</div>`;
       } else {
@@ -662,10 +655,8 @@
         const awayId = nextMatch.away_team_id;
         const homeInfo = await teamInfo(homeId);
         const awayInfo = await teamInfo(awayId);
-
         const opponentId = (homeId === team.id) ? awayId : homeId;
 
-        // compute our OVR & opponent OVR
         const ourSelection = pickByLineupOrAuto(players || [], lineup || null);
         const ourRates = computeRatings(ourSelection);
 
@@ -708,7 +699,6 @@
           </div>
         `;
 
-        // Countdown updater
         const countdownEl = document.getElementById('matchCountdown');
         function updateCountdown() {
           const now = new Date();
@@ -722,7 +712,7 @@
       // --------------------------
       // Match Preparation progress (4 tasks x 25%)
       // --------------------------
-      // TRAINING: check previous window using window + week_anchor
+      // TRAINING: check previous window using week_anchor + window
       const trainingDone = await checkTrainingWindowDoneByWeek(supabase, user.id);
 
       const lastWed = lastWednesday(new Date());
