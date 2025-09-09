@@ -17,7 +17,7 @@
     /* ensure content clears top nav */
     .main {
       padding: 20px;
-      padding-top: 80px;
+      padding-top: 2px;
       max-width: 800px;
       margin: auto;
     }
@@ -229,7 +229,7 @@
     }
 
     // ----------------------
-    // Helpers
+    // Helper functions reused/adapted from your profile files
     // ----------------------
     const toNum = (v) => (v == null || v === '') ? 0 : Number(v);
 
@@ -310,7 +310,7 @@
     }
 
     // Short name formatter: all parts except last -> initials, last part full.
-    function shortName(full) {
+    function shortNameDisplay(full) {
       if (!full) return '–';
       const parts = String(full).trim().split(/\s+/).filter(Boolean);
       if (parts.length === 0) return '–';
@@ -330,136 +330,101 @@
       return d;
     }
 
-    // Return IST Date object for given UTC date
+    // ---------- training window helpers ----------
+    // Return IST Date object for given Date
     function toIST(date = new Date()) {
+      // local timezone offset -> convert to UTC then add 5.5h to get IST wall-clock
       const utc = new Date(date.getTime() + (date.getTimezoneOffset() * 60000));
       return new Date(utc.getTime() + (5.5 * 3600 * 1000));
     }
 
-    // Returns { window: 'mon'|'thu', week_anchor: 'YYYY-MM-DD' } for the PREVIOUS window (the window that finished most recently)
-    function prevTrainingWindow(reference = new Date()) {
-      // Work in IST wall-clock
-      const ist = toIST(reference);
-      // build this week's Monday (IST) at 00:00
-      const day = ist.getDay(); // 0=Sun..6=Sat
-      const offsetToMon = (day + 6) % 7; // days since Monday
-      const thisMon = new Date(ist);
-      thisMon.setDate(ist.getDate() - offsetToMon);
-      thisMon.setHours(0,0,0,0);
+    // Build ISO date string YYYY-MM-DD for a Date (IST assumed)
+    function ymd(d) {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
 
-      // helper to build IST time on a base date
-      function make(date, hh, mm=0) {
-        const d = new Date(date);
+    /**
+     * Determine PREVIOUS training window name ('mon' or 'thu') and its week_anchor date.
+     * Rules:
+     * - mon-window: Mon 22:00 -> Thu 19:00  (label "mon", week_anchor = this week's Monday)
+     * - thu-window: Thu 22:00 -> next Mon 19:00 (label "thu", week_anchor = this week's Monday)
+     *
+     * We use IST wall-clock to decide which window most recently finished.
+     */
+    function prevTrainingWindow(reference = new Date()) {
+      const ist = toIST(reference);
+
+      // compute this week's Monday at 00:00 IST
+      const day = ist.getDay(); // 0..6
+      const offsetToMon = (day + 6) % 7;
+      const thisMon = new Date(ist); thisMon.setDate(ist.getDate() - offsetToMon); thisMon.setHours(0,0,0,0);
+
+      // helper to create IST times on a date
+      function at(baseDate, hh, mm=0) {
+        const d = new Date(baseDate);
         d.setHours(hh, mm, 0, 0);
         return d;
       }
 
-      const mon22 = make(thisMon, 22, 0);                          // this Mon 22:00 IST
+      const mon22 = at(thisMon, 22, 0); // this Mon 22:00 IST
       const thu = new Date(thisMon); thu.setDate(thisMon.getDate() + 3);
-      const thu19 = make(thu, 19, 0);                              // this Thu 19:00 IST
-      const thu22 = make(thu, 22, 0);                              // this Thu 22:00 IST
+      const thu19 = at(thu, 19, 0); // this Thu 19:00 IST
+      const thu22 = at(thu, 22, 0); // this Thu 22:00 IST
       const nextMon = new Date(thisMon); nextMon.setDate(thisMon.getDate() + 7);
-      const nextMon19 = make(nextMon, 19, 0);                      // next Mon 19:00 IST
+      const nextMon19 = at(nextMon, 19, 0); // next Mon 19:00 IST
       const prevMon = new Date(thisMon); prevMon.setDate(thisMon.getDate() - 7);
 
-      // Decide which window the current time is in (we only need previous window)
+      // Determine which window most recently finished:
+      // If current is inside mon-window (mon22 .. thu19) => previous = thu-window (previous week anchor)
+      // Else => previous = mon-window (this week's anchor).
       const inMonWindow = (ist >= mon22 && ist <= thu19);
       if (inMonWindow) {
-        const yyyy = prevMon.getFullYear();
-        const mm = String(prevMon.getMonth() + 1).padStart(2, '0');
-        const dd = String(prevMon.getDate()).padStart(2, '0');
-        return { window: 'thu', week_anchor: `${yyyy}-${mm}-${dd}` };
+        // previous was the thu-window anchored to previous Monday
+        return { window: 'thu', week_anchor: ymd(prevMon) };
       } else {
-        const yyyy = thisMon.getFullYear();
-        const mm = String(thisMon.getMonth() + 1).padStart(2, '0');
-        const dd = String(thisMon.getDate()).padStart(2, '0');
-        return { window: 'mon', week_anchor: `${yyyy}-${mm}-${dd}` };
+        // previous was the mon-window anchored to thisMon
+        return { window: 'mon', week_anchor: ymd(thisMon) };
       }
     }
 
-    // Compute precise IST start/end for a given window anchor + name, and return corresponding UTC ISO range
-    function windowStartEndFor(anchorWeekAnchorStr, windowName) {
-      // anchorWeekAnchorStr is 'YYYY-MM-DD'
-      const [y, mo, da] = anchorWeekAnchorStr.split('-').map(Number);
-
-      // helper: create a Date whose UTC time corresponds to given IST (IST -> UTC = IST - 5:30)
-      function istToUTCDate(y, m0, d, hh, mm) {
-        // m0 is 0-based month for Date.UTC
-        // Construct UTC instant equal to IST(hh:mm) by subtracting 5h30m
-        return new Date(Date.UTC(y, m0, d, hh - 5, mm - 30, 0, 0));
-      }
-
-      if (windowName === 'mon') {
-        // Mon 22:00 IST -> Thu 19:00 IST (same anchor Monday)
-        const startUTC = istToUTCDate(y, mo - 1, da, 22, 0);
-        const thu = new Date(Date.UTC(y, mo - 1, da)); thu.setUTCDate(thu.getUTCDate() + 3);
-        const endUTC = istToUTCDate(thu.getUTCFullYear(), thu.getUTCMonth(), thu.getUTCDate(), 19, 0);
-        return {
-          startIST: new Date(startUTC.getTime() + (5.5 * 3600 * 1000)),
-          endIST: new Date(endUTC.getTime() + (5.5 * 3600 * 1000)),
-          startUTC: startUTC.toISOString(),
-          endUTC: endUTC.toISOString()
-        };
-      } else {
-        // Thu 22:00 IST -> next Mon 19:00 IST
-        const thu = new Date(Date.UTC(y, mo - 1, da)); thu.setUTCDate(thu.getUTCDate() + 3);
-        const startUTC = istToUTCDate(thu.getUTCFullYear(), thu.getUTCMonth(), thu.getUTCDate(), 22, 0);
-        const nextMon = new Date(Date.UTC(y, mo - 1, da)); nextMon.setUTCDate(nextMon.getUTCDate() + 7);
-        const endUTC = istToUTCDate(nextMon.getUTCFullYear(), nextMon.getUTCMonth(), nextMon.getUTCDate(), 19, 0);
-        return {
-          startIST: new Date(startUTC.getTime() + (5.5 * 3600 * 1000)),
-          endIST: new Date(endUTC.getTime() + (5.5 * 3600 * 1000)),
-          startUTC: startUTC.toISOString(),
-          endUTC: endUTC.toISOString()
-        };
-      }
-    }
-
-    function normalizeAnchorVal(val) {
-      if (!val) return null;
-      if (typeof val === 'string') return val.split('T')[0];
-      try { return new Date(val).toISOString().split('T')[0]; } catch (e) { return null; }
-    }
-
-    // Strict previous-window check: require week_anchor equality AND window AND created_at inside UTC window range
+    // Check training completion for previous window
     async function isTrainingCompletedForPreviousWindow(userId, profileRow) {
       try {
         const prev = prevTrainingWindow(new Date());
-        console.log('Training debug: previous window ->', prev);
+        console.debug('Training debug: computed previous window ->', prev);
 
-        // Profile fast-path:
+        // fast path: if profile already records the last_training_window_{anchor,which} equal to prev
         if (profileRow?.last_training_window_anchor && profileRow?.last_training_window_which) {
-          const anchorStr = normalizeAnchorVal(profileRow.last_training_window_anchor);
+          // profiles may store dates as string or Date - normalize to YYYY-MM-DD string
+          let anchorStr = profileRow.last_training_window_anchor;
+          if (anchorStr instanceof Date) anchorStr = anchorStr.toISOString().split('T')[0];
+          if (typeof anchorStr === 'string') anchorStr = anchorStr.split('T')[0];
           if (anchorStr === prev.week_anchor && profileRow.last_training_window_which === prev.window) {
-            console.log('Training debug: profile last_training_window indicates previous window done ->', anchorStr, profileRow.last_training_window_which);
+            console.debug('Training debug: profile last_training_window_anchor/which matches previous window ->', anchorStr, profileRow.last_training_window_which);
             return true;
           }
         }
 
-        // Compute window UTC range and query created_at within it AND week_anchor must match prev.week_anchor
-        const range = windowStartEndFor(prev.week_anchor, prev.window);
-        console.log('Training debug: previous window IST start/end ->', range.startIST.toString(), '-', range.endIST.toString());
-        console.log('Training debug: previous window UTC range ->', range.startUTC, '-', range.endUTC);
-
+        // fallback: query training_sessions exact match on week_anchor + window
         const { data, error } = await supabase
           .from('training_sessions')
-          .select('id,week_anchor,window,created_at')
+          .select('id, week_anchor, window, created_at')
           .eq('user_id', userId)
+          .eq('week_anchor', prev.week_anchor)
           .eq('window', prev.window)
-          .eq('week_anchor', prev.week_anchor)             // <-- require exact anchor match
-          .gte('created_at', range.startUTC)
-          .lte('created_at', range.endUTC)
           .limit(1);
 
         if (error) {
-          console.warn('training_sessions query error', error);
+          console.warn('Training debug: training_sessions query error', error);
           return false;
         }
-
-        console.log('Training debug: query previous window result count ->', (data || []).length, data || []);
+        console.debug('Training debug: query previous window result count ->', (data && data.length) ? data.length : 0, data || []);
         return (data && data.length > 0);
       } catch (e) {
-        console.warn('training window check failed', e);
+        console.warn('Training debug: training check failed', e);
         return false;
       }
     }
@@ -509,25 +474,14 @@
       return `${m}m ${s}s`;
     }
 
-    // Short name formatter reused
-    function shortNameDisplay(full) {
-      if (!full) return '–';
-      const parts = String(full).trim().split(/\s+/).filter(Boolean);
-      if (parts.length === 0) return '–';
-      if (parts.length === 1) return parts[0];
-      const last = parts[parts.length - 1];
-      const initials = parts.slice(0, parts.length - 1).map(p => p[0].toUpperCase()).join(' ');
-      return `${initials} ${last}`;
-    }
-
     // ----------------------
-    // Main logic (unchanged except training check)
+    // Main logic (only changed areas: Next Match + Match Preparation)
     // ----------------------
     async function main() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return location.href = "login.html";
 
-      const { data: profile } = await supabase
+      let { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("user_id", user.id)
@@ -546,7 +500,7 @@
 
       await distributeDailyLoginXP(user.id);
 
-      // XP UI
+      // XP UI unchanged but now we show left/right level labels
       const xp = profile.xp ?? 0;
       const levels = [
         { name: "Beginner", xp: 0 },
@@ -572,6 +526,7 @@
         }
       }
       const percent = Math.min(((xp - currentLevel.xp) / (nextLevel.xp - currentLevel.xp)) * 100, 100);
+      // set left/right labels and xp bar
       document.getElementById("level-current").textContent = currentLevel.name;
       document.getElementById("level-next").textContent = `Next: ${nextLevel.name}`;
       document.getElementById("xp-label").textContent = `XP: ${xp} / ${nextLevel.xp}`;
@@ -590,13 +545,13 @@
         return;
       }
 
-      // Fetch players & lineup
+      // Fetch players & lineup (we'll need them for OVR & fitness)
       const [{ data: players }, { data: lineup }] = await Promise.all([
         supabase.from("players").select("*").eq("team_id", team.id),
         supabase.from("lineups").select("playing_xi,keeper,captain,team_id").eq("team_id", team.id).maybeSingle()
       ]);
 
-      // Render Top 3 Players
+      // --- Render Top 3 Players (rank by highest of Batting and Bowling ONLY) ---
       (function renderTop3() {
         function getSkillTitle(score) {
           if (score > 100) return "The Boss";
@@ -614,16 +569,24 @@
         const ranked = (allPlayers || []).map(p => {
           const bat = toNum(p.batting);
           const bowl = toNum(p.bowling);
-          const topVal = Math.max(bat, bowl);
+          const topVal = Math.max(bat, bowl); // ONLY batting vs bowling
           const topSkillName = (bat >= bowl) ? 'Batting' : 'Bowling';
-          return { ...p, topSkillValue: topVal, topSkillName, topSkillLevel: getSkillTitle(topVal) };
+          return {
+            ...p,
+            topSkillValue: topVal,
+            topSkillName,
+            topSkillLevel: getSkillTitle(topVal)
+          };
         })
         .sort((a,b) => b.topSkillValue - a.topSkillValue)
         .slice(0,3);
 
         const topEl = document.getElementById("top-players-list");
         const fallbackImage = 'assets/default-avatar.png';
-        if (!ranked.length) { topEl.innerHTML = "No players found."; return; }
+        if (!ranked.length) {
+          topEl.innerHTML = "No players found.";
+          return;
+        }
 
         topEl.innerHTML = `
           <div style="display:flex;justify-content:space-around;align-items:center;">
@@ -644,17 +607,19 @@
           </div>
         `;
       })();
+      // --- end Top 3 Players ---
 
-      // Fetch upcoming matches
+      // Fetch next upcoming match across fixtures and friendlies
       const [fixturesRes, friendliesRes] = await Promise.all([
-        supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5),
-        supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(5)
+        supabase.from("fixtures").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(10),
+        supabase.from("matches").select("*").or(`home_team_id.eq.${team.id},away_team_id.eq.${team.id}`).gte("date", new Date().toISOString().split('T')[0]).order("date", { ascending: true }).limit(10)
       ]);
 
       const combined = [];
       if (fixturesRes?.data) fixturesRes.data.forEach(f => combined.push({ ...f, _kind: 'league' }));
       if (friendliesRes?.data) friendliesRes.data.forEach(m => combined.push({ ...m, _kind: 'friendly' }));
 
+      // Only include matches with status 'scheduled' or 'running'
       const allowed = combined.filter(m => m && (m.status === 'scheduled' || m.status === 'running'));
 
       let nextMatch = null;
@@ -669,6 +634,8 @@
       }
 
       const fixtureInfo = document.getElementById("fixture-info");
+
+      // helper to fetch team info (caching)
       const teamCache = new Map();
       async function teamInfo(id) {
         if (!id) return { team_name: '—', logo_url: null };
@@ -679,6 +646,7 @@
         return out;
       }
 
+      // If no upcoming match found
       if (!nextMatch) {
         fixtureInfo.innerHTML = `<div>No upcoming matches</div>`;
       } else {
@@ -686,8 +654,10 @@
         const awayId = nextMatch.away_team_id;
         const homeInfo = await teamInfo(homeId);
         const awayInfo = await teamInfo(awayId);
+
         const opponentId = (homeId === team.id) ? awayId : homeId;
 
+        // compute our OVR & opponent OVR
         const ourSelection = pickByLineupOrAuto(players || [], lineup || null);
         const ourRates = computeRatings(ourSelection);
 
@@ -730,6 +700,7 @@
           </div>
         `;
 
+        // Countdown updater
         const countdownEl = document.getElementById('matchCountdown');
         function updateCountdown() {
           const now = new Date();
@@ -744,8 +715,9 @@
       // Match Preparation progress (4 tasks x 25%)
       // --------------------------
 
-      // TRAINING: check previous window using strict week_anchor + window + created_at range
+      // TRAINING: check previous window using profile or training_sessions exactly as per schema
       const trainingDone = await isTrainingCompletedForPreviousWindow(user.id, profile);
+      console.debug('Training debug: initial trainingDone ->', trainingDone);
 
       // Scout: last_scouted_date or last_scouted must be >= last Wednesday
       const lastWed = lastWednesday(new Date());
@@ -778,7 +750,7 @@
         lineupDone = false;
       }
 
-      // compute fitness
+      // compute fitness: use lineup XI if present, else auto-pick 5 bats, 1 ar, 5 bowlers
       let fitnessDone = false;
       let useXI = [];
       const luRow = await supabase.from('lineups').select('playing_xi').eq('team_id', team.id).maybeSingle();
@@ -828,19 +800,22 @@
       prepPercent.textContent = `${score}%`;
       document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
 
-      // periodic refresh: re-run strict previous-window check
+      // periodic refresh every 20s for tasks & countdown
       setInterval(async () => {
         try {
-          const { data: freshProfile } = await supabase.from('profiles').select('last_training_window_anchor,last_training_window_which,last_scouted,last_scouted_date').eq('user_id', user.id).single();
-          console.log('Training debug: periodic refresh profile ->', freshProfile);
+          // refresh profile row (fast-path uses profile fields)
+          const { data: newProfile } = await supabase.from('profiles').select('last_training_window_anchor,last_training_window_which,last_scouted,last_scouted_date').eq('user_id', user.id).single();
+          if (newProfile) profile = { ...profile, ...newProfile };
 
-          const newTrainingDone = await isTrainingCompletedForPreviousWindow(user.id, freshProfile);
+          // re-check training using same logic (profile fast path + training_sessions fallback)
+          const newTraining = await isTrainingCompletedForPreviousWindow(user.id, profile);
 
           // scout
+          const { data: pf } = await supabase.from('profiles').select('last_scouted_date,last_scouted').eq('user_id', user.id).single();
           let newScoutDone = false;
-          if (freshProfile?.last_scouted_date || freshProfile?.last_scouted) {
-            const sd = new Date(freshProfile.last_scouted_date || freshProfile.last_scouted); sd.setHours(0,0,0,0);
-            newScoutDone = sd >= lastWednesday(new Date());
+          if (pf?.last_scouted_date || pf?.last_scouted) {
+            const sd = new Date(pf.last_scouted_date || pf.last_scouted); sd.setHours(0,0,0,0);
+            newScoutDone = sd >= lastWed;
           }
 
           // lineup
@@ -866,14 +841,14 @@
           }
 
           let newScore = 0;
-          if (newTrainingDone) newScore += 25;
+          if (newTraining) newScore += 25;
           if (newScoutDone) newScore += 25;
           if (newLineupDone) newScore += 25;
           if (newAvg > 95) newScore += 25;
 
           prepFill.style.width = newScore + '%';
           prepPercent.textContent = `${newScore}%`;
-          const map = { training: newTrainingDone, scout: newScoutDone, lineup: newLineupDone, fitness: newAvg > 95 };
+          const map = { training: newTraining, scout: newScoutDone, lineup: newLineupDone, fitness: newAvg > 95 };
           Object.keys(map).forEach(k=>{
             const el = document.querySelector(`.task[data-task="${k}"]`);
             if (!el) return;
