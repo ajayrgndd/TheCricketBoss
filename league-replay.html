@@ -38,6 +38,12 @@
     .nm{line-height:1.1}
     .toss-line .toss-banner{background:#222a68;color:#fff;text-align:center;font-weight:bold;padding:10px;margin:8px 0;border-radius:6px;font-size:16px;letter-spacing:.5px}
     .controls button{margin-right:8px}
+
+    /* Venue card */
+    .venue-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+    .venue-col{min-width:220px}
+    .venue-value{font-weight:800;font-size:1.05rem}
+    .venue-note{opacity:.8;font-size:.85rem;margin-top:4px}
   </style>
 </head>
 <body>
@@ -84,6 +90,20 @@
       <!-- toss banner placeholder for REPLAY -->
       <div id="toss-banner-inline"></div>
 
+      <!-- VENUE & TICKET SALES (added) -->
+      <div class="card venue-row" id="venue-ticket-card">
+        <div class="venue-col">
+          <div style="font-weight:800">Venue</div>
+          <div id="venue-name" class="muted">—</div>
+        </div>
+        <div class="venue-col">
+          <div style="font-weight:800">Ticket sales (home team)</div>
+          <div id="ticket-cash" class="venue-value">—</div>
+          <div id="ticket-note" class="venue-note">Calculated using stadium capacity × ₹50</div>
+        </div>
+      </div>
+      <!-- /VENUE -->
+
       <!-- Mini score strip (always visible on REPLAY tab) -->
       <div class="score-strip">
         <div class="big" id="mini-a"><span id="mini-a-name">Team A</span> <span id="mini-a-score">0/0 - 0.0 ov</span></div>
@@ -97,6 +117,9 @@
 
     <!-- SCORECARD -->
     <div id="toss-banner-score"></div>
+
+    <!-- Also render a smaller Venue card below toss banner in scorecard for visibility -->
+    <div id="venue-ticket-scorecard" style="margin-top:8px"></div>
 
     <section id="score-panel" class="panel show">
       <div class="card">
@@ -568,6 +591,116 @@
       setButtons();
     }
 
+    /* Venue & Ticket Sales: level/capacity mapping + renderer */
+    const TICKET_PRICE = 50;
+    const LEVEL_CAPACITY = {
+      "World Class": 30000,
+      "World_Class": 30000,
+      "World": 30000,
+      "National": 20000,
+      "Domestic": 15000,
+      "Professional": 10000,
+      "Local": 5000
+    };
+
+    function formatCurrencyINR(n){
+      if (typeof n !== "number") return "—";
+      // Indian grouping (lakh) formatting
+      const s = Math.round(n).toString();
+      let last3 = s.slice(-3), rest = s.slice(0, -3);
+      if (rest !== "") {
+        last3 = "," + last3;
+        return "₹" + rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + last3;
+      }
+      return "₹" + last3;
+    }
+
+    async function fetchStadiumAndShow(fxRow){
+      if (!fxRow) return;
+      const venueEl = document.getElementById('venue-name');
+      const cashEl = document.getElementById('ticket-cash');
+      const noteEl = document.getElementById('ticket-note') || null;
+      const scorecardContainer = document.getElementById('venue-ticket-scorecard');
+
+      let stadiumId = fxRow.stadium_id || fxRow.stadium || null;
+      let stadium = null;
+
+      if (fxRow.stadium_name || fxRow.stadium_level || fxRow.stadium_capacity) {
+        stadium = {
+          id: stadiumId || null,
+          stadium_name: fxRow.stadium_name || fxRow.stadium || "Unknown venue",
+          level: fxRow.stadium_level || fxRow.level || null,
+          capacity: fxRow.stadium_capacity || fxRow.capacity || null
+        };
+      }
+
+      if (stadiumId && (!stadium || (!stadium.capacity && !stadium.level && !stadium.stadium_name))) {
+        try {
+          const { data } = await supabase.from('stadiums').select('id,team_id,stadium_name,stadium_level,capacity,pitch_type').eq('id', stadiumId).maybeSingle();
+          if (data) {
+            stadium = {
+              id: data.id,
+              stadium_name: data.stadium_name || `Stadium ${String(data.id).slice(0,8)}`,
+              level: data.stadium_level || null,
+              capacity: data.capacity || null,
+              pitch_type: data.pitch_type || null
+            };
+          }
+        } catch (e) {
+          console.warn("fetchStadiumAndShow: stadium fetch failed", e);
+        }
+      }
+
+      if (!stadium) {
+        const homeTeamName = (names && names[fxRow.home_team_id]) || (fxRow.home_team_name) || "Home Ground";
+        stadium = { id: null, stadium_name: homeTeamName + " Ground", level: null, capacity: null };
+      }
+
+      let capacity = null;
+      if (stadium.capacity && Number(stadium.capacity) > 0) capacity = Number(stadium.capacity);
+      else if (stadium.level) {
+        const key = String(stadium.level).trim();
+        capacity = LEVEL_CAPACITY[key] || LEVEL_CAPACITY[key.replace(/\s+/g, "_")] || null;
+      }
+
+      if (capacity === null) {
+        if (fxRow.stadium_capacity) capacity = Number(fxRow.stadium_capacity) || null;
+        else if (fxRow.stadium_level) {
+          const k = String(fxRow.stadium_level).trim();
+          capacity = LEVEL_CAPACITY[k] || LEVEL_CAPACITY[k.replace(/\s+/g, "_")] || null;
+        }
+      }
+
+      const ticketCash = capacity ? capacity * TICKET_PRICE : null;
+
+      if (venueEl) venueEl.textContent = stadium.stadium_name || "—";
+      if (cashEl) cashEl.textContent = ticketCash ? formatCurrencyINR(ticketCash) : "Capacity unknown";
+      if (noteEl) {
+        if (capacity) noteEl.textContent = `Capacity: ${capacity.toLocaleString()} × ₹${TICKET_PRICE}`;
+        else noteEl.textContent = "Capacity/level not available — can't compute ticket sales";
+      }
+
+      // render small scorecard venue card
+      if (scorecardContainer) {
+        if (ticketCash || stadium.stadium_name) {
+          const html = `<div class="card" style="padding:10px;margin:8px 0">
+            <div style="font-weight:800">Venue</div>
+            <div class="muted">${stadium.stadium_name || "—"}</div>
+            <div style="font-weight:800;margin-top:8px">Ticket sales (home)</div>
+            <div style="font-weight:800">${ticketCash ? formatCurrencyINR(ticketCash) : "Capacity unknown"}</div>
+            <div class="muted" style="margin-top:6px">${capacity ? `Capacity: ${capacity.toLocaleString()} × ₹${TICKET_PRICE}` : "Capacity/level not available"}</div>
+          </div>`;
+          scorecardContainer.innerHTML = html;
+        } else {
+          scorecardContainer.innerHTML = "";
+        }
+      }
+    }
+
+    /* battingFirst/battingSecond mapping (important for correct labels) */
+    let battingFirst = null;
+    let battingSecond = null;
+
     /* load data and render */
     function formatDateTime(ts){
       if(!ts) return "--";
@@ -632,7 +765,6 @@
       let fetched = (bdata || []).slice();
 
       // ensure toss row present client-side and remove early noisy lines
-      // if toss missing, insert synthetic toss into array (not database) for display
       const hasToss = fetched.some(c => (c.delivery_type||'').toLowerCase() === 'toss');
       if (!hasToss) {
         const normalizedT = normalizeTossFromPayload(fx);
@@ -721,6 +853,9 @@
 
       // toss banner
       renderTossBanner(fx, balls);
+
+      // venue/tickets
+      try { await fetchStadiumAndShow(fx); } catch (e) { console.warn('venue init failed', e); }
 
       // summary panel
       const homeName = names[fx.home_team_id] || 'Home';
