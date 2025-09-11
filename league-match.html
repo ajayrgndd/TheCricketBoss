@@ -44,6 +44,10 @@
     .skillbar .seg{width:6px;height:10px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
     .namecell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
     .nm{line-height:1.1}
+
+    /* Venue card tweaks */
+    #venue-ticket-card { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    #venue-ticket-card .muted { margin-top:4px; }
   </style>
 </head>
 <body>
@@ -82,6 +86,20 @@
         <div class="t" id="team-a-name">Home</div>
         <div class="t" id="team-b-name">Away</div>
       </div>
+
+      <!-- VENUE & TICKET SALES (added) -->
+      <div id="venue-ticket-card" class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div style="min-width:220px">
+          <div style="font-weight:800">Venue</div>
+          <div id="venue-name" class="muted">—</div>
+        </div>
+        <div style="min-width:220px">
+          <div style="font-weight:800">Ticket sales (home team)</div>
+          <div id="ticket-cash" style="font-size:1.05rem;font-weight:800">—</div>
+          <div id="ticket-note" class="muted" style="font-size:.85rem;margin-top:4px">Calculated using stadium capacity × ₹50</div>
+        </div>
+      </div>
+      <!-- /VENUE -->
 
       <div class="card">
         <div style="font-weight:800;margin-bottom:8px" id="batting-heading">Batting</div>
@@ -613,7 +631,7 @@
           if (winner === home) { i1Team = home; i2Team = away; }
           else { i1Team = away; i2Team = home; }
         }
-      } else if (Array.isArray(fixtureRow?.innings) && fixtureRow.innings.length >= 2 && fixtureRow.innings[0].team_id) {
+      } else if (Array.isArray(fixtureRow.innings) && fixtureRow.innings.length >= 2 && fixtureRow.innings[0].team_id) {
         i1Team = fixtureRow.innings[0].team_id;
         i2Team = fixtureRow.innings[1].team_id;
       } else if (fixtureRow?.result?.innings && fixtureRow.result.innings.length >= 2 && fixtureRow.result.innings[0].team_id) {
@@ -853,7 +871,99 @@
       });
     }
 
-    /* Data load */
+    /* Venue & Ticket Sales: level/capacity mapping + renderer */
+    const TICKET_PRICE = 50;
+    const LEVEL_CAPACITY = {
+      "World Class": 30000,
+      "World_Class": 30000,
+      "World": 30000,
+      "National": 20000,
+      "Domestic": 15000,
+      "Professional": 10000,
+      "Local": 5000
+    };
+
+    function formatCurrencyINR(n){
+      if (typeof n !== "number") return "—";
+      const s = Math.round(n).toString();
+      let last3 = s.slice(-3), rest = s.slice(0, -3);
+      if (rest !== "") {
+        last3 = "," + last3;
+        return "₹" + rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + last3;
+      }
+      return "₹" + last3;
+    }
+
+    async function fetchStadiumAndShow(fxRow){
+      if (!fxRow) return;
+      const venueEl = document.getElementById('venue-name');
+      const cashEl = document.getElementById('ticket-cash');
+      const noteEl = document.getElementById('ticket-note');
+
+      let stadiumId = fxRow.stadium_id || fxRow.stadium || null;
+      let stadium = null;
+
+      // Use any stadium fields present on fixture
+      if (fxRow.stadium_name || fxRow.stadium_level || fxRow.stadium_capacity) {
+        stadium = {
+          id: stadiumId || null,
+          stadium_name: fxRow.stadium_name || fxRow.stadium || "Unknown venue",
+          level: fxRow.stadium_level || fxRow.level || null,
+          capacity: fxRow.stadium_capacity || fxRow.capacity || null
+        };
+      }
+
+      // If stadiumId present and missing details, fetch stadium row
+      if (stadiumId && (!stadium || (!stadium.capacity && !stadium.level && !stadium.stadium_name))) {
+        try {
+          const { data } = await supabase.from('stadiums').select('id,team_id,stadium_name,stadium_level,capacity,pitch_type').eq('id', stadiumId).maybeSingle();
+          if (data) {
+            stadium = {
+              id: data.id,
+              stadium_name: data.stadium_name || `Stadium ${String(data.id).slice(0,8)}`,
+              level: data.stadium_level || null,
+              capacity: data.capacity || null,
+              pitch_type: data.pitch_type || null
+            };
+          }
+        } catch (e) {
+          console.warn("fetchStadiumAndShow: stadium fetch failed", e);
+        }
+      }
+
+      // Final fallback: construct friendly venue name from home team
+      if (!stadium) {
+        const homeTeamName = (names && names[fxRow.home_team_id]) || (fxRow.home_team_name) || "Home Ground";
+        stadium = { id: null, stadium_name: homeTeamName + " Ground", level: null, capacity: null };
+      }
+
+      // Determine capacity from explicit capacity or stadium level mapping
+      let capacity = null;
+      if (stadium.capacity && Number(stadium.capacity) > 0) capacity = Number(stadium.capacity);
+      else if (stadium.level) {
+        const key = String(stadium.level).trim();
+        capacity = LEVEL_CAPACITY[key] || LEVEL_CAPACITY[key.replace(/\s+/g, "_")] || null;
+      }
+
+      // Try fixture-level hints too
+      if (capacity === null) {
+        if (fxRow.stadium_capacity) capacity = Number(fxRow.stadium_capacity) || null;
+        else if (fxRow.stadium_level) {
+          const k = String(fxRow.stadium_level).trim();
+          capacity = LEVEL_CAPACITY[k] || LEVEL_CAPACITY[k.replace(/\s+/g, "_")] || null;
+        }
+      }
+
+      const ticketCash = capacity ? capacity * TICKET_PRICE : null;
+
+      if (venueEl) venueEl.textContent = stadium.stadium_name || "—";
+      if (cashEl) cashEl.textContent = ticketCash ? formatCurrencyINR(ticketCash) : "Capacity unknown";
+      if (noteEl) {
+        if (capacity) noteEl.textContent = `Capacity: ${capacity.toLocaleString()} × ₹${TICKET_PRICE}`;
+        else noteEl.textContent = "Capacity/level not available — can't compute ticket sales";
+      }
+    }
+
     async function loadMeta() {
       if (!fixtureId) { console.error('Missing fixture id'); return; }
       const { data: fx } = await supabase.from('fixtures').select('*').eq('id', fixtureId).maybeSingle();
@@ -942,6 +1052,9 @@
       updateLiveBlocks();
       updateScorecardBlocks();
       maybeShowSummary();
+
+      // --- NEW: initialize Venue & Ticket card after data is loaded ---
+      try { await fetchStadiumAndShow(fixtureRow); } catch (e) { console.warn('venue init failed', e); }
     }
 
     function startRealtime() {
@@ -952,7 +1065,7 @@
         )
         .on('postgres_changes',
           { event:'UPDATE', schema:'public', table:'fixtures', filter:`id=eq.${fixtureId}` },
-          (payload)=> { fixtureRow = payload.new; maybeShowSummary(); renderTossBanner(fixtureRow, all); }
+          (payload)=> { fixtureRow = payload.new; maybeShowSummary(); renderTossBanner(fixtureRow, all); fetchStadiumAndShow(fixtureRow); }
         )
         .subscribe();
     }
