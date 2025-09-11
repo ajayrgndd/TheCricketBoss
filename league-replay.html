@@ -466,8 +466,9 @@
     }
 
     /* battingFirst/battingSecond mapping (important for correct labels) */
-    let battingFirst = null;
-    let battingSecond = null;
+    // NOTE: changed from "let ..." to assignment to avoid redeclaration SyntaxError
+    battingFirst = battingFirst ?? null;
+    battingSecond = battingSecond ?? null;
 
     /* playback helpers */
     function setButtons(){
@@ -696,10 +697,6 @@
         }
       }
     }
-
-    /* battingFirst/battingSecond mapping (important for correct labels) */
-    let battingFirst = null;
-    let battingSecond = null;
 
     /* load data and render */
     function formatDateTime(ts){
