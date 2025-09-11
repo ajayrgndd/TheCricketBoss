@@ -47,6 +47,7 @@
     .name{font-weight:600;text-align:center}
     .name a{color:#8affc3;text-decoration:none}
     .name a:hover{text-decoration:underline}
+    .ovr { font-size:.85rem; color:#cbd5e1; opacity:.9; margin-top:4px; }
     .vs{width:24%;text-align:center;opacity:.8}
     .score{margin-top:6px;text-align:center;font-weight:800}
     .subscore{margin-top:10px;text-align:center;font-size:.95rem;opacity:.95}
@@ -108,9 +109,9 @@
     function isFrontEndLive(m) {
       if (m.status === 'completed' || m.status === 'cancelled') return false;
       // fallback: if kickoff time is in past => consider live/started
-      if (!m.kickoff_at) return false;
+      if (!m.kickoff_at && !m.scheduled_at && !m.date) return false;
       const now = Date.now();
-      const ko = new Date(m.kickoff_at).getTime();
+      const ko = new Date(m.kickoff_at || m.scheduled_at || m.date).getTime();
       return now >= ko;
     }
 
@@ -240,8 +241,78 @@
       return {home:{runs:null, overs:null}, away:{runs:null, overs:null}};
     }
 
-    /* ---------- Card ---------- */
-    function card(m){
+    /* ---------- TEAM OVR helpers (copied/adapted from public-profile.html) */
+    const TEAM_PLAYERS_CACHE = new Map();
+    const TEAM_LINEUP_CACHE = new Map();
+    async function fetchPlayersForTeam(teamId){
+      if (!teamId) return [];
+      if (TEAM_PLAYERS_CACHE.has(teamId)) return TEAM_PLAYERS_CACHE.get(teamId);
+      const { data } = await supabase.from('players').select('id,name,role,batting,bowling,keeping').eq('team_id', teamId);
+      const arr = (data || []).map(p=>({ ...p }));
+      TEAM_PLAYERS_CACHE.set(teamId, arr);
+      return arr;
+    }
+    async function fetchLineupForTeam(teamId){
+      if (!teamId) return null;
+      if (TEAM_LINEUP_CACHE.has(teamId)) return TEAM_LINEUP_CACHE.get(teamId);
+      const { data } = await supabase.from('lineups').select('playing_xi,keeper,captain,batting_order,bowling_order').eq('team_id', teamId).maybeSingle();
+      TEAM_LINEUP_CACHE.set(teamId, data || null);
+      return data || null;
+    }
+
+    function toNum(v){ return Number.isFinite(Number(v)) ? Number(v) : 0; }
+
+    function pickByLineupOrAuto(allPlayers, lineup){
+      const byId = new Map(allPlayers.map(p=>[p.id,p]));
+      let pool = [];
+      if (lineup?.playing_xi?.length){
+        pool = lineup.playing_xi.map(id=>byId.get(id)).filter(Boolean);
+      }else{
+        pool = [...allPlayers].sort((a,b)=>
+          (toNum(b.batting)+toNum(b.bowling)+toNum(b.keeping)) -
+          (toNum(a.batting)+toNum(a.bowling)+toNum(a.keeping))
+        ).slice(0, Math.min(11, allPlayers.length));
+      }
+      // determine keeper
+      let wk = lineup?.keeper ? byId.get(lineup.keeper) : null;
+      if (!wk){
+        wk = [...(pool.length?pool:allPlayers)].sort((a,b)=>toNum(b.keeping)-toNum(a.keeping))[0] || null;
+      }
+      const poolNoWK = (pool.length?pool:allPlayers).filter(p=>!wk || p.id !== wk.id);
+      const ar = [...poolNoWK].sort((a,b)=>(toNum(b.batting)+toNum(b.bowling)) - (toNum(a.batting)+toNum(a.bowling)))[0] || null;
+      const bats = [...(pool.length?pool:allPlayers)].filter(p=>!wk || p.id!==wk.id).sort((a,b)=>toNum(b.batting)-toNum(a.batting)).slice(0,4);
+      const bowls = [...(pool.length?pool:allPlayers)].filter(p=>!wk || p.id!==wk.id).sort((a,b)=>toNum(b.bowling)-toNum(a.bowling)).slice(0,5);
+      return { wk, ar, batters: bats, bowlers: bowls };
+    }
+
+    function computeRatings(sel){
+      const batSum = (sel.batters||[]).reduce((s,p)=>s+toNum(p.batting),0) + (sel.wk?toNum(sel.wk.batting):0) + (sel.ar?toNum(sel.ar.batting):0);
+      const batCount = (sel.batters?.length || 0) + (sel.wk?1:0) + (sel.ar?1:0);
+      const batAvg = batCount ? (batSum / batCount) : 0;
+
+      const ballSum = (sel.bowlers||[]).reduce((s,p)=>s+toNum(p.bowling),0) + (sel.ar?toNum(sel.ar.bowling):0);
+      const ballCount = (sel.bowlers?.length || 0) + (sel.ar?1:0);
+      const ballAvg = ballCount ? (ballSum / ballCount) : 0;
+
+      const wkVal = sel.wk ? toNum(sel.wk.keeping) : 0;
+      const ovr = (batAvg + ballAvg + wkVal) / 3;
+      return { bat: batAvg, ball: ballAvg, wk: wkVal, ovr };
+    }
+
+    const TEAM_OVR_CACHE = new Map();
+    async function computeTeamOVR(teamId){
+      if (!teamId) return null;
+      if (TEAM_OVR_CACHE.has(teamId)) return TEAM_OVR_CACHE.get(teamId);
+      const players = await fetchPlayersForTeam(teamId);
+      const lineup = await fetchLineupForTeam(teamId);
+      const sel = pickByLineupOrAuto(players, lineup);
+      const ratings = computeRatings(sel);
+      TEAM_OVR_CACHE.set(teamId, ratings.ovr);
+      return ratings.ovr;
+    }
+
+    /* ---------- Card creation (async) ---------- */
+    async function createCardAsync(m){
       const homeLogo = m.home_logo || 'images/logo.png';
       const awayLogo = m.away_logo || 'images/logo.png';
       const when = formatDateTime(m.kickoff_at || m.scheduled_at || m.date);
@@ -261,6 +332,9 @@
       const chaseText  = live ? buildChaseText(m.result) : '';
       const resultText = (!live && m.status==='completed') ? completedResultLine(m, homeName, awayName) : '';
 
+      // Compute OVRs (cached where possible). Do them in parallel.
+      const [homeOvr, awayOvr] = await Promise.all([ computeTeamOVR(m.home_team_id), computeTeamOVR(m.away_team_id) ]);
+
       const div = document.createElement('div');
       div.className = 'match-card';
       div.innerHTML = `
@@ -274,6 +348,7 @@
           <div class="team">
             <img src="${homeLogo}" alt="${homeName}"/>
             <div class="name">${homeNameHtml}</div>
+            <div class="ovr">OVR: ${homeOvr != null ? Number(homeOvr).toFixed(1) : '—'}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${homeScore}</div>
           </div>
 
@@ -282,6 +357,7 @@
           <div class="team">
             <img src="${awayLogo}" alt="${awayName}"/>
             <div class="name">${awayNameHtml}</div>
+            <div class="ovr">OVR: ${awayOvr != null ? Number(awayOvr).toFixed(1) : '—'}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${awayScore}</div>
           </div>
         </div>
@@ -312,7 +388,7 @@
       return div;
     }
 
-    /* ---------- Feed ---------- */
+    /* ---------- Feed (uses async card creation) ---------- */
     async function renderFeed() {
       // NOTE: your RPC get_matches_feed_for_user already returns a mixed list with fields used above
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
@@ -321,20 +397,44 @@
       const list = data ?? [];
 
       const liveL  = list.filter(m => isFrontEndLive(m))
-                         .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
+                         .sort((a,b)=> new Date(b.kickoff_at || b.scheduled_at || b.date) - new Date(a.kickoff_at || a.scheduled_at || a.date));
       const upcL   = list.filter(m => !isFrontEndLive(m) && m.status !== 'completed' && m.status !== 'cancelled')
-                         .sort((a,b)=> new Date(a.kickoff_at) - new Date(b.kickoff_at));
+                         .sort((a,b)=> new Date(a.kickoff_at || a.scheduled_at || a.date) - new Date(b.kickoff_at || b.scheduled_at || b.date));
       const doneL  = list.filter(m => m.status === 'completed')
-                         .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
+                         .sort((a,b)=> new Date(b.kickoff_at || b.scheduled_at || b.date) - new Date(a.kickoff_at || a.scheduled_at || a.date));
 
-      $('live-matches').innerHTML = liveL.length ? '' : '<div class="empty">No live matches</div>';
-      liveL.forEach(m => $('live-matches').appendChild(card(m)));
+      $('live-matches').innerHTML = '';
+      if (!liveL.length) $('live-matches').innerHTML = '<div class="empty">No live matches</div>';
+      for (const m of liveL) {
+        try {
+          const cardEl = await createCardAsync(m);
+          $('live-matches').appendChild(cardEl);
+        } catch (e) {
+          console.error('card render error', e, m);
+        }
+      }
 
-      $('upcoming-matches').innerHTML = upcL.length ? '' : '<div class="empty">No upcoming matches</div>';
-      upcL.forEach(m => $('upcoming-matches').appendChild(card(m)));
+      $('upcoming-matches').innerHTML = '';
+      if (!upcL.length) $('upcoming-matches').innerHTML = '<div class="empty">No upcoming matches</div>';
+      for (const m of upcL) {
+        try {
+          const cardEl = await createCardAsync(m);
+          $('upcoming-matches').appendChild(cardEl);
+        } catch (e) {
+          console.error('card render error', e, m);
+        }
+      }
 
-      $('completed-matches').innerHTML = doneL.length ? '' : '<div class="empty">No completed matches yet</div>';
-      doneL.forEach(m => $('completed-matches').appendChild(card(m)));
+      $('completed-matches').innerHTML = '';
+      if (!doneL.length) $('completed-matches').innerHTML = '<div class="empty">No completed matches yet</div>';
+      for (const m of doneL) {
+        try {
+          const cardEl = await createCardAsync(m);
+          $('completed-matches').appendChild(cardEl);
+        } catch (e) {
+          console.error('card render error', e, m);
+        }
+      }
     }
 
     async function load(){
