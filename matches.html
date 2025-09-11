@@ -352,7 +352,7 @@
           <div class="team">
             <img src="${homeLogo}" alt="${homeName}"/>
             <div class="name">${homeNameHtml}</div>
-            <div class="ovr"><img class="ovr-img" src="assets/rating/ovr.png" alt="OVR"/> ${homeOvr != null ? Number(homeOvr).toFixed(1) : '—'}</div>
+            <div class="ovr"><img class="ovr-img" src="assets/rating/ovr.png" alt="OVR" width="16" height="16"/> ${homeOvr != null ? Number(homeOvr).toFixed(1) : '—'}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${homeScore}</div>
           </div>
 
@@ -361,7 +361,7 @@
           <div class="team">
             <img src="${awayLogo}" alt="${awayName}"/>
             <div class="name">${awayNameHtml}</div>
-            <div class="ovr"><img class="ovr-img" src="assets/rating/ovr.png" alt="OVR"/> ${awayOvr != null ? Number(awayOvr).toFixed(1) : '—'}</div>
+            <div class="ovr"><img class="ovr-img" src="assets/rating/ovr.png" alt="OVR" width="16" height="16"/> ${awayOvr != null ? Number(awayOvr).toFixed(1) : '—'}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${awayScore}</div>
           </div>
         </div>
@@ -464,5 +464,6 @@
   </script>
 </body>
 </html>
+
 
 
