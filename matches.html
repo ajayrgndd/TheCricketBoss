@@ -99,11 +99,16 @@
       return `${dd}-${mm}-${yyyy}, ${hh}:${min} ${ampm}`;
     }
 
-    const badge = (kind) =>
-      `<span class="badge ${kind==='league'?'badge-league':'badge-friendly'}">${kind==='league'?'League':'Friendly'}</span>`;
+    // badge now accepts a boolean or the original kind string
+    const badge = (kindOrRow) => {
+      const isLeague = typeof kindOrRow === 'object' ? (!!kindOrRow.league_id || kindOrRow.kind === 'league') : (kindOrRow === 'league');
+      return `<span class="badge ${isLeague ? 'badge-league' : 'badge-friendly'}">${isLeague ? 'League' : 'Friendly'}</span>`;
+    };
 
     function isFrontEndLive(m) {
       if (m.status === 'completed' || m.status === 'cancelled') return false;
+      // fallback: if kickoff time is in past => consider live/started
+      if (!m.kickoff_at) return false;
       const now = Date.now();
       const ko = new Date(m.kickoff_at).getTime();
       return now >= ko;
@@ -239,7 +244,7 @@
     function card(m){
       const homeLogo = m.home_logo || 'images/logo.png';
       const awayLogo = m.away_logo || 'images/logo.png';
-      const when = formatDateTime(m.kickoff_at);
+      const when = formatDateTime(m.kickoff_at || m.scheduled_at || m.date);
       const live = isFrontEndLive(m);
 
       const homeName = m.home_team_name || 'Home';
@@ -260,7 +265,7 @@
       div.className = 'match-card';
       div.innerHTML = `
         <div class="match-head">
-          ${badge(m.kind)}
+          ${badge(m)}
           <div class="start">${when}</div>
           ${statusChip(m)}
         </div>
@@ -285,20 +290,31 @@
         ${(!live && m.status==='completed') ? `<div class="subscore">${resultText}</div>` : ''}
       `;
 
-      if (live && m.status === 'running') {
-        div.onclick = () => location.href = `friendly-match.html?id=${m.id}`;
-        div.style.cursor = 'pointer';
-      } else if (m.status === 'completed') {
-        div.onclick = () => location.href = `friendly-replay.html?id=${m.id}`;
+      // New routing logic: league vs friendly, running vs not
+      const isLeague = !!m.league_id || m.kind === 'league';
+      const running = ((m.status||'').toLowerCase() === 'running') || (m.started_at && !m.finished_at);
+
+      let dest = null;
+      if (isLeague) {
+        dest = running ? `league-match.html?id=${encodeURIComponent(m.id)}` : `league-replay.html?id=${encodeURIComponent(m.id)}`;
+      } else {
+        dest = running ? `friendly-match.html?id=${encodeURIComponent(m.id)}` : `friendly-replay.html?id=${encodeURIComponent(m.id)}`;
+      }
+
+      // Attach click handler only when we have a destination to go to
+      if (dest) {
+        div.onclick = () => { window.location.href = dest; };
         div.style.cursor = 'pointer';
       } else {
         div.style.cursor = 'default';
       }
+
       return div;
     }
 
     /* ---------- Feed ---------- */
     async function renderFeed() {
+      // NOTE: your RPC get_matches_feed_for_user already returns a mixed list with fields used above
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
       if (error) { console.error(error); return; }
 
