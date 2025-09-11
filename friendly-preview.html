@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Friendly Preview – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css"/>
+  <style>
+    body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px}
+    .head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
+    h1{margin:10px 0 6px}
+    .muted{opacity:.75}
+    .badge{font-size:.75rem;padding:6px 12px;border-radius:999px;border:1px solid #26314b;background:#0f1522}
+    .card{background:#0f1620;border:1px solid #1d263a;border-radius:12px;padding:18px;margin:14px 0}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .countdown{font-weight:800;font-size:2.1rem}
+    .section-title{font-weight:800;margin-top:8px;margin-bottom:6px}
+    .submuted{color:#9fb0c2}
+    .venue-card{background:#0d1520;border-radius:10px;padding:12px;border:1px solid #1f2b3b}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#0e1720;border:1px solid #223146}
+    .big-btn{background:#11b36a;color:#000;padding:12px 18px;border-radius:10px;border:none;font-weight:800;cursor:pointer}
+    .big-btn[disabled]{opacity:.6;cursor:default;background:#204230;color:#cfe7dc}
+    .meta{font-size:0.95rem;color:#bcd1dd}
+    .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .kv{margin:8px 0}
+    .hint{margin-top:12px;color:#9fb0c2}
+    @media (max-width:880px){ .grid{grid-template-columns:1fr} .countdown{font-size:1.5rem} .card{padding:12px} }
+  </style>
+</head>
+<body>
+  <div id="top-bar"></div>
+
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <div class="badge">Friendly</div>
+        <h1 id="match-title">Home vs Away</h1>
+        <div id="kickoff-line" class="muted">Kickoff — --</div>
+      </div>
+
+      <div style="text-align:right">
+        <div class="muted">Status</div>
+        <div id="status-text" style="font-weight:800;margin-top:6px">scheduled</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="grid">
+        <div>
+          <div class="section-title">Countdown to kickoff</div>
+          <div class="countdown" id="countdown">--:--:--</div>
+
+          <div style="margin-top:12px" class="meta">
+            <div id="toss-line"><strong>Toss :</strong> <span id="toss-text">Pending</span></div>
+            <div style="margin-top:6px"><strong>Match :</strong> <span id="match-state-text">Not yet started</span></div>
+          </div>
+
+          <div class="section-title" style="margin-top:18px">Match Details</div>
+
+          <div class="two-cols">
+            <div class="venue-card">
+              <div class="submuted">Venue</div>
+              <div style="margin-top:8px;font-weight:800" id="venue-name">—</div>
+              <div class="muted" id="venue-level">Level unknown</div>
+            </div>
+
+            <div class="venue-card">
+              <div class="submuted">Pitch</div>
+              <div style="margin-top:8px;font-weight:800" id="pitch-type">Unknown</div>
+              <div class="muted" id="pitch-note">Pitch details not available</div>
+            </div>
+          </div>
+
+          <div style="margin-top:18px">
+            <button id="goto-match" class="big-btn" disabled>Match not started</button>
+            <div class="hint">When match status becomes running this button will open the live match page.</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="padding:12px;margin:0">
+            <div class="submuted">Home</div>
+            <div id="home-name" style="font-weight:800;margin-top:8px">—</div>
+
+            <div style="height:12px"></div>
+
+            <div class="submuted">Away</div>
+            <div id="away-name" style="font-weight:800;margin-top:8px">—</div>
+
+            <div style="height:18px"></div>
+
+            <div class="submuted">Kickoff</div>
+            <div id="kickoff-when" style="font-weight:800;margin-top:8px">--</div>
+
+            <div style="height:16px"></div>
+
+            <div class="submuted">Stadium capacity</div>
+            <div id="stadium-cap" style="font-weight:800;margin-top:8px">unknown</div>
+          </div>
+
+          <div id="quick-actions" class="card" style="margin-top:12px;padding:12px">
+            <div class="submuted">Quick actions</div>
+            <div style="margin-top:8px">
+              <button class="pill" id="team-home-link" style="margin-right:8px">Home profile</button>
+              <button class="pill" id="team-away-link">Away profile</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bottom-note" class="muted" style="margin-top:6px">This preview shows kickoff/time/venue for scheduled friendly fixtures.</div>
+  </div>
+
+  <div id="bottom-nav"></div>
+
+  <script type="module">
+    import { loadSmoothUI } from './js/smooth-ui.js';
+    loadSmoothUI('top-bar', 'bottom-nav');
+  </script>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    const qs = new URLSearchParams(location.search);
+    const fixtureId = qs.get('id');
+
+    const el = id => document.getElementById(id);
+
+    const LEVEL_CAPACITY = {
+      "World Class": 30000,
+      "World_Class": 30000,
+      "World": 30000,
+      "National": 20000,
+      "Domestic": 15000,
+      "Professional": 10000,
+      "Local": 5000
+    };
+
+    function formatDateTime(ts){
+      if(!ts) return "--";
+      const d = new Date(ts);
+      const dd = String(d.getDate()).padStart(2,"0");
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const yyyy = d.getFullYear();
+      const h24 = d.getHours();
+      const hh = String(h24 % 12 || 12).padStart(2,"0");
+      const mi = String(d.getMinutes()).padStart(2,"0");
+      const ampm = h24 >= 12 ? "PM" : "AM";
+      return `${dd}-${mm}-${yyyy}, ${hh}:${mi} ${ampm}`;
+    }
+
+    let fixture = null;
+    let teams = {};
+    let stadium = null;
+    let countdownTimer = null;
+
+    function computeCapacity(stadObj, fxRow){
+      let capacity = null;
+      if (stadObj && stadObj.capacity) capacity = Number(stadObj.capacity);
+      else if (fxRow && fxRow.stadium_capacity) capacity = Number(fxRow.stadium_capacity);
+      else {
+        const levelKey = (stadObj && stadObj.stadium_level) || fxRow && fxRow.stadium_level;
+        if (levelKey) {
+          capacity = LEVEL_CAPACITY[String(levelKey).trim()] || LEVEL_CAPACITY[String(levelKey).trim().replace(/\s+/g,'_')];
+        }
+      }
+      return capacity || null;
+    }
+
+    function startCountdown(kickoffAt){
+      if (!kickoffAt) { el('countdown').textContent = '--:--:--'; return; }
+      if (countdownTimer) clearInterval(countdownTimer);
+      function tick(){
+        const now = Date.now();
+        const t = new Date(kickoffAt).getTime() - now;
+        if (t <= 0) {
+          el('countdown').textContent = "00:00:00";
+          fetchAndRender(true);
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          return;
+        }
+        const s = Math.floor(t/1000);
+        const hh = String(Math.floor(s/3600)).padStart(2,'0');
+        const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
+        const ss = String(s%60).padStart(2,'0');
+        el('countdown').textContent = `${hh}:${mm}:${ss}`;
+      }
+      tick();
+      countdownTimer = setInterval(tick, 1000);
+    }
+
+    function enableGoLiveButton(){
+      const btn = el('goto-match');
+      btn.disabled = false;
+      btn.textContent = 'Open live match';
+      btn.onclick = ()=> {
+        if (!fixture) return;
+        location.href = `friendly-match.html?id=${encodeURIComponent(fixture.id)}`;
+      };
+    }
+    function disableGoLiveButton(){
+      const btn = el('goto-match');
+      btn.disabled = true;
+      btn.textContent = 'Match not started';
+      btn.onclick = null;
+    }
+
+    function tryParse(v){ if (!v) return null; try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return null; } }
+
+    async function fetchAndRender(forceRefresh=false){
+      if (!fixtureId) { alert('Missing fixture id'); return; }
+      const { data: fx } = await supabase.from('matches').select('*').eq('id', fixtureId).maybeSingle();
+      if (!fx) { alert('Fixture not found'); return; }
+      fixture = fx;
+
+      const teamIds = [fx.home_team_id, fx.away_team_id].filter(Boolean);
+      if (teamIds.length) {
+        const { data: trows } = await supabase.from('teams').select('id,team_name').in('id', teamIds);
+        (trows||[]).forEach(t=> teams[t.id] = t.team_name);
+      }
+
+      let stadiumId = fx.stadium_id || fx.stadium || null;
+      let stad = null;
+      if (stadiumId) {
+        try{
+          const { data: s } = await supabase.from('stadiums').select('id,stadium_name,stadium_level,capacity,pitch_type').eq('id', stadiumId).maybeSingle();
+          if (s) stad = s;
+        }catch(e){}
+      }
+
+      if (!stad) {
+        if (fx.stadium_name || fx.stadium_level || fx.stadium_capacity) {
+          stad = {
+            id: stadiumId || null,
+            stadium_name: fx.stadium_name || fx.stadium || "Unknown venue",
+            stadium_level: fx.stadium_level || fx.level || null,
+            capacity: fx.stadium_capacity || fx.capacity || null,
+            pitch_type: fx.pitch_type || null
+          };
+        }
+      }
+
+      stadium = stad || null;
+
+      el('match-title').textContent = `${teams[fx.home_team_id] || fx.home_team_id || 'Home'} vs ${teams[fx.away_team_id] || fx.away_team_id || 'Away'}`;
+      const whenRaw = fx.kickoff_at || (fx.date && fx.start_time ? `${fx.date}T${fx.start_time}` : null);
+      el('kickoff-line').textContent = whenRaw ? `Kickoff — ${formatDateTime(whenRaw)}` : 'Kickoff — --';
+      el('kickoff-when').textContent = whenRaw ? formatDateTime(whenRaw) : '--';
+      el('home-name').textContent = teams[fx.home_team_id] || fx.home_team_name || fx.home_team_id || 'Home';
+      el('away-name').textContent = teams[fx.away_team_id] || fx.away_team_name || fx.away_team_id || 'Away';
+
+      const status = String((fx.status||'')).toLowerCase();
+      el('status-text').textContent = fx.status || 'scheduled';
+      const running = status === 'running' || status === 'inprogress' || status === 'live' || fx.started_at;
+      if (running) {
+        el('match-state-text').textContent = 'Running';
+        enableGoLiveButton();
+      } else {
+        el('match-state-text').textContent = 'Not yet started';
+        disableGoLiveButton();
+      }
+
+      let tossText = 'Pending';
+      const resultObj = tryParse(fx.result) || fx.result;
+      const simObj = tryParse(fx.sim_state) || fx.sim_state;
+      if (fx.toss_winner_team_id || fx.toss_decision) {
+        const winner = teams[fx.toss_winner_team_id] || fx.toss_winner_team_id;
+        const decision = fx.toss_decision || fx.toss_decision;
+        if (winner) tossText = `${winner} won the toss and chose to ${decision || 'bat'}`;
+      } else if (fx.toss) {
+        if (typeof fx.toss === 'string') tossText = fx.toss;
+        else if (fx.toss.winner_team_id) tossText = `${teams[fx.toss.winner_team_id] || fx.toss.winner_team_id} won the toss and chose to ${fx.toss.decision||fx.toss.elected||'bat'}`;
+      } else if (resultObj && resultObj.toss) {
+        const t = resultObj.toss;
+        if (t.text) tossText = t.text;
+        else if (t.winner || t.winner_team_id) tossText = `${teams[t.winner||t.winner_team_id]||t.winner||t.winner_team_id} won the toss and chose to ${t.decision||t.elected||'bat'}`;
+      } else if (simObj && simObj.toss) {
+        const t = simObj.toss;
+        if (t.text) tossText = t.text;
+        else if (t.winner || t.winner_team_id) tossText = `${teams[t.winner||t.winner_team_id]||t.winner||t.winner_team_id} won the toss and chose to ${t.decision||t.elected||'bat'}`;
+      }
+      el('toss-text').textContent = tossText;
+
+      const vname = stadium?.stadium_name || `${el('home-name').textContent} Ground`;
+      el('venue-name').textContent = vname;
+      el('venue-level').textContent = stadium?.stadium_level ? `Level ${stadium.stadium_level}` : 'Level unknown';
+      el('pitch-type').textContent = stadium?.pitch_type || fx.pitch_type || 'Unknown';
+      el('pitch-note').textContent = stadium?.pitch_type ? '' : 'Pitch details not available';
+
+      const cap = computeCapacity(stadium, fx);
+      el('stadium-cap').textContent = cap ? cap.toLocaleString() : 'unknown';
+
+      const koDate = whenRaw ? new Date(whenRaw).toISOString() : null;
+      startCountdown(koDate);
+    }
+
+    fetchAndRender();
+    setInterval(()=> fetchAndRender(true), 10000);
+
+    el('team-home-link').addEventListener('click', ()=> {
+      const id = fixture?.home_team_id;
+      if (!id) return alert('Home team unknown');
+      location.href = `public-profile.html?team=${encodeURIComponent(id)}`;
+    });
+    el('team-away-link').addEventListener('click', ()=> {
+      const id = fixture?.away_team_id;
+      if (!id) return alert('Away team unknown');
+      location.href = `public-profile.html?team=${encodeURIComponent(id)}`;
+    });
+  </script>
+</body>
+</html>
