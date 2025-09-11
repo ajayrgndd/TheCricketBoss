@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -47,12 +47,16 @@
     .name{font-weight:600;text-align:center}
     .name a{color:#8affc3;text-decoration:none}
     .name a:hover{text-decoration:underline}
-    .ovr { font-size:.85rem; color:#cbd5e1; opacity:.9; margin-top:4px; }
+    .ovr { font-size:.85rem; color:#cbd5e1; opacity:.95; margin-top:4px; display:flex; align-items:center; gap:8px; }
+    .ovr img { width:22px; height:22px; display:block; border-radius:0; object-fit:contain; border:none; }
     .vs{width:24%;text-align:center;opacity:.8}
     .score{margin-top:6px;text-align:center;font-weight:800}
     .subscore{margin-top:10px;text-align:center;font-size:.95rem;opacity:.95}
     .hidden-score{opacity:.6;font-weight:500}
     .empty{opacity:.7;padding:16px;border:1px dashed #333;border-radius:10px;margin:8px 0; width:100%; max-width:680px; text-align:center}
+
+    /* ensure OVR image inside .team doesn't inherit circular style */
+    .team .ovr-img { border-radius: 0 !important; width:22px; height:22px; object-fit:contain; }
   </style>
 </head>
 <body>
@@ -348,7 +352,7 @@
           <div class="team">
             <img src="${homeLogo}" alt="${homeName}"/>
             <div class="name">${homeNameHtml}</div>
-            <div class="ovr">OVR: ${homeOvr != null ? Number(homeOvr).toFixed(1) : '—'}</div>
+            <div class="ovr"><img class="ovr-img" src="assets/rating/ovr.png" alt="OVR"/> ${homeOvr != null ? Number(homeOvr).toFixed(1) : '—'}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${homeScore}</div>
           </div>
 
@@ -357,7 +361,7 @@
           <div class="team">
             <img src="${awayLogo}" alt="${awayName}"/>
             <div class="name">${awayNameHtml}</div>
-            <div class="ovr">OVR: ${awayOvr != null ? Number(awayOvr).toFixed(1) : '—'}</div>
+            <div class="ovr"><img class="ovr-img" src="assets/rating/ovr.png" alt="OVR"/> ${awayOvr != null ? Number(awayOvr).toFixed(1) : '—'}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${awayScore}</div>
           </div>
         </div>
