@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>League Preview – TheCricketBoss</title>
+  <link rel="stylesheet" href="styles/global.css"/>
+  <style>
+    :root{ --bg:#08101a; --card:#0f1522; --muted: #98a0b3; --accent:#00e676; --panel:#121825; --stroke:rgba(255,255,255,.05) }
+    body{margin:0;background:var(--bg);color:#e7ecf3;font-family:system-ui}
+    .wrap{max-width:980px;margin:0 auto;padding:20px}
+    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .title{font-size:1.6rem;font-weight:800}
+    .sub{color:var(--muted)}
+    .card{background:var(--panel);border:1px solid var(--stroke);border-radius:12px;padding:16px;margin-top:16px}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:12px}
+    .small{font-size:.9rem;color:var(--muted)}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#0b1220;border:1px solid var(--stroke);font-weight:700}
+    .countdown{font-weight:800;font-size:1.6rem;margin-top:6px}
+    .meta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:8px}
+    .venue-block{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px}
+    .muted{color:var(--muted)}
+    .notes{font-size:.9rem;color:var(--muted);margin-top:8px}
+    .btn{display:inline-block;padding:10px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:800;cursor:pointer}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    @media (max-width:760px){ .grid{grid-template-columns:1fr} .countdown{font-size:1.3rem} }
+  </style>
+</head>
+<body>
+  <div id="top-bar"></div>
+
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="title" id="matchTitle">— vs —</div>
+        <div class="sub" id="kickoffText">Kickoff — --</div>
+      </div>
+      <div style="text-align:right">
+        <div class="pill" id="kindBadge">League</div>
+        <div class="small muted" id="statusBadge" style="margin-top:8px">Status — scheduled</div>
+      </div>
+    </div>
+
+    <div class="card grid">
+      <div>
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div class="small">Countdown to kickoff</div>
+              <div class="countdown" id="countdown">--:--:--</div>
+            </div>
+            <div style="text-align:right">
+              <div class="small">Toss</div>
+              <div style="font-weight:800;margin-top:6px">Pending</div>
+              <div class="small muted" style="margin-top:10px">Match : Not yet started</div>
+            </div>
+          </div>
+
+          <div class="notes" id="notesArea">Loading match preview…</div>
+        </div>
+
+        <div style="margin-top:16px">
+          <h4 style="margin:0 0 8px 0">Match Details</h4>
+          <div class="meta-row">
+            <div class="venue-block" style="flex:1">
+              <div class="small">Venue</div>
+              <div id="venueName" style="font-weight:800;margin-top:6px">—</div>
+              <div class="small muted" id="venueInfo">—</div>
+            </div>
+
+            <div class="venue-block" style="width:220px">
+              <div class="small">Pitch</div>
+              <div id="pitchType" style="font-weight:800;margin-top:6px">—</div>
+              <div class="small muted" id="pitchNote">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px">
+          <button id="goBtn" class="btn" disabled>Match not started</button>
+          <div class="small muted" style="margin-top:8px">When match status becomes running this button will open the live match page.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="padding:12px">
+          <div class="small muted">Home</div>
+          <div style="font-weight:800;font-size:1.15rem" id="homeName">—</div>
+          <div class="small muted" style="margin-top:8px">Away</div>
+          <div style="font-weight:800;font-size:1.05rem;margin-top:6px" id="awayName">—</div>
+
+          <div style="margin-top:12px;border-top:1px solid var(--stroke);padding-top:12px">
+            <div class="small muted">Kickoff</div>
+            <div style="font-weight:800;margin-top:6px" id="kickoffPretty">—</div>
+
+            <div style="margin-top:12px">
+              <div class="small muted">Stadium capacity</div>
+              <div id="stadiumCap" style="font-weight:800;margin-top:6px">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <div class="small muted">Quick actions</div>
+          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button id="refreshBtn" class="btn" style="background:#223447">Refresh</button>
+            <button id="viewTeamBtn" class="btn" style="background:#0b2a20">Home profile</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottom-nav"></div>
+
+  <script type="module">
+    import { loadSmoothUI } from './js/smooth-ui.js';
+    loadSmoothUI('top-bar','bottom-nav');
+
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    const supabase = createClient(
+      "https://iukofcmatlfhfwcechdq.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
+    );
+
+    const qs = new URLSearchParams(location.search);
+    const id = qs.get('id');
+
+    const el = (id)=>document.getElementById(id);
+    const homeNameEl = el('homeName'), awayNameEl = el('awayName');
+    const titleEl = el('matchTitle'), kickoffText = el('kickoffText'), kickoffPretty = el('kickoffPretty');
+    const countdownEl = el('countdown'), notesEl = el('notesArea');
+    const venueNameEl = el('venueName'), venueInfoEl = el('venueInfo'), stadiumCapEl = el('stadiumCap');
+    const pitchTypeEl = el('pitchType'), pitchNoteEl = el('pitchNote');
+    const goBtn = el('goBtn'), refreshBtn = el('refreshBtn'), viewTeamBtn = el('viewTeamBtn'), kindBadge = el('kindBadge'), statusBadge = el('statusBadge');
+
+    // small helpers
+    function fmtDateTime(ts){
+      if(!ts) return '--';
+      const d = new Date(ts);
+      const dd = String(d.getDate()).padStart(2,'0');
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      const h24 = d.getHours();
+      const hh = String(h24 % 12 || 12).padStart(2,'0');
+      const min = String(d.getMinutes()).padStart(2,'0');
+      const ampm = h24 >= 12 ? 'PM' : 'AM';
+      return `${dd}-${mm}-${yyyy}, ${hh}:${min} ${ampm}`;
+    }
+    function humanNumber(n){ if (!n && n!==0) return '—'; return n.toLocaleString(); }
+    function toEpoch(ts){ if(!ts) return null; const t = new Date(ts).getTime(); return Number.isFinite(t)?t:null; }
+
+    let fixture = null;
+    let stadium = null;
+    let countdownTimer = null;
+
+    async function fetchFixture(){
+      if(!id){ notesEl.textContent = 'Missing fixture id in URL.'; return; }
+      const { data:fx, error } = await supabase.from('fixtures').select('*').eq('id', id).maybeSingle();
+      if (error){ notesEl.textContent = 'Failed to load fixture.'; console.error(error); return; }
+      if (!fx){ notesEl.textContent = 'Fixture not found.'; return; }
+      fixture = fx;
+      renderFixture();
+      // subscribe to changes so preview updates automatically
+      try {
+        supabase.channel(`fixture-preview-${id}`)
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fixtures', filter: `id=eq.${id}` }, payload => {
+            // reload fixture on update
+            fetchFixture();
+          })
+          .subscribe();
+      } catch(e){ /* ignore subscribe errors */ }
+    }
+
+    async function fetchStadium(stadId){
+      if (!stadId) return null;
+      const { data, error } = await supabase.from('stadiums')
+        .select('id,stadium_name,stadium_level,capacity,pitch_type')
+        .eq('id', stadId).maybeSingle();
+      if (error){ console.warn('stadium fetch failed', error); return null; }
+      return data || null;
+    }
+
+    function scheduleCountdown(targetEpoch){
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      if (!targetEpoch){ countdownEl.textContent = '--:--:--'; return; }
+      function tick(){
+        const now = Date.now();
+        let diff = Math.max(0, targetEpoch - now);
+        if (diff <= 0){
+          countdownEl.textContent = '00:00:00';
+          goBtn.disabled = false;
+          statusBadge.textContent = 'Status — running';
+          statusBadge.style.color = '';
+          clearInterval(countdownTimer);
+          // attempt to flip button to live-match after short delay (server may have switched status)
+          setTimeout(()=> tryOpenLive(false), 1500);
+          return;
+        }
+        const hrs = Math.floor(diff / 3600000); diff %= 3600000;
+        const mins = Math.floor(diff / 60000); diff %= 60000;
+        const secs = Math.floor(diff / 1000);
+        countdownEl.textContent = `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+      }
+      tick();
+      countdownTimer = setInterval(tick, 1000);
+    }
+
+    async function renderFixture(){
+      if (!fixture) return;
+      // names
+      homeNameEl.textContent = fixture.home_team_name || fixture.home_team_id || 'Home';
+      awayNameEl.textContent = fixture.away_team_name || fixture.away_team_id || 'Away';
+      titleEl.textContent = `${homeNameEl.textContent} vs ${awayNameEl.textContent}`;
+
+      // kickoff
+      const kickoff = fixture.kickoff_at || (fixture.date && fixture.start_time ? `${fixture.date}T${fixture.start_time}` : null);
+      kickoffText.textContent = kickoff ? `Kickoff — ${fmtDateTime(kickoff)}` : 'Kickoff — --';
+      kickoffPretty.textContent = kickoff ? fmtDateTime(kickoff) : '--';
+
+      // status/kind labels
+      const isLeague = !!fixture.league_id || fixture.kind === 'league';
+      kindBadge.textContent = isLeague ? 'League' : 'Friendly';
+      statusBadge.textContent = `Status — ${fixture.status || 'scheduled'}`;
+
+      // venue/stadium
+      let stadiumObj = null;
+      if (fixture.stadium_id) stadiumObj = await fetchStadium(fixture.stadium_id);
+      // fallback to fixture embedded stadium fields
+      if (!stadiumObj) {
+        stadiumObj = {
+          stadium_name: fixture.stadium_name || fixture.stadium || (homeNameEl.textContent + ' Ground'),
+          stadium_level: fixture.stadium_level || fixture.level || null,
+          capacity: fixture.stadium_capacity || fixture.capacity || null,
+          pitch_type: fixture.pitch_type || fixture.pitch || null
+        };
+      }
+      stadium = stadiumObj;
+
+      venueNameEl.textContent = stadiumObj.stadium_name || '—';
+      const cap = stadiumObj.capacity ? Number(stadiumObj.capacity) : null;
+      stadiumCapEl.textContent = cap ? humanNumber(cap) : 'unknown';
+      venueInfoEl.textContent = stadiumObj.stadium_level ? `${stadiumObj.stadium_level} stadium` : 'Level unknown';
+
+      // pitch
+      pitchTypeEl.textContent = stadiumObj.pitch_type || 'Unknown';
+      pitchNoteEl.textContent = stadiumObj.pitch_type ? `Type: ${stadiumObj.pitch_type}` : 'Pitch details not available';
+
+      // notes
+      notesEl.textContent = fixture.note || fixture.description || 'Toss : Pending • Match : Not yet started';
+
+      // countdown
+      const target = toEpoch(kickoff);
+      scheduleCountdown(target);
+
+      // button behaviour
+      updateGoButton();
+
+      // enable view team button
+      viewTeamBtn.onclick = () => {
+        if (fixture.home_team_id) window.location.href = `public-profile.html?team=${encodeURIComponent(fixture.home_team_id)}`;
+      };
+    }
+
+    // decide destination for "go" button using current fixture data
+    function matchIsRunning(){
+      const st = String((fixture && fixture.status) || '').toLowerCase();
+      return (st === 'running' || st === 'inprogress' || st === 'live' || !!fixture.started_at) ;
+    }
+    function matchIsCompleted(){
+      const st = String((fixture && fixture.status) || '').toLowerCase();
+      return (st === 'completed' || st === 'finished' || !!fixture.winner_team_id);
+    }
+
+    function updateGoButton(){
+      if (!fixture) { goBtn.disabled = true; goBtn.textContent = 'Match not started'; return; }
+      const isLeague = !!fixture.league_id || fixture.kind === 'league';
+      if (matchIsRunning()){
+        goBtn.disabled = false;
+        goBtn.textContent = 'Open live match';
+      } else if (matchIsCompleted()){
+        goBtn.disabled = false;
+        goBtn.textContent = 'Open match replay';
+      } else {
+        goBtn.disabled = true;
+        goBtn.textContent = 'Match not started';
+      }
+    }
+
+    async function tryOpenLive(skipReload=true){
+      // re-fetch fixture to get freshest status if we are called after countdown
+      try {
+        const { data:fx } = await supabase.from('fixtures').select('id,status,started_at,finished_at,winner_team_id,league_id').eq('id', id).maybeSingle();
+        if (fx) fixture = { ...fixture, ...fx };
+      } catch(e){}
+      updateGoButton();
+      // route to appropriate page when running/completed
+      const isLeague = !!fixture.league_id || fixture.kind === 'league';
+      if (matchIsRunning()){
+        const dest = isLeague ? `league-match.html?id=${encodeURIComponent(id)}` : `friendly-match.html?id=${encodeURIComponent(id)}`;
+        window.location.href = dest;
+      } else if (matchIsCompleted()){
+        const dest = isLeague ? `league-replay.html?id=${encodeURIComponent(id)}` : `friendly-replay.html?id=${encodeURIComponent(id)}`;
+        window.location.href = dest;
+      } else {
+        // still scheduled — do nothing
+      }
+    }
+
+    refreshBtn.addEventListener('click', ()=> fetchFixture());
+    goBtn.addEventListener('click', ()=> tryOpenLive(false));
+
+    // initial load
+    fetchFixture();
+  </script>
+</body>
+</html>
