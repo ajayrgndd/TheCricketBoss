@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -40,7 +40,6 @@
     .chip-upcoming{background:#0f766e;color:#ecfeff}
 
     .start{font-size:.8rem;opacity:.8}
-    .countdown-chip{display:inline-block;margin-top:6px;background:#0b1220;padding:4px 8px;border-radius:8px;font-weight:800}
 
     .match-body{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .team{display:flex;flex-direction:column;align-items:center;gap:6px;width:38%}
@@ -165,6 +164,87 @@
       return 'Match completed';
     }
 
+    /**
+     * Extract totals for home & away with correct mapping even when the away team bats first.
+     * Priority:
+     *   1) result.home / result.away
+     *   2) result.innings[] with team_id
+     *   3) result.innings[] (no team_id) + toss (result.toss or sim_state.toss)
+     *   4) sim_state.i1/i2 + toss (fallback for older data)
+     */
+    function extractTotalsMapped(result, homeId, awayId, sim_state){
+      const r = (typeof result === 'string' ? (()=>{ try{return JSON.parse(result)}catch{return null}})() : result) || {};
+      const sim = (typeof sim_state === 'string' ? (()=>{ try{return JSON.parse(sim_state)}catch{return null}})() : sim_state) || {};
+
+      // 1) explicit home/away blocks
+      if (r.home || r.away) {
+        const home = r.home ? {
+          runs: (r.home.runs ?? r.home.score) != null ? Number(r.home.runs ?? r.home.score) : null,
+          overs: r.home.overs ?? (typeof r.home.balls === 'number' ? `${Math.floor(r.home.balls/6)}.${r.home.balls%6}` : null)
+        } : {runs:null, overs:null};
+        const away = r.away ? {
+          runs: (r.away.runs ?? r.away.score) != null ? Number(r.away.runs ?? r.away.score) : null,
+          overs: r.away.overs ?? (typeof r.away.balls === 'number' ? `${Math.floor(r.away.balls/6)}.${r.away.balls%6}` : null)
+        } : {runs:null, overs:null};
+        return {home, away};
+      }
+
+      // helper to normalize totals from a generic innings block
+      const toTotals = (inn) => ({
+        runs: (inn?.totals?.runs ?? inn?.runs ?? inn?.score) != null ? Number(inn?.totals?.runs ?? inn?.runs ?? inn?.score) : null,
+        overs: inn?.totals?.overs ?? inn?.overs ?? (typeof (inn?.totals?.balls ?? inn?.balls) === 'number' ? `${Math.floor((inn?.totals?.balls ?? inn?.balls)/6)}.${(inn?.totals?.balls ?? inn?.balls)%6}` : null)
+      });
+
+      // 2) innings with team ids
+      if (Array.isArray(r.innings) && r.innings.some(x => x && (x.team_id!=null || x.team!=null))) {
+        let home = {runs:null, overs:null}, away = {runs:null, overs:null};
+        for (const inn of r.innings) {
+          const tid = String(inn.team_id ?? inn.team ?? '');
+          const totals = toTotals(inn);
+          if (String(homeId) === tid) home = totals;
+          else if (String(awayId) === tid) away = totals;
+        }
+        return {home, away};
+      }
+
+      // decide teams from toss object
+      const decideTeamsFromToss = (tossObj) => {
+        if (!tossObj || (!tossObj.winner && !tossObj.winner_team_id) || !tossObj.decision) return null;
+        const winner = String(tossObj.winner ?? tossObj.winner_team_id);
+        const loser  = (String(homeId) === winner) ? String(awayId) : String(homeId);
+        const i1Team = (String(tossObj.decision).toLowerCase() === 'bat') ? winner : loser;
+        const i2Team = (i1Team === String(homeId)) ? String(awayId) : String(homeId);
+        return {i1Team, i2Team};
+      };
+
+      // 3) innings[] without team_id + toss
+      if (Array.isArray(r.innings) && r.innings.length) {
+        const order = decideTeamsFromToss(r.toss) || decideTeamsFromToss(sim.toss);
+        if (order) {
+          const i1 = toTotals(r.innings[0] || {});
+          const i2 = toTotals(r.innings[1] || {});
+          const home = (String(homeId) === order.i1Team) ? i1 : i2;
+          const away = (String(awayId)  === order.i1Team) ? i1 : i2;
+          return {home, away};
+        }
+      }
+
+      // 4) sim_state i1/i2 + toss (older data)
+      if (sim.i1 || sim.i2) {
+        const order = decideTeamsFromToss(sim.toss);
+        if (order) {
+          const i1 = { runs: sim.i1?.runs != null ? Number(sim.i1.runs) : null, overs: (typeof sim.i1?.balls === 'number') ? `${Math.floor(sim.i1.balls/6)}.${sim.i1.balls%6}` : null };
+          const i2 = { runs: sim.i2?.runs != null ? Number(sim.i2.runs) : null, overs: (typeof sim.i2?.balls === 'number') ? `${Math.floor(sim.i2.balls/6)}.${sim.i2.balls%6}` : null };
+          const home = (String(homeId) === order.i1Team) ? i1 : i2;
+          const away = (String(awayId)  === order.i1Team) ? i1 : i2;
+          return {home, away};
+        }
+      }
+
+      // default fallback
+      return {home:{runs:null, overs:null}, away:{runs:null, overs:null}};
+    }
+
     /* ---------- TEAM OVR helpers (copied/adapted from public-profile.html) */
     const TEAM_PLAYERS_CACHE = new Map();
     const TEAM_LINEUP_CACHE = new Map();
@@ -235,18 +315,6 @@
       return ratings.ovr;
     }
 
-    /* helper to compute ISO kickoff timestamp (or null) */
-    function kickoffISO(m){
-      if (!m) return null;
-      if (m.kickoff_at) return new Date(m.kickoff_at).toISOString();
-      if (m.scheduled_at) return new Date(m.scheduled_at).toISOString();
-      if (m.date && m.start_time) {
-        // date like YYYY-MM-DD, start_time like HH:MM — make an ISO
-        return new Date(`${m.date}T${m.start_time}`).toISOString();
-      }
-      return null;
-    }
-
     /* ---------- Card creation (async) ---------- */
     async function createCardAsync(m){
       const homeLogo = m.home_logo || 'images/logo.png';
@@ -271,20 +339,12 @@
       // Compute OVRs (cached where possible). Do them in parallel.
       const [homeOvr, awayOvr] = await Promise.all([ computeTeamOVR(m.home_team_id), computeTeamOVR(m.away_team_id) ]);
 
-      // build countdown markup only for scheduled (non-live, non-completed)
-      const kickoffIso = kickoffISO(m);
-      const showCountdown = !live && m.status !== 'completed' && kickoffIso;
-
       const div = document.createElement('div');
       div.className = 'match-card';
-
       div.innerHTML = `
         <div class="match-head">
           ${badge(m)}
-          <div>
-            <div class="start">${when}</div>
-            ${showCountdown ? `<div class="countdown-chip" data-kickoff="${kickoffIso}" data-matchid="${m.id}">--:--:--</div>` : ''}
-          </div>
+          <div class="start">${when}</div>
           ${statusChip(m)}
         </div>
 
@@ -310,28 +370,29 @@
         ${(!live && m.status==='completed') ? `<div class="subscore">${resultText}</div>` : ''}
       `;
 
-      // New routing logic:
+      // New routing logic: league vs friendly, running vs not
       const isLeague = !!m.league_id || m.kind === 'league';
       const running = ((m.status||'').toLowerCase() === 'running') || (m.started_at && !m.finished_at);
 
       let dest = null;
       if (isLeague) {
-        if (running) dest = `league-match.html?id=${encodeURIComponent(m.id)}`;
-        else if (m.status === 'scheduled') dest = `league-preview.html?id=${encodeURIComponent(m.id)}`;
-        else dest = `league-replay.html?id=${encodeURIComponent(m.id)}`;
+        // if scheduled (not yet started) we want to send to league-preview.html instead of replay/match
+        if ((m.status||'').toLowerCase() === 'scheduled') {
+          dest = `league-preview.html?id=${encodeURIComponent(m.id)}`;
+        } else {
+          dest = running ? `league-match.html?id=${encodeURIComponent(m.id)}` : `league-replay.html?id=${encodeURIComponent(m.id)}`;
+        }
       } else {
-        if (running) dest = `friendly-match.html?id=${encodeURIComponent(m.id)}`;
-        else if (m.status === 'scheduled') dest = `friendly-preview.html?id=${encodeURIComponent(m.id)}`;
-        else dest = `friendly-replay.html?id=${encodeURIComponent(m.id)}`;
+        if ((m.status||'').toLowerCase() === 'scheduled') {
+          dest = `friendly-preview.html?id=${encodeURIComponent(m.id)}`;
+        } else {
+          dest = running ? `friendly-match.html?id=${encodeURIComponent(m.id)}` : `friendly-replay.html?id=${encodeURIComponent(m.id)}`;
+        }
       }
 
       // Attach click handler only when we have a destination to go to
       if (dest) {
-        div.onclick = (ev) => {
-          // allow copying/selecting without navigation via ignoring clicks on links
-          if (ev.target && (ev.target.tagName === 'A' || ev.target.closest('a'))) return;
-          window.location.href = dest;
-        };
+        div.onclick = () => { window.location.href = dest; };
         div.style.cursor = 'pointer';
       } else {
         div.style.cursor = 'default';
@@ -340,34 +401,9 @@
       return div;
     }
 
-    /* ---------- Countdown updater ---------- */
-    function updateCountdowns(){
-      const nodes = document.querySelectorAll('.countdown-chip');
-      const now = Date.now();
-      nodes.forEach(n=>{
-        const kickoff = n.dataset.kickoff;
-        if (!kickoff) return;
-        const t = new Date(kickoff).getTime() - now;
-        if (t <= 0) {
-          n.textContent = '00:00:00';
-        } else {
-          const s = Math.floor(t/1000);
-          const hh = String(Math.floor(s/3600)).padStart(2,'0');
-          const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
-          const ss = String(s%60).padStart(2,'0');
-          n.textContent = `${hh}:${mm}:${ss}`;
-        }
-      });
-    }
-    let __countdown_interval = null;
-    function ensureCountdownTicker(){
-      if (__countdown_interval) return;
-      updateCountdowns();
-      __countdown_interval = setInterval(updateCountdowns, 1000);
-    }
-
     /* ---------- Feed (uses async card creation) ---------- */
     async function renderFeed() {
+      // NOTE: your RPC get_matches_feed_for_user already returns a mixed list with fields used above
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
       if (error) { console.error(error); return; }
 
@@ -412,9 +448,6 @@
           console.error('card render error', e, m);
         }
       }
-
-      // start countdown ticker if any scheduled cards present
-      ensureCountdownTicker();
     }
 
     async function load(){
