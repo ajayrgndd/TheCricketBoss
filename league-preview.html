@@ -6,312 +6,335 @@
   <title>League Preview – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css"/>
   <style>
-    :root{ --bg:#08101a; --card:#0f1522; --muted: #98a0b3; --accent:#00e676; --panel:#121825; --stroke:rgba(255,255,255,.05) }
-    body{margin:0;background:var(--bg);color:#e7ecf3;font-family:system-ui}
-    .wrap{max-width:980px;margin:0 auto;padding:20px}
-    .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .title{font-size:1.6rem;font-weight:800}
-    .sub{color:var(--muted)}
-    .card{background:var(--panel);border:1px solid var(--stroke);border-radius:12px;padding:16px;margin-top:16px}
-    .grid{display:grid;grid-template-columns:1fr 320px;gap:12px}
-    .small{font-size:.9rem;color:var(--muted)}
-    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#0b1220;border:1px solid var(--stroke);font-weight:700}
-    .countdown{font-weight:800;font-size:1.6rem;margin-top:6px}
-    .meta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:8px}
-    .venue-block{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px}
-    .muted{color:var(--muted)}
-    .notes{font-size:.9rem;color:var(--muted);margin-top:8px}
-    .btn{display:inline-block;padding:10px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:800;cursor:pointer}
-    .btn[disabled]{opacity:.5;cursor:not-allowed}
-    @media (max-width:760px){ .grid{grid-template-columns:1fr} .countdown{font-size:1.3rem} }
+    body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px}
+    .head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:10px 0}
+    h1{margin:10px 0 6px}
+    .muted{opacity:.75}
+    .badge{font-size:.75rem;padding:6px 12px;border-radius:999px;border:1px solid #26314b;background:#0f1522}
+    .card{background:#0f1620;border:1px solid #1d263a;border-radius:12px;padding:18px;margin:14px 0}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .box-row{display:flex;gap:12px;flex-wrap:wrap}
+    .countdown{font-weight:800;font-size:2.1rem}
+    .section-title{font-weight:800;margin-top:8px;margin-bottom:6px}
+    .submuted{color:#9fb0c2}
+    .venue-card{background:#0d1520;border-radius:10px;padding:12px;border:1px solid #1f2b3b}
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#0e1720;border:1px solid #223146}
+    .big-btn{background:#11b36a;color:#000;padding:12px 18px;border-radius:10px;border:none;font-weight:800;cursor:pointer}
+    .big-btn[disabled]{opacity:.6;cursor:default;background:#204230;color:#cfe7dc}
+    .meta{font-size:0.95rem;color:#bcd1dd}
+    .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .kv{margin:8px 0}
+    .kv .k{color:#9fb0c2;font-weight:700}
+    .kv .v{margin-top:6px;font-weight:800}
+    .hint{margin-top:12px;color:#9fb0c2}
+    @media (max-width:880px){ .grid{grid-template-columns:1fr} .countdown{font-size:1.5rem} .card{padding:12px} }
   </style>
 </head>
 <body>
   <div id="top-bar"></div>
 
   <div class="wrap">
-    <div class="top">
+    <div class="head">
       <div>
-        <div class="title" id="matchTitle">— vs —</div>
-        <div class="sub" id="kickoffText">Kickoff — --</div>
+        <div class="badge">League</div>
+        <h1 id="match-title">Home vs Away</h1>
+        <div id="kickoff-line" class="muted">Kickoff — --</div>
       </div>
+
       <div style="text-align:right">
-        <div class="pill" id="kindBadge">League</div>
-        <div class="small muted" id="statusBadge" style="margin-top:8px">Status — scheduled</div>
+        <div class="muted">Status</div>
+        <div id="status-text" style="font-weight:800;margin-top:6px">scheduled</div>
       </div>
     </div>
 
-    <div class="card grid">
-      <div>
+    <div class="card">
+      <div class="grid">
+        <!-- left: countdown + details -->
         <div>
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <div class="small">Countdown to kickoff</div>
-              <div class="countdown" id="countdown">--:--:--</div>
+          <div class="section-title">Countdown to kickoff</div>
+          <div class="countdown" id="countdown">--:--:--</div>
+
+          <div style="margin-top:12px" class="meta">
+            <div id="toss-line"><strong>Toss :</strong> <span id="toss-text">Pending</span></div>
+            <div style="margin-top:6px"><strong>Match :</strong> <span id="match-state-text">Not yet started</span></div>
+          </div>
+
+          <div class="section-title" style="margin-top:18px">Match Details</div>
+
+          <div class="two-cols">
+            <div class="venue-card">
+              <div class="submuted">Venue</div>
+              <div style="margin-top:8px;font-weight:800" id="venue-name">—</div>
+              <div class="muted" id="venue-level">Level unknown</div>
             </div>
-            <div style="text-align:right">
-              <div class="small">Toss</div>
-              <div style="font-weight:800;margin-top:6px">Pending</div>
-              <div class="small muted" style="margin-top:10px">Match : Not yet started</div>
+
+            <div class="venue-card">
+              <div class="submuted">Pitch</div>
+              <div style="margin-top:8px;font-weight:800" id="pitch-type">Unknown</div>
+              <div class="muted" id="pitch-note">Pitch details not available</div>
             </div>
           </div>
 
-          <div class="notes" id="notesArea">Loading match preview…</div>
-        </div>
-
-        <div style="margin-top:16px">
-          <h4 style="margin:0 0 8px 0">Match Details</h4>
-          <div class="meta-row">
-            <div class="venue-block" style="flex:1">
-              <div class="small">Venue</div>
-              <div id="venueName" style="font-weight:800;margin-top:6px">—</div>
-              <div class="small muted" id="venueInfo">—</div>
-            </div>
-
-            <div class="venue-block" style="width:220px">
-              <div class="small">Pitch</div>
-              <div id="pitchType" style="font-weight:800;margin-top:6px">—</div>
-              <div class="small muted" id="pitchNote">—</div>
-            </div>
+          <div style="margin-top:18px">
+            <button id="goto-match" class="big-btn" disabled>Match not started</button>
+            <div class="hint">When match status becomes running this button will open the live match page.</div>
           </div>
         </div>
 
-        <div style="margin-top:18px">
-          <button id="goBtn" class="btn" disabled>Match not started</button>
-          <div class="small muted" style="margin-top:8px">When match status becomes running this button will open the live match page.</div>
-        </div>
-      </div>
+        <!-- right: teams, kickoff, stadium -->
+        <div>
+          <div class="card" style="padding:12px;margin:0">
+            <div class="submuted">Home</div>
+            <div id="home-name" style="font-weight:800;margin-top:8px">—</div>
 
-      <div>
-        <div class="card" style="padding:12px">
-          <div class="small muted">Home</div>
-          <div style="font-weight:800;font-size:1.15rem" id="homeName">—</div>
-          <div class="small muted" style="margin-top:8px">Away</div>
-          <div style="font-weight:800;font-size:1.05rem;margin-top:6px" id="awayName">—</div>
+            <div style="height:12px"></div>
 
-          <div style="margin-top:12px;border-top:1px solid var(--stroke);padding-top:12px">
-            <div class="small muted">Kickoff</div>
-            <div style="font-weight:800;margin-top:6px" id="kickoffPretty">—</div>
+            <div class="submuted">Away</div>
+            <div id="away-name" style="font-weight:800;margin-top:8px">—</div>
 
-            <div style="margin-top:12px">
-              <div class="small muted">Stadium capacity</div>
-              <div id="stadiumCap" style="font-weight:800;margin-top:6px">—</div>
-            </div>
+            <div style="height:18px"></div>
+
+            <div class="submuted">Kickoff</div>
+            <div id="kickoff-when" style="font-weight:800;margin-top:8px">--</div>
+
+            <div style="height:16px"></div>
+
+            <div class="submuted">Stadium capacity</div>
+            <div id="stadium-cap" style="font-weight:800;margin-top:8px">unknown</div>
           </div>
-        </div>
 
-        <div class="card" style="margin-top:12px">
-          <div class="small muted">Quick actions</div>
-          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-            <button id="refreshBtn" class="btn" style="background:#223447">Refresh</button>
-            <button id="viewTeamBtn" class="btn" style="background:#0b2a20">Home profile</button>
+          <div id="quick-actions" class="card" style="margin-top:12px;padding:12px">
+            <div class="submuted">Quick actions</div>
+            <div style="margin-top:8px">
+              <!-- placeholder for future quick actions -->
+              <button class="pill" id="team-home-link" style="margin-right:8px">Home profile</button>
+              <button class="pill" id="team-away-link">Away profile</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <div id="bottom-note" class="muted" style="margin-top:6px">This preview shows kickoff/time/venue and is intended for scheduled league fixtures.</div>
   </div>
 
   <div id="bottom-nav"></div>
 
   <script type="module">
     import { loadSmoothUI } from './js/smooth-ui.js';
-    loadSmoothUI('top-bar','bottom-nav');
+    loadSmoothUI('top-bar', 'bottom-nav');
+  </script>
 
+  <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
     const qs = new URLSearchParams(location.search);
-    const id = qs.get('id');
+    const fixtureId = qs.get('id');
 
-    const el = (id)=>document.getElementById(id);
-    const homeNameEl = el('homeName'), awayNameEl = el('awayName');
-    const titleEl = el('matchTitle'), kickoffText = el('kickoffText'), kickoffPretty = el('kickoffPretty');
-    const countdownEl = el('countdown'), notesEl = el('notesArea');
-    const venueNameEl = el('venueName'), venueInfoEl = el('venueInfo'), stadiumCapEl = el('stadiumCap');
-    const pitchTypeEl = el('pitchType'), pitchNoteEl = el('pitchNote');
-    const goBtn = el('goBtn'), refreshBtn = el('refreshBtn'), viewTeamBtn = el('viewTeamBtn'), kindBadge = el('kindBadge'), statusBadge = el('statusBadge');
+    const el = id => document.getElementById(id);
 
-    // small helpers
-    function fmtDateTime(ts){
-      if(!ts) return '--';
+    // level -> capacity fallback map (same as other pages)
+    const LEVEL_CAPACITY = {
+      "World Class": 30000,
+      "World_Class": 30000,
+      "World": 30000,
+      "National": 20000,
+      "Domestic": 15000,
+      "Professional": 10000,
+      "Local": 5000
+    };
+
+    function formatDateTime(ts){
+      if(!ts) return "--";
       const d = new Date(ts);
-      const dd = String(d.getDate()).padStart(2,'0');
-      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,"0");
+      const mm = String(d.getMonth()+1).padStart(2,"0");
       const yyyy = d.getFullYear();
       const h24 = d.getHours();
-      const hh = String(h24 % 12 || 12).padStart(2,'0');
-      const min = String(d.getMinutes()).padStart(2,'0');
-      const ampm = h24 >= 12 ? 'PM' : 'AM';
-      return `${dd}-${mm}-${yyyy}, ${hh}:${min} ${ampm}`;
+      const hh = String(h24 % 12 || 12).padStart(2,"0");
+      const mi = String(d.getMinutes()).padStart(2,"0");
+      const ampm = h24 >= 12 ? "PM" : "AM";
+      return `${dd}-${mm}-${yyyy}, ${hh}:${mi} ${ampm}`;
     }
-    function humanNumber(n){ if (!n && n!==0) return '—'; return n.toLocaleString(); }
-    function toEpoch(ts){ if(!ts) return null; const t = new Date(ts).getTime(); return Number.isFinite(t)?t:null; }
 
     let fixture = null;
+    let teams = {};
     let stadium = null;
     let countdownTimer = null;
 
-    async function fetchFixture(){
-      if(!id){ notesEl.textContent = 'Missing fixture id in URL.'; return; }
-      const { data:fx, error } = await supabase.from('fixtures').select('*').eq('id', id).maybeSingle();
-      if (error){ notesEl.textContent = 'Failed to load fixture.'; console.error(error); return; }
-      if (!fx){ notesEl.textContent = 'Fixture not found.'; return; }
-      fixture = fx;
-      renderFixture();
-      // subscribe to changes so preview updates automatically
-      try {
-        supabase.channel(`fixture-preview-${id}`)
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'fixtures', filter: `id=eq.${id}` }, payload => {
-            // reload fixture on update
-            fetchFixture();
-          })
-          .subscribe();
-      } catch(e){ /* ignore subscribe errors */ }
+    function computeCapacity(stadObj, fxRow){
+      let capacity = null;
+      if (stadObj && stadObj.capacity) capacity = Number(stadObj.capacity);
+      else if (fxRow && fxRow.stadium_capacity) capacity = Number(fxRow.stadium_capacity);
+      else {
+        const levelKey = (stadObj && stadObj.stadium_level) || fxRow && fxRow.stadium_level;
+        if (levelKey) {
+          capacity = LEVEL_CAPACITY[String(levelKey).trim()] || LEVEL_CAPACITY[String(levelKey).trim().replace(/\s+/g,'_')];
+        }
+      }
+      return capacity || null;
     }
 
-    async function fetchStadium(stadId){
-      if (!stadId) return null;
-      const { data, error } = await supabase.from('stadiums')
-        .select('id,stadium_name,stadium_level,capacity,pitch_type')
-        .eq('id', stadId).maybeSingle();
-      if (error){ console.warn('stadium fetch failed', error); return null; }
-      return data || null;
-    }
-
-    function scheduleCountdown(targetEpoch){
-      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
-      if (!targetEpoch){ countdownEl.textContent = '--:--:--'; return; }
+    function startCountdown(kickoffAt){
+      if (!kickoffAt) { el('countdown').textContent = '--:--:--'; return; }
+      if (countdownTimer) clearInterval(countdownTimer);
       function tick(){
         const now = Date.now();
-        let diff = Math.max(0, targetEpoch - now);
-        if (diff <= 0){
-          countdownEl.textContent = '00:00:00';
-          goBtn.disabled = false;
-          statusBadge.textContent = 'Status — running';
-          statusBadge.style.color = '';
+        const t = new Date(kickoffAt).getTime() - now;
+        if (t <= 0) {
+          el('countdown').textContent = "00:00:00";
+          // Try to refresh fixture to detect status change
+          fetchAndRender(true);
           clearInterval(countdownTimer);
-          // attempt to flip button to live-match after short delay (server may have switched status)
-          setTimeout(()=> tryOpenLive(false), 1500);
+          countdownTimer = null;
           return;
         }
-        const hrs = Math.floor(diff / 3600000); diff %= 3600000;
-        const mins = Math.floor(diff / 60000); diff %= 60000;
-        const secs = Math.floor(diff / 1000);
-        countdownEl.textContent = `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+        const s = Math.floor(t/1000);
+        const hh = String(Math.floor(s/3600)).padStart(2,'0');
+        const mm = String(Math.floor((s%3600)/60)).padStart(2,'0');
+        const ss = String(s%60).padStart(2,'0');
+        el('countdown').textContent = `${hh}:${mm}:${ss}`;
       }
       tick();
       countdownTimer = setInterval(tick, 1000);
     }
 
-    async function renderFixture(){
-      if (!fixture) return;
-      // names
-      homeNameEl.textContent = fixture.home_team_name || fixture.home_team_id || 'Home';
-      awayNameEl.textContent = fixture.away_team_name || fixture.away_team_id || 'Away';
-      titleEl.textContent = `${homeNameEl.textContent} vs ${awayNameEl.textContent}`;
-
-      // kickoff
-      const kickoff = fixture.kickoff_at || (fixture.date && fixture.start_time ? `${fixture.date}T${fixture.start_time}` : null);
-      kickoffText.textContent = kickoff ? `Kickoff — ${fmtDateTime(kickoff)}` : 'Kickoff — --';
-      kickoffPretty.textContent = kickoff ? fmtDateTime(kickoff) : '--';
-
-      // status/kind labels
-      const isLeague = !!fixture.league_id || fixture.kind === 'league';
-      kindBadge.textContent = isLeague ? 'League' : 'Friendly';
-      statusBadge.textContent = `Status — ${fixture.status || 'scheduled'}`;
-
-      // venue/stadium
-      let stadiumObj = null;
-      if (fixture.stadium_id) stadiumObj = await fetchStadium(fixture.stadium_id);
-      // fallback to fixture embedded stadium fields
-      if (!stadiumObj) {
-        stadiumObj = {
-          stadium_name: fixture.stadium_name || fixture.stadium || (homeNameEl.textContent + ' Ground'),
-          stadium_level: fixture.stadium_level || fixture.level || null,
-          capacity: fixture.stadium_capacity || fixture.capacity || null,
-          pitch_type: fixture.pitch_type || fixture.pitch || null
-        };
-      }
-      stadium = stadiumObj;
-
-      venueNameEl.textContent = stadiumObj.stadium_name || '—';
-      const cap = stadiumObj.capacity ? Number(stadiumObj.capacity) : null;
-      stadiumCapEl.textContent = cap ? humanNumber(cap) : 'unknown';
-      venueInfoEl.textContent = stadiumObj.stadium_level ? `${stadiumObj.stadium_level} stadium` : 'Level unknown';
-
-      // pitch
-      pitchTypeEl.textContent = stadiumObj.pitch_type || 'Unknown';
-      pitchNoteEl.textContent = stadiumObj.pitch_type ? `Type: ${stadiumObj.pitch_type}` : 'Pitch details not available';
-
-      // notes
-      notesEl.textContent = fixture.note || fixture.description || 'Toss : Pending • Match : Not yet started';
-
-      // countdown
-      const target = toEpoch(kickoff);
-      scheduleCountdown(target);
-
-      // button behaviour
-      updateGoButton();
-
-      // enable view team button
-      viewTeamBtn.onclick = () => {
-        if (fixture.home_team_id) window.location.href = `public-profile.html?team=${encodeURIComponent(fixture.home_team_id)}`;
+    function enableGoLiveButton(){
+      const btn = el('goto-match');
+      btn.disabled = false;
+      btn.textContent = 'Open live match';
+      btn.onclick = ()=> {
+        if (!fixture) return;
+        location.href = `league-match.html?id=${encodeURIComponent(fixture.id)}`;
       };
     }
-
-    // decide destination for "go" button using current fixture data
-    function matchIsRunning(){
-      const st = String((fixture && fixture.status) || '').toLowerCase();
-      return (st === 'running' || st === 'inprogress' || st === 'live' || !!fixture.started_at) ;
-    }
-    function matchIsCompleted(){
-      const st = String((fixture && fixture.status) || '').toLowerCase();
-      return (st === 'completed' || st === 'finished' || !!fixture.winner_team_id);
+    function disableGoLiveButton(){
+      const btn = el('goto-match');
+      btn.disabled = true;
+      btn.textContent = 'Match not started';
+      btn.onclick = null;
     }
 
-    function updateGoButton(){
-      if (!fixture) { goBtn.disabled = true; goBtn.textContent = 'Match not started'; return; }
-      const isLeague = !!fixture.league_id || fixture.kind === 'league';
-      if (matchIsRunning()){
-        goBtn.disabled = false;
-        goBtn.textContent = 'Open live match';
-      } else if (matchIsCompleted()){
-        goBtn.disabled = false;
-        goBtn.textContent = 'Open match replay';
-      } else {
-        goBtn.disabled = true;
-        goBtn.textContent = 'Match not started';
+    // safe parsing of JSON-like result/sim/toss
+    function tryParse(v){ if (!v) return null; try { return typeof v === 'string' ? JSON.parse(v) : v; } catch { return null; } }
+
+    async function fetchAndRender(forceRefresh=false){
+      if (!fixtureId) { alert('Missing fixture id'); return; }
+      // fetch fixture row (fresh if forceRefresh)
+      const { data: fx } = await supabase.from('fixtures').select('*').eq('id', fixtureId).maybeSingle();
+      if (!fx) { alert('Fixture not found'); return; }
+      fixture = fx;
+
+      // teams
+      const teamIds = [fx.home_team_id, fx.away_team_id].filter(Boolean);
+      if (teamIds.length) {
+        const { data: trows } = await supabase.from('teams').select('id,team_name').in('id', teamIds);
+        (trows||[]).forEach(t=> teams[t.id] = t.team_name);
       }
-    }
 
-    async function tryOpenLive(skipReload=true){
-      // re-fetch fixture to get freshest status if we are called after countdown
-      try {
-        const { data:fx } = await supabase.from('fixtures').select('id,status,started_at,finished_at,winner_team_id,league_id').eq('id', id).maybeSingle();
-        if (fx) fixture = { ...fixture, ...fx };
-      } catch(e){}
-      updateGoButton();
-      // route to appropriate page when running/completed
-      const isLeague = !!fixture.league_id || fixture.kind === 'league';
-      if (matchIsRunning()){
-        const dest = isLeague ? `league-match.html?id=${encodeURIComponent(id)}` : `friendly-match.html?id=${encodeURIComponent(id)}`;
-        window.location.href = dest;
-      } else if (matchIsCompleted()){
-        const dest = isLeague ? `league-replay.html?id=${encodeURIComponent(id)}` : `friendly-replay.html?id=${encodeURIComponent(id)}`;
-        window.location.href = dest;
-      } else {
-        // still scheduled — do nothing
+      // stadium if provided on fixture
+      let stadiumId = fx.stadium_id || fx.stadium || null;
+      let stad = null;
+      if (stadiumId) {
+        try{
+          const { data: s } = await supabase.from('stadiums').select('id,stadium_name,stadium_level,capacity,pitch_type').eq('id', stadiumId).maybeSingle();
+          if (s) stad = s;
+        }catch(e){}
       }
+
+      // if fixture includes inline stadium info, use it
+      if (!stad) {
+        if (fx.stadium_name || fx.stadium_level || fx.stadium_capacity) {
+          stad = {
+            id: stadiumId || null,
+            stadium_name: fx.stadium_name || fx.stadium || "Unknown venue",
+            stadium_level: fx.stadium_level || fx.level || null,
+            capacity: fx.stadium_capacity || fx.capacity || null,
+            pitch_type: fx.pitch_type || null
+          };
+        }
+      }
+
+      stadium = stad || null;
+
+      // render UI elements
+      el('match-title').textContent = `${teams[fx.home_team_id] || fx.home_team_id || 'Home'} vs ${teams[fx.away_team_id] || fx.away_team_id || 'Away'}`;
+      const whenRaw = fx.kickoff_at || (fx.date && fx.start_time ? `${fx.date}T${fx.start_time}` : null);
+      el('kickoff-line').textContent = whenRaw ? `Kickoff — ${formatDateTime(whenRaw)}` : 'Kickoff — --';
+      el('kickoff-when').textContent = whenRaw ? formatDateTime(whenRaw) : '--';
+      el('home-name').textContent = teams[fx.home_team_id] || fx.home_team_name || fx.home_team_id || 'Home';
+      el('away-name').textContent = teams[fx.away_team_id] || fx.away_team_name || fx.away_team_id || 'Away';
+
+      // status handling
+      const status = String((fx.status||'')).toLowerCase();
+      el('status-text').textContent = fx.status || 'scheduled';
+      const running = status === 'running' || status === 'inprogress' || status === 'live' || fx.started_at;
+      if (running) {
+        el('match-state-text').textContent = 'Running';
+        enableGoLiveButton();
+      } else {
+        el('match-state-text').textContent = 'Not yet started';
+        disableGoLiveButton();
+      }
+
+      // toss info - try a few places
+      let tossText = 'Pending';
+      const resultObj = tryParse(fx.result) || fx.result;
+      const simObj = tryParse(fx.sim_state) || fx.sim_state;
+      if (fx.toss_winner_team_id || fx.toss_decision) {
+        const winner = teams[fx.toss_winner_team_id] || fx.toss_winner_team_id;
+        const decision = fx.toss_decision || fx.toss_decision;
+        if (winner) tossText = `${winner} won the toss and chose to ${decision || 'bat'}`;
+      } else if (fx.toss) {
+        if (typeof fx.toss === 'string') tossText = fx.toss;
+        else if (fx.toss.winner_team_id) tossText = `${teams[fx.toss.winner_team_id] || fx.toss.winner_team_id} won the toss and chose to ${fx.toss.decision||fx.toss.elected||'bat'}`;
+      } else if (resultObj && resultObj.toss) {
+        const t = resultObj.toss;
+        if (t.text) tossText = t.text;
+        else if (t.winner || t.winner_team_id) tossText = `${teams[t.winner||t.winner_team_id]||t.winner||t.winner_team_id} won the toss and chose to ${t.decision||t.elected||'bat'}`;
+      } else if (simObj && simObj.toss) {
+        const t = simObj.toss;
+        if (t.text) tossText = t.text;
+        else if (t.winner || t.winner_team_id) tossText = `${teams[t.winner||t.winner_team_id]||t.winner||t.winner_team_id} won the toss and chose to ${t.decision||t.elected||'bat'}`;
+      }
+      el('toss-text').textContent = tossText;
+
+      // venue/pitch rendering
+      const vname = stadium?.stadium_name || `${el('home-name').textContent} Ground`;
+      el('venue-name').textContent = vname;
+      el('venue-level').textContent = stadium?.stadium_level ? `Level ${stadium.stadium_level}` : 'Level unknown';
+      el('pitch-type').textContent = stadium?.pitch_type || fx.pitch_type || 'Unknown';
+      el('pitch-note').textContent = stadium?.pitch_type ? '' : 'Pitch details not available';
+
+      const cap = computeCapacity(stadium, fx);
+      el('stadium-cap').textContent = cap ? cap.toLocaleString() : 'unknown';
+
+      // kickoff countdown
+      const koDate = whenRaw ? new Date(whenRaw).toISOString() : null;
+      startCountdown(koDate);
     }
 
-    refreshBtn.addEventListener('click', ()=> fetchFixture());
-    goBtn.addEventListener('click', ()=> tryOpenLive(false));
+    // poll fixture every 10s to detect status changes
+    fetchAndRender();
+    setInterval(()=> fetchAndRender(true), 10000);
 
-    // initial load
-    fetchFixture();
+    // team profile quick links
+    el('team-home-link').addEventListener('click', ()=> {
+      const id = fixture?.home_team_id;
+      if (!id) return alert('Home team unknown');
+      location.href = `public-profile.html?team=${encodeURIComponent(id)}`;
+    });
+    el('team-away-link').addEventListener('click', ()=> {
+      const id = fixture?.away_team_id;
+      if (!id) return alert('Away team unknown');
+      location.href = `public-profile.html?team=${encodeURIComponent(id)}`;
+    });
   </script>
 </body>
 </html>
