@@ -467,8 +467,10 @@
 
     /* battingFirst/battingSecond mapping (important for correct labels) */
     // NOTE: changed from "let ..." to assignment to avoid redeclaration SyntaxError
-    battingFirst = battingFirst ?? null;
-    battingSecond = battingSecond ?? null;
+    // ensure variables exist (use var so they become globals and won't throw ReferenceError)
+     var battingFirst = null;
+     var battingSecond = null;
+
 
     /* playback helpers */
     function setButtons(){
