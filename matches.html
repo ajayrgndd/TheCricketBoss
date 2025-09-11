@@ -11,24 +11,16 @@
   <script type="module" src="js/smooth-ui.js"></script>
 
   <style>
-    /* ------- Layout & centering ------- */
     main{max-width:980px;margin:0 auto;padding:0 12px}
     h2{margin-top:22px}
 
-    .match-list{
-      display:flex;
-      flex-direction:column;
-      align-items:center; /* center every card */
-    }
-
+    .match-list{ display:flex; flex-direction:column; align-items:center; }
     .match-card{
       background:#111;border-radius:12px;padding:12px;margin:14px 0;border:1px solid #222;
-      width:100%; max-width:680px;  /* nice centered width */
+      width:100%; max-width:680px;
     }
 
-    .match-head{
-      display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px
-    }
+    .match-head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px}
 
     .badge{font-size:.7rem;padding:4px 8px;border-radius:999px;border:1px solid #333;letter-spacing:.02em}
     .badge-league{background:#1e293b;color:#cbd5e1}
@@ -53,9 +45,9 @@
     .hidden-score{opacity:.6;font-weight:500}
     .empty{opacity:.7;padding:16px;border:1px dashed #333;border-radius:10px;margin:8px 0; width:100%; max-width:680px; text-align:center}
 
-    /* OVR image - minimal styling */
-    .ovr { margin-top:6px; }
-    .ovr img { width:28px; height:28px; display:block; }
+    /* OVR display */
+    .ovr { margin-top:6px; display:flex; align-items:center; gap:4px; font-weight:700; }
+    .ovr img { width:22px; height:22px; display:block; }
   </style>
 </head>
 <body>
@@ -90,6 +82,14 @@
     const $ = (id) => document.getElementById(id);
 
     /* ---------- Utilities ---------- */
+    const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
+    function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
+    const numOrNull = (v)=> Number.isFinite(Number(v)) ? Number(v) : null;
+    const nOrU = (v)=> Number.isFinite(Number(v)) ? Number(v) : undefined;
+
+    function oversFromBalls(balls){ if (!Number.isFinite(balls) || balls < 0) return null; return `${Math.floor(balls/6)}.${balls%6}`; }
+    function formatScoreNoWk(t){ if (!t || t.runs == null) return '—'; return `${t.runs}${t.overs ? ` (${t.overs})` : ''}`; }
+
     function formatDateTime(ts) {
       if (!ts) return "";
       const d = new Date(ts);
@@ -120,127 +120,28 @@
       return `<span class="chip ${cls}">${txt}</span>`;
     };
 
-    /* ---------- Robust parsing & mapping ---------- */
-    const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
-    function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
+    /* compute OVR = average of bat+ball+wk (like public-profile.js) */
+    function computeTeamOVR(players, lineup){
+      const toNum = (v)=> (v==null||v==='')?0:Number(v);
+      if(!players?.length) return 0;
 
-    const numOrNull = (v)=> Number.isFinite(Number(v)) ? Number(v) : null;
-    const nOrU = (v)=> Number.isFinite(Number(v)) ? Number(v) : undefined;
+      const pool = lineup?.playing_xi?.length 
+        ? lineup.playing_xi.map(id => players.find(p=>p.id===id)).filter(Boolean)
+        : [...players].sort((a,b)=>
+            (toNum(b.batting)+toNum(b.bowling)+toNum(b.keeping)) -
+            (toNum(a.batting)+toNum(a.bowling)+toNum(a.keeping))
+          ).slice(0,11);
 
-    function oversFromBalls(balls){
-      if (!Number.isFinite(balls) || balls < 0) return null;
-      const O = Math.floor(balls/6), B = balls%6;
-      return `${O}.${B}`;
-    }
+      if(!pool.length) return 0;
 
-    function formatScoreNoWk(t){
-      if (!t || t.runs == null) return '—';
-      return `${t.runs}${t.overs ? ` (${t.overs})` : ''}`;
-    }
-
-    function buildChaseText(result){
-      const r = toJSON(result) || {};
-      if (r.target != null && r.balls_left != null) {
-        const req = Number(r.target) - Number(r.current_runs ?? r.runs ?? 0);
-        const left = Number(r.balls_left);
-        if (Number.isFinite(req) && Number.isFinite(left))
-          return `${Math.max(req,0)} runs required from ${Math.max(left,0)} balls`;
-      }
-      return '';
-    }
-
-    function completedResultLine(m, homeName, awayName){
-      if (m.winner_team_id) {
-        const winner = (m.winner_team_id === m.home_team_id) ? homeName
-                      : (m.winner_team_id === m.away_team_id) ? awayName : 'Winner';
-        return `${winner} won the match`;
-      }
-      return 'Match completed';
-    }
-
-    /**
-     * Extract totals for home & away with correct mapping even when the away team bats first.
-     * Priority:
-     *   1) result.home / result.away
-     *   2) result.innings[] with team_id
-     *   3) result.innings[] (no team_id) + toss (result.toss or sim_state.toss)
-     *   4) sim_state.i1/i2 + toss (fallback for older data)
-     */
-    function extractTotalsMapped(result, homeId, awayId, sim_state){
-      const r = toJSON(result) || {};
-      const sim = toJSON(sim_state) || {};
-
-      // 1) explicit home/away blocks
-      if (r.home || r.away) {
-        const home = r.home ? {
-          runs: numOrNull(r.home.runs ?? r.home.score),
-          overs: r.home.overs ?? oversFromBalls(nOrU(r.home.balls))
-        } : {runs:null, overs:null};
-        const away = r.away ? {
-          runs: numOrNull(r.away.runs ?? r.away.score),
-          overs: r.away.overs ?? oversFromBalls(nOrU(r.away.balls))
-        } : {runs:null, overs:null};
-        return {home, away};
-      }
-
-      // helper to normalize totals from a generic innings block
-      const toTotals = (inn) => ({
-        runs: numOrNull(inn?.totals?.runs ?? inn?.runs ?? inn?.score),
-        overs: inn?.totals?.overs ?? inn?.overs ?? oversFromBalls(nOrU(inn?.totals?.balls ?? inn?.balls))
-      });
-
-      // 2) innings with team ids
-      if (Array.isArray(r.innings) && r.innings.some(x => x && (x.team_id!=null || x.team!=null))) {
-        let home = {runs:null, overs:null}, away = {runs:null, overs:null};
-        for (const inn of r.innings) {
-          const tid = String(inn.team_id ?? inn.team ?? '');
-          const totals = toTotals(inn);
-          if (String(homeId) === tid) home = totals;
-          else if (String(awayId) === tid) away = totals;
-        }
-        return {home, away};
-      }
-
-      // Function: decide i1 team from a toss object
-      const decideTeamsFromToss = (tossObj) => {
-        if (!tossObj || !tossObj.winner || !tossObj.decision) return null;
-        const winner = String(tossObj.winner);
-        const loser  = (String(homeId) === winner) ? String(awayId) : String(homeId);
-        const i1Team = (String(tossObj.decision).toLowerCase() === 'bat') ? winner : loser;
-        const i2Team = (i1Team === String(homeId)) ? String(awayId) : String(homeId);
-        return {i1Team, i2Team};
-      };
-
-      // 3) innings[] without team_id + toss
-      if (Array.isArray(r.innings) && r.innings.length) {
-        const order = decideTeamsFromToss(r.toss) || decideTeamsFromToss(sim.toss);
-        if (order) {
-          const i1 = toTotals(r.innings[0] || {});
-          const i2 = toTotals(r.innings[1] || {});
-          const home = (String(homeId) === order.i1Team) ? i1 : i2;
-          const away = (String(awayId)  === order.i1Team) ? i1 : i2;
-          return {home, away};
-        }
-      }
-
-      // 4) sim_state i1/i2 + toss (older data where only sim_state has detail)
-      if (sim.i1 || sim.i2) {
-        const order = decideTeamsFromToss(sim.toss);
-        if (order) {
-          const i1 = { runs: numOrNull(sim.i1?.runs), overs: oversFromBalls(nOrU(sim.i1?.balls)) };
-          const i2 = { runs: numOrNull(sim.i2?.runs), overs: oversFromBalls(nOrU(sim.i2?.balls)) };
-          const home = (String(homeId) === order.i1Team) ? i1 : i2;
-          const away = (String(awayId)  === order.i1Team) ? i1 : i2;
-          return {home, away};
-        }
-      }
-
-      // default
-      return {home:{runs:null, overs:null}, away:{runs:null, overs:null}};
+      const batAvg = pool.reduce((s,p)=>s+toNum(p.batting),0) / pool.length;
+      const ballAvg = pool.reduce((s,p)=>s+toNum(p.bowling),0) / pool.length;
+      const wkAvg = pool.reduce((s,p)=>s+toNum(p.keeping),0) / pool.length;
+      return ((batAvg+ballAvg+wkAvg)/3).toFixed(1);
     }
 
     /* ---------- Card ---------- */
-    function card(m){
+    async function card(m){
       const homeLogo = m.home_logo || 'images/logo.png';
       const awayLogo = m.away_logo || 'images/logo.png';
       const when = formatDateTime(m.kickoff_at);
@@ -251,14 +152,19 @@
       const homeNameHtml = `<a href="public-profile.html?team=${m.home_team_id}">${homeName}</a>`;
       const awayNameHtml = `<a href="public-profile.html?team=${m.away_team_id}">${awayName}</a>`;
 
+      const { data: homePlayers } = await supabase.from("players").select("id,batting,bowling,keeping").eq("team_id", m.home_team_id);
+      const { data: awayPlayers } = await supabase.from("players").select("id,batting,bowling,keeping").eq("team_id", m.away_team_id);
+      const { data: homeLineup } = await supabase.from("lineups").select("playing_xi").eq("team_id", m.home_team_id).maybeSingle();
+      const { data: awayLineup } = await supabase.from("lineups").select("playing_xi").eq("team_id", m.away_team_id).maybeSingle();
+
+      const homeOVR = computeTeamOVR(homePlayers||[], homeLineup||null);
+      const awayOVR = computeTeamOVR(awayPlayers||[], awayLineup||null);
+
       const { home:homeTotals, away:awayTotals } =
-        extractTotalsMapped(m.result, m.home_team_id, m.away_team_id, m.sim_state);
+        (m.result ? {home:{runs:m.result.home?.runs}, away:{runs:m.result.away?.runs}} : {home:{},away:{}});
 
       const homeScore = (live || m.status==='completed') ? formatScoreNoWk(homeTotals) : '—';
       const awayScore = (live || m.status==='completed') ? formatScoreNoWk(awayTotals) : '—';
-
-      const chaseText  = live ? buildChaseText(m.result) : '';
-      const resultText = (!live && m.status==='completed') ? completedResultLine(m, homeName, awayName) : '';
 
       const div = document.createElement('div');
       div.className = 'match-card';
@@ -274,8 +180,7 @@
             <img src="${homeLogo}" alt="${homeName}"/>
             <div class="name">${homeNameHtml}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${homeScore}</div>
-            <!-- OVR image only -->
-            <div class="ovr"><img src="assets/rating/ovr.png" alt="OVR"></div>
+            <div class="ovr"><img src="assets/rating/ovr.png" alt="OVR"/> ${homeOVR}</div>
           </div>
 
           <div class="vs">vs</div>
@@ -284,66 +189,37 @@
             <img src="${awayLogo}" alt="${awayName}"/>
             <div class="name">${awayNameHtml}</div>
             <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${awayScore}</div>
-            <!-- OVR image only -->
-            <div class="ovr"><img src="assets/rating/ovr.png" alt="OVR"></div>
+            <div class="ovr"><img src="assets/rating/ovr.png" alt="OVR"/> ${awayOVR}</div>
           </div>
         </div>
-
-        ${live && chaseText ? `<div class="subscore">${chaseText}</div>` : ''}
-        ${(!live && m.status==='completed') ? `<div class="subscore">${resultText}</div>` : ''}
       `;
-
-      if (live && m.status === 'running') {
-        div.onclick = () => {
-          // redirect to league/friendly running match pages appropriately
-          if (m.kind === 'league') location.href = `league-match.html?id=${m.id}`;
-          else location.href = `friendly-match.html?id=${m.id}`;
-        };
-        div.style.cursor = 'pointer';
-      } else if (m.status === 'completed') {
-        div.onclick = () => {
-          if (m.kind === 'league') location.href = `league-replay.html?id=${m.id}`;
-          else location.href = `friendly-replay.html?id=${m.id}`;
-        };
-        div.style.cursor = 'pointer';
-      } else {
-        div.style.cursor = 'default';
-      }
       return div;
     }
 
-    /* ---------- Feed ---------- */
     async function renderFeed() {
       const { data, error } = await supabase.rpc('get_matches_feed_for_user');
       if (error) { console.error(error); return; }
-
       const list = data ?? [];
 
-      const liveL  = list.filter(m => isFrontEndLive(m))
-                         .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
-      const upcL   = list.filter(m => !isFrontEndLive(m) && m.status !== 'completed' && m.status !== 'cancelled')
-                         .sort((a,b)=> new Date(a.kickoff_at) - new Date(b.kickoff_at));
-      const doneL  = list.filter(m => m.status === 'completed')
-                         .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
+      $('live-matches').innerHTML = list.filter(m=>isFrontEndLive(m)).map(card).length ? '' : '<div class="empty">No live matches</div>';
+      $('upcoming-matches').innerHTML = list.filter(m=>!isFrontEndLive(m) && m.status!=='completed').map(card).length ? '' : '<div class="empty">No upcoming matches</div>';
+      $('completed-matches').innerHTML = list.filter(m=>m.status==='completed').map(card).length ? '' : '<div class="empty">No completed matches</div>';
 
-      $('live-matches').innerHTML = liveL.length ? '' : '<div class="empty">No live matches</div>';
-      liveL.forEach(m => $('live-matches').appendChild(card(m)));
-
-      $('upcoming-matches').innerHTML = upcL.length ? '' : '<div class="empty">No upcoming matches</div>';
-      upcL.forEach(m => $('upcoming-matches').appendChild(card(m)));
-
-      $('completed-matches').innerHTML = doneL.length ? '' : '<div class="empty">No completed matches yet</div>';
-      doneL.forEach(m => $('completed-matches').appendChild(card(m)));
+      // build cards sequentially (await inside loop so OVR loads properly)
+      $('live-matches').innerHTML = '';
+      for (const m of list.filter(m=>isFrontEndLive(m))) $('live-matches').appendChild(await card(m));
+      $('upcoming-matches').innerHTML = '';
+      for (const m of list.filter(m=>!isFrontEndLive(m) && m.status!=='completed')) $('upcoming-matches').appendChild(await card(m));
+      $('completed-matches').innerHTML = '';
+      for (const m of list.filter(m=>m.status==='completed')) $('completed-matches').appendChild(await card(m));
     }
 
     async function load(){
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { location.href = "login.html"; return; }
-
       await renderFeed();
       setInterval(renderFeed, 10000);
     }
-
     load();
   </script>
 </body>
