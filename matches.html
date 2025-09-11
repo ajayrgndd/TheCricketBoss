@@ -11,16 +11,25 @@
   <script type="module" src="js/smooth-ui.js"></script>
 
   <style>
+    /* ------- Layout & centering ------- */
     main{max-width:980px;margin:0 auto;padding:0 12px}
     h2{margin-top:22px}
 
-    .match-list{ display:flex; flex-direction:column; align-items:center; }
+    .match-list{
+      display:flex;
+      flex-direction:column;
+      align-items:center; /* center every card */
+    }
+
     .match-card{
       background:#111;border-radius:12px;padding:12px;margin:14px 0;border:1px solid #222;
-      width:100%; max-width:680px;
-      cursor:pointer;
+      width:100%; max-width:680px;  /* nice centered width */
     }
-    .match-head{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px}
+
+    .match-head{
+      display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:8px
+    }
+
     .badge{font-size:.7rem;padding:4px 8px;border-radius:999px;border:1px solid #333;letter-spacing:.02em}
     .badge-league{background:#1e293b;color:#cbd5e1}
     .badge-friendly{background:#1b4332;color:#d1fae5}
@@ -31,9 +40,10 @@
     .chip-upcoming{background:#0f766e;color:#ecfeff}
 
     .start{font-size:.8rem;opacity:.8}
+
     .match-body{display:flex;align-items:center;justify-content:space-between;gap:10px}
     .team{display:flex;flex-direction:column;align-items:center;gap:6px;width:38%}
-    .team img.logo{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#0b0b0b;border:1px solid #1f2937}
+    .team img{width:56px;height:56px;border-radius:50%;object-fit:cover;background:#0b0b0b;border:1px solid #1f2937}
     .name{font-weight:600;text-align:center}
     .name a{color:#8affc3;text-decoration:none}
     .name a:hover{text-decoration:underline}
@@ -41,8 +51,11 @@
     .score{margin-top:6px;text-align:center;font-weight:800}
     .subscore{margin-top:10px;text-align:center;font-size:.95rem;opacity:.95}
     .hidden-score{opacity:.6;font-weight:500}
-    .ovr img{width:28px;height:28px;margin-top:4px}
     .empty{opacity:.7;padding:16px;border:1px dashed #333;border-radius:10px;margin:8px 0; width:100%; max-width:680px; text-align:center}
+
+    /* OVR image - minimal styling */
+    .ovr { margin-top:6px; }
+    .ovr img { width:28px; height:28px; display:block; }
   </style>
 </head>
 <body>
@@ -76,86 +89,180 @@
 
     const $ = (id) => document.getElementById(id);
 
+    /* ---------- Utilities ---------- */
     function formatDateTime(ts) {
       if (!ts) return "";
       const d = new Date(ts);
-      const dd = String(d.getDate()).padStart(2,"0");
-      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
       const yyyy = d.getFullYear();
       const h24 = d.getHours();
-      const hh = String(h24%12||12).padStart(2,"0");
-      const mi = String(d.getMinutes()).padStart(2,"0");
-      const ampm = h24>=12?"PM":"AM";
-      return `${dd}-${mm}-${yyyy}, ${hh}:${mi} ${ampm}`;
+      const hh = String(h24 % 12 || 12).padStart(2, "0");
+      const min = String(d.getMinutes()).padStart(2, "0");
+      const ampm = h24 >= 12 ? "PM" : "AM";
+      return `${dd}-${mm}-${yyyy}, ${hh}:${min} ${ampm}`;
     }
 
-    const badge = (kind)=>
+    const badge = (kind) =>
       `<span class="badge ${kind==='league'?'badge-league':'badge-friendly'}">${kind==='league'?'League':'Friendly'}</span>`;
 
-    function isFrontEndLive(m){
-      if(m.status==='completed'||m.status==='cancelled') return false;
-      const now=Date.now();
-      const ko=new Date(m.kickoff_at).getTime();
-      return now>=ko;
+    function isFrontEndLive(m) {
+      if (m.status === 'completed' || m.status === 'cancelled') return false;
+      const now = Date.now();
+      const ko = new Date(m.kickoff_at).getTime();
+      return now >= ko;
     }
 
-    const statusChip=(m)=>{
-      const live=isFrontEndLive(m);
-      const cls=live?'chip-live':(m.status==='completed'?'chip-done':'chip-upcoming');
-      const txt=live?'LIVE':(m.status==='completed'?'Completed':'Scheduled');
+    const statusChip = (m) => {
+      const live = isFrontEndLive(m);
+      const cls = live ? 'chip-live' : (m.status === 'completed' ? 'chip-done' : 'chip-upcoming');
+      const txt = live ? 'LIVE' : (m.status === 'completed' ? 'Completed' : 'Scheduled');
       return `<span class="chip ${cls}">${txt}</span>`;
     };
 
-    const toJSON=(v)=> typeof v==='string'?safeParse(v):v;
-    function safeParse(s){try{return JSON.parse(s);}catch{return null;}}
-    const numOrNull=(v)=>Number.isFinite(Number(v))?Number(v):null;
-    const nOrU=(v)=>Number.isFinite(Number(v))?Number(v):undefined;
-    function oversFromBalls(balls){ if(!Number.isFinite(balls)||balls<0) return null;
-      const O=Math.floor(balls/6),B=balls%6; return `${O}.${B}`; }
-    function formatScoreNoWk(t){ if(!t||t.runs==null) return '—'; return `${t.runs}${t.overs?` (${t.overs})`:''}`; }
+    /* ---------- Robust parsing & mapping ---------- */
+    const toJSON = (v)=> (typeof v === 'string' ? safeParse(v) : v);
+    function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
 
-    // Ratings calculation helpers
-    function selectXI(players){
-      if(!players?.length) return [];
-      return [...players].sort((a,b)=>
-        ((+b.batting||0)+(+b.bowling||0)+(+b.keeping||0)) -
-        ((+a.batting||0)+(+a.bowling||0)+(+a.keeping||0))
-      ).slice(0,11);
-    }
-    function computeOVR(players){
-      if(!players?.length) return null;
-      const sel=selectXI(players);
-      const batAvg=sel.reduce((s,p)=>s+(+p.batting||0),0)/sel.length;
-      const ballAvg=sel.reduce((s,p)=>s+(+p.bowling||0),0)/sel.length;
-      const wkAvg=sel.reduce((s,p)=>s+(+p.keeping||0),0)/sel.length;
-      return (batAvg+ballAvg+wkAvg)/3;
+    const numOrNull = (v)=> Number.isFinite(Number(v)) ? Number(v) : null;
+    const nOrU = (v)=> Number.isFinite(Number(v)) ? Number(v) : undefined;
+
+    function oversFromBalls(balls){
+      if (!Number.isFinite(balls) || balls < 0) return null;
+      const O = Math.floor(balls/6), B = balls%6;
+      return `${O}.${B}`;
     }
 
-    async function fetchTeamOVR(teamId){
-      const {data:players}=await supabase.from('players')
-        .select('id,batting,bowling,keeping').eq('team_id',teamId);
-      return computeOVR(players);
+    function formatScoreNoWk(t){
+      if (!t || t.runs == null) return '—';
+      return `${t.runs}${t.overs ? ` (${t.overs})` : ''}`;
     }
 
-    async function createCardAsync(m){
-      const homeLogo=m.home_logo||'images/logo.png';
-      const awayLogo=m.away_logo||'images/logo.png';
-      const when=formatDateTime(m.kickoff_at);
-      const live=isFrontEndLive(m);
+    function buildChaseText(result){
+      const r = toJSON(result) || {};
+      if (r.target != null && r.balls_left != null) {
+        const req = Number(r.target) - Number(r.current_runs ?? r.runs ?? 0);
+        const left = Number(r.balls_left);
+        if (Number.isFinite(req) && Number.isFinite(left))
+          return `${Math.max(req,0)} runs required from ${Math.max(left,0)} balls`;
+      }
+      return '';
+    }
 
-      const homeName=m.home_team_name||'Home';
-      const awayName=m.away_team_name||'Away';
-      const homeNameHtml=`<a href="public-profile.html?team=${m.home_team_id}">${homeName}</a>`;
-      const awayNameHtml=`<a href="public-profile.html?team=${m.away_team_id}">${awayName}</a>`;
+    function completedResultLine(m, homeName, awayName){
+      if (m.winner_team_id) {
+        const winner = (m.winner_team_id === m.home_team_id) ? homeName
+                      : (m.winner_team_id === m.away_team_id) ? awayName : 'Winner';
+        return `${winner} won the match`;
+      }
+      return 'Match completed';
+    }
 
-      const {home:homeTotals,away:awayTotals}={home:{runs:null},away:{runs:null}}; // simplified
+    /**
+     * Extract totals for home & away with correct mapping even when the away team bats first.
+     * Priority:
+     *   1) result.home / result.away
+     *   2) result.innings[] with team_id
+     *   3) result.innings[] (no team_id) + toss (result.toss or sim_state.toss)
+     *   4) sim_state.i1/i2 + toss (fallback for older data)
+     */
+    function extractTotalsMapped(result, homeId, awayId, sim_state){
+      const r = toJSON(result) || {};
+      const sim = toJSON(sim_state) || {};
 
-      const homeScore=(live||m.status==='completed')?formatScoreNoWk(homeTotals):'—';
-      const awayScore=(live||m.status==='completed')?formatScoreNoWk(awayTotals):'—';
+      // 1) explicit home/away blocks
+      if (r.home || r.away) {
+        const home = r.home ? {
+          runs: numOrNull(r.home.runs ?? r.home.score),
+          overs: r.home.overs ?? oversFromBalls(nOrU(r.home.balls))
+        } : {runs:null, overs:null};
+        const away = r.away ? {
+          runs: numOrNull(r.away.runs ?? r.away.score),
+          overs: r.away.overs ?? oversFromBalls(nOrU(r.away.balls))
+        } : {runs:null, overs:null};
+        return {home, away};
+      }
 
-      const div=document.createElement('div');
-      div.className='match-card';
-      div.innerHTML=`
+      // helper to normalize totals from a generic innings block
+      const toTotals = (inn) => ({
+        runs: numOrNull(inn?.totals?.runs ?? inn?.runs ?? inn?.score),
+        overs: inn?.totals?.overs ?? inn?.overs ?? oversFromBalls(nOrU(inn?.totals?.balls ?? inn?.balls))
+      });
+
+      // 2) innings with team ids
+      if (Array.isArray(r.innings) && r.innings.some(x => x && (x.team_id!=null || x.team!=null))) {
+        let home = {runs:null, overs:null}, away = {runs:null, overs:null};
+        for (const inn of r.innings) {
+          const tid = String(inn.team_id ?? inn.team ?? '');
+          const totals = toTotals(inn);
+          if (String(homeId) === tid) home = totals;
+          else if (String(awayId) === tid) away = totals;
+        }
+        return {home, away};
+      }
+
+      // Function: decide i1 team from a toss object
+      const decideTeamsFromToss = (tossObj) => {
+        if (!tossObj || !tossObj.winner || !tossObj.decision) return null;
+        const winner = String(tossObj.winner);
+        const loser  = (String(homeId) === winner) ? String(awayId) : String(homeId);
+        const i1Team = (String(tossObj.decision).toLowerCase() === 'bat') ? winner : loser;
+        const i2Team = (i1Team === String(homeId)) ? String(awayId) : String(homeId);
+        return {i1Team, i2Team};
+      };
+
+      // 3) innings[] without team_id + toss
+      if (Array.isArray(r.innings) && r.innings.length) {
+        const order = decideTeamsFromToss(r.toss) || decideTeamsFromToss(sim.toss);
+        if (order) {
+          const i1 = toTotals(r.innings[0] || {});
+          const i2 = toTotals(r.innings[1] || {});
+          const home = (String(homeId) === order.i1Team) ? i1 : i2;
+          const away = (String(awayId)  === order.i1Team) ? i1 : i2;
+          return {home, away};
+        }
+      }
+
+      // 4) sim_state i1/i2 + toss (older data where only sim_state has detail)
+      if (sim.i1 || sim.i2) {
+        const order = decideTeamsFromToss(sim.toss);
+        if (order) {
+          const i1 = { runs: numOrNull(sim.i1?.runs), overs: oversFromBalls(nOrU(sim.i1?.balls)) };
+          const i2 = { runs: numOrNull(sim.i2?.runs), overs: oversFromBalls(nOrU(sim.i2?.balls)) };
+          const home = (String(homeId) === order.i1Team) ? i1 : i2;
+          const away = (String(awayId)  === order.i1Team) ? i1 : i2;
+          return {home, away};
+        }
+      }
+
+      // default
+      return {home:{runs:null, overs:null}, away:{runs:null, overs:null}};
+    }
+
+    /* ---------- Card ---------- */
+    function card(m){
+      const homeLogo = m.home_logo || 'images/logo.png';
+      const awayLogo = m.away_logo || 'images/logo.png';
+      const when = formatDateTime(m.kickoff_at);
+      const live = isFrontEndLive(m);
+
+      const homeName = m.home_team_name || 'Home';
+      const awayName = m.away_team_name || 'Away';
+      const homeNameHtml = `<a href="public-profile.html?team=${m.home_team_id}">${homeName}</a>`;
+      const awayNameHtml = `<a href="public-profile.html?team=${m.away_team_id}">${awayName}</a>`;
+
+      const { home:homeTotals, away:awayTotals } =
+        extractTotalsMapped(m.result, m.home_team_id, m.away_team_id, m.sim_state);
+
+      const homeScore = (live || m.status==='completed') ? formatScoreNoWk(homeTotals) : '—';
+      const awayScore = (live || m.status==='completed') ? formatScoreNoWk(awayTotals) : '—';
+
+      const chaseText  = live ? buildChaseText(m.result) : '';
+      const resultText = (!live && m.status==='completed') ? completedResultLine(m, homeName, awayName) : '';
+
+      const div = document.createElement('div');
+      div.className = 'match-card';
+      div.innerHTML = `
         <div class="match-head">
           ${badge(m.kind)}
           <div class="start">${when}</div>
@@ -164,72 +271,79 @@
 
         <div class="match-body">
           <div class="team">
-            <img class="logo" src="${homeLogo}" alt="${homeName}"/>
+            <img src="${homeLogo}" alt="${homeName}"/>
             <div class="name">${homeNameHtml}</div>
-            <div class="score ${live||m.status==='completed'?'':'hidden-score'}">${homeScore}</div>
-            <div class="ovr">
-              <img src="assets/rating/ovr.png" alt="OVR" id="ovr-home-${m.id}" style="width:28px;height:28px"/>
-            </div>
+            <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${homeScore}</div>
+            <!-- OVR image only -->
+            <div class="ovr"><img src="assets/rating/ovr.png" alt="OVR"></div>
           </div>
 
           <div class="vs">vs</div>
 
           <div class="team">
-            <img class="logo" src="${awayLogo}" alt="${awayName}"/>
+            <img src="${awayLogo}" alt="${awayName}"/>
             <div class="name">${awayNameHtml}</div>
-            <div class="score ${live||m.status==='completed'?'':'hidden-score'}">${awayScore}</div>
-            <div class="ovr">
-              <img src="assets/rating/ovr.png" alt="OVR" id="ovr-away-${m.id}" style="width:28px;height:28px"/>
-            </div>
+            <div class="score ${live || m.status==='completed' ? '' : 'hidden-score'}">${awayScore}</div>
+            <!-- OVR image only -->
+            <div class="ovr"><img src="assets/rating/ovr.png" alt="OVR"></div>
           </div>
         </div>
+
+        ${live && chaseText ? `<div class="subscore">${chaseText}</div>` : ''}
+        ${(!live && m.status==='completed') ? `<div class="subscore">${resultText}</div>` : ''}
       `;
 
-      // click navigation
-      if(live&&m.status==='running'){
-        div.onclick=()=>location.href=`${m.kind==='league'?'league-match.html':'friendly-match.html'}?id=${m.id}`;
-      }else if(m.status==='completed'){
-        div.onclick=()=>location.href=`${m.kind==='league'?'league-replay.html':'friendly-replay.html'}?id=${m.id}`;
+      if (live && m.status === 'running') {
+        div.onclick = () => {
+          // redirect to league/friendly running match pages appropriately
+          if (m.kind === 'league') location.href = `league-match.html?id=${m.id}`;
+          else location.href = `friendly-match.html?id=${m.id}`;
+        };
+        div.style.cursor = 'pointer';
+      } else if (m.status === 'completed') {
+        div.onclick = () => {
+          if (m.kind === 'league') location.href = `league-replay.html?id=${m.id}`;
+          else location.href = `friendly-replay.html?id=${m.id}`;
+        };
+        div.style.cursor = 'pointer';
+      } else {
+        div.style.cursor = 'default';
       }
-
-      // compute OVR asynchronously
-      fetchTeamOVR(m.home_team_id).then(v=>{
-        const el=document.getElementById(`ovr-home-${m.id}`);
-        if(el) el.title=v?`OVR: ${v.toFixed(1)}`:'OVR: —';
-      });
-      fetchTeamOVR(m.away_team_id).then(v=>{
-        const el=document.getElementById(`ovr-away-${m.id}`);
-        if(el) el.title=v?`OVR: ${v.toFixed(1)}`:'OVR: —';
-      });
-
       return div;
     }
 
-    async function renderFeed(){
-      const {data,error}=await supabase.rpc('get_matches_feed_for_user');
-      if(error){console.error(error);return;}
-      const list=data??[];
+    /* ---------- Feed ---------- */
+    async function renderFeed() {
+      const { data, error } = await supabase.rpc('get_matches_feed_for_user');
+      if (error) { console.error(error); return; }
 
-      const liveL=list.filter(m=>isFrontEndLive(m)).sort((a,b)=>new Date(b.kickoff_at)-new Date(a.kickoff_at));
-      const upcL=list.filter(m=>!isFrontEndLive(m)&&m.status!=='completed'&&m.status!=='cancelled').sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at));
-      const doneL=list.filter(m=>m.status==='completed').sort((a,b)=>new Date(b.kickoff_at)-new Date(a.kickoff_at));
+      const list = data ?? [];
 
-      $('live-matches').innerHTML=liveL.length?'':'<div class="empty">No live matches</div>';
-      for(const m of liveL) $('live-matches').appendChild(await createCardAsync(m));
+      const liveL  = list.filter(m => isFrontEndLive(m))
+                         .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
+      const upcL   = list.filter(m => !isFrontEndLive(m) && m.status !== 'completed' && m.status !== 'cancelled')
+                         .sort((a,b)=> new Date(a.kickoff_at) - new Date(b.kickoff_at));
+      const doneL  = list.filter(m => m.status === 'completed')
+                         .sort((a,b)=> new Date(b.kickoff_at) - new Date(a.kickoff_at));
 
-      $('upcoming-matches').innerHTML=upcL.length?'':'<div class="empty">No upcoming matches</div>';
-      for(const m of upcL) $('upcoming-matches').appendChild(await createCardAsync(m));
+      $('live-matches').innerHTML = liveL.length ? '' : '<div class="empty">No live matches</div>';
+      liveL.forEach(m => $('live-matches').appendChild(card(m)));
 
-      $('completed-matches').innerHTML=doneL.length?'':'<div class="empty">No completed matches yet</div>';
-      for(const m of doneL) $('completed-matches').appendChild(await createCardAsync(m));
+      $('upcoming-matches').innerHTML = upcL.length ? '' : '<div class="empty">No upcoming matches</div>';
+      upcL.forEach(m => $('upcoming-matches').appendChild(card(m)));
+
+      $('completed-matches').innerHTML = doneL.length ? '' : '<div class="empty">No completed matches yet</div>';
+      doneL.forEach(m => $('completed-matches').appendChild(card(m)));
     }
 
     async function load(){
-      const {data:{user}}=await supabase.auth.getUser();
-      if(!user){location.href="login.html";return;}
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { location.href = "login.html"; return; }
+
       await renderFeed();
-      setInterval(renderFeed,10000);
+      setInterval(renderFeed, 10000);
     }
+
     load();
   </script>
 </body>
