@@ -3,213 +3,1089 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>League Preview – TheCricketBoss</title>
+  <title>League Match – TheCricketBoss</title>
   <link rel="stylesheet" href="styles/global.css"/>
   <style>
-    body{background:#0b0f16;color:#e7ecf3;font-family:system-ui;margin:0}
-    .wrap{max-width:980px;margin:0 auto;padding:16px}
-    .head{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:10px 0}
-    .badge{font-size:.75rem;padding:6px 12px;border-radius:999px;border:1px solid #26314b;background:#0f1522}
-    h1{margin:8px 0 4px;font-size:2rem}
+    /* (styles copied/trimmed from friendly-match for brevity; keep same visual) */
+    body { background:#0b0f16; color:#e7ecf3; font-family:system-ui; margin:0; }
+    .wrap{max-width:900px;margin:0 auto;padding:16px;}
+    .tabs{display:flex;gap:6px;border-bottom:2px solid #222;position:sticky;top:48px;background:#0b0f16;z-index:5}
+    .tabs button{flex:1;padding:10px 8px;background:#10151f;color:#cfe7dc;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:700;letter-spacing:.02em}
+    .tabs button.active{background:#00e676;color:#000}
+    .score-strip{display:flex;justify-content:space-between;align-items:center;background:#ff7a00;color:#000;font-weight:800;padding:10px 12px;border-radius:8px;margin:10px 0}
+    .score-strip .big {font-size:1.2rem}
+    .teambar{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 8px 2px;font-size:1.05rem}
+    .teambar .t{font-weight:700}
+    .card{background:#121825;border:1px solid #1d263a;border-radius:10px;padding:10px;margin:10px 0}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #2a344a;padding:8px;text-align:center;vertical-align:top}
+    th{background:#1a2236}
     .muted{opacity:.75}
-    .card{background:#121825;border:1px solid #1d263a;border-radius:12px;padding:18px;margin:14px 0}
-    .grid{display:grid;grid-template-columns:1fr 320px;gap:18px}
-    .strip{display:flex;flex-direction:column;gap:12px}
-    .count{font-weight:800;font-size:48px;line-height:1}
-    .venue-box{background:#0d1220;border-radius:8px;padding:12px;border:1px solid #20283a}
-    .tag{font-size:.85rem;color:#9fb0be}
-    .info-title{font-weight:700;margin-bottom:6px}
-    .value{font-weight:800}
-    .big-btn{background:#0f6b2a;color:#000;border:none;padding:12px 20px;border-radius:8px;font-weight:800;cursor:not-allowed;opacity:.95}
-    .big-btn.enabled{cursor:pointer}
-    .right-panel{display:flex;flex-direction:column;gap:12px}
-    .info-card{background:#0d1220;border-radius:10px;padding:12px;border:1px solid #20283a}
+    .toss-line .toss-banner { background: #222a68; color: #fff; text-align:center; font-weight:bold; padding:10px; margin:8px 0; border-radius:6px; font-size:16px; letter-spacing:.5px; }
+    .com-line{padding:10px;border-bottom:1px dashed #1f2a44}
+    .com-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .ball-tag{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:2px 6px;font-size:.75rem;color:#cbd5e1}
+    .pill{display:inline-block;font-size:.72rem;border-radius:999px;padding:2px 8px;margin-right:6px;border:1px solid #333}
+    .pill-w{background:#991b1b;color:#fff;border-color:#7f1d1d}
+    .pill-6{background:#14532d;color:#d1fae5;border-color:#064e3b}
+    .pill-4{background:#0f172a;color:#93c5fd;border-color:#1e293b}
+    .com-text{line-height:1.45}
+    .sub{opacity:.9;margin-top:4px}
+    .target-bar{margin-top:8px;font-weight:700;color:#c7f9cc}
+    .panel{display:none}
+    .panel.show{display:block}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .xi h4{margin:0 0 8px 0}
+    .xi ul{margin:0;padding-left:18px;line-height:1.5}
+    .tag{font-size:.75rem;border:1px solid #2a344a;border-radius:6px;padding:2px 6px;margin-left:6px}
+    .row-ctrls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .spacer{flex:1}
+    .skillbar{display:flex;gap:2px;margin-top:4px}
+    .skillbar .seg{width:6px;height:10px;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
+    .namecell{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+    .nm{line-height:1.1}
+
+    /* Venue card tweaks */
+    #venue-ticket-card { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    #venue-ticket-card .muted { margin-top:4px; }
   </style>
 </head>
 <body>
   <div id="top-bar"></div>
-
   <div class="wrap">
-    <div class="head">
-      <div>
-        <span class="badge">League</span>
-        <div style="height:8px"></div>
-        <h1 id="match-title">Home vs Away</h1>
-        <div class="muted" id="kickoff-line">Kickoff — --</div>
-      </div>
-      <div style="text-align:right">
-        <div class="tag">Status</div>
-        <div style="font-weight:800;font-size:1.1rem" id="status-text">scheduled</div>
-      </div>
+    <div class="row-ctrls">
+      <h2 style="margin:0">League Match</h2>
+      <div class="spacer"></div>
+      <label class="muted" style="font-size:.9rem">
+        Auto refresh
+        <select id="auto-refresh">
+          <option value="0">Off</option>
+          <option value="2000" selected>2s</option>
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+        </select>
+      </label>
+      <button id="btn-refresh">Refresh</button>
     </div>
 
-    <div class="card grid">
-      <div class="strip">
-        <div>
-          <div class="muted">Countdown to kickoff</div>
-          <div class="count" id="countdown">--:--:--</div>
-        </div>
+    <div class="tabs">
+      <button id="tab-live" class="active">LIVE</button>
+      <button id="tab-score">SCORECARD</button>
+      <button id="tab-comm">COMMENTARY</button>
+      <button id="tab-xi">LINEUP</button>
+    </div>
 
-        <div>
-          <div class="muted">Toss : <span id="toss-text">Pending</span></div>
-          <div class="muted">Match : <span id="match-state">Not yet started</span></div>
-        </div>
-
-        <div class="info-card">
-          <div class="info-title">Match Details</div>
-          <div style="display:flex;gap:12px;flex-wrap:wrap">
-            <div class="venue-box" style="flex:1">
-              <div class="tag">Venue</div>
-              <div class="value" id="venue-name">—</div>
-              <div class="muted" id="venue-level">Level unknown</div>
-            </div>
-            <div class="venue-box" style="width:220px">
-              <div class="tag">Pitch</div>
-              <div class="value" id="pitch-type">Unknown</div>
-              <div class="muted" id="pitch-note">Pitch details not available</div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <button id="open-live" class="big-btn" disabled>Match not started</button>
-        </div>
-        <div class="muted">When match status becomes running this button will open the live match page.</div>
+    <!-- LIVE -->
+    <section id="live-panel" class="panel show">
+      <div class="score-strip">
+        <div class="big" id="live-score-a">--/-- - --.- ov</div>
+        <div class="big" id="live-score-b">--/-- - --.- ov</div>
       </div>
 
-      <aside class="right-panel">
-        <div class="info-card">
-          <div class="info-title">Home</div>
-          <div id="home-name" class="value">—</div>
-          <div style="height:10px"></div>
-          <div class="info-title">Away</div>
-          <div id="away-name" class="value">—</div>
-          <div style="height:12px"></div>
-          <div class="tag">Kickoff</div>
-          <div id="kickoff-value" class="value">--</div>
-        </div>
+      <div class="teambar">
+        <div class="t" id="team-a-name">Home</div>
+        <div class="t" id="team-b-name">Away</div>
+      </div>
 
-        <div class="info-card">
-          <div class="info-title">Stadium capacity</div>
-          <div id="stad-cap" class="value">unknown</div>
-          <div style="height:8px"></div>
-          <div class="info-title">Quick actions</div>
-          <div style="display:flex;gap:8px">
-            <a id="home-profile" href="#"><button class="big-btn" style="background:#263142;color:#fff;padding:8px 10px;cursor:pointer">Home profile</button></a>
-            <a id="away-profile" href="#"><button class="big-btn" style="background:#263142;color:#fff;padding:8px 10px;cursor:pointer">Away profile</button></a>
+      <!-- VENUE & TICKET SALES (added) -->
+      <div id="venue-ticket-card" class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div style="min-width:220px">
+          <div style="font-weight:800">Venue</div>
+          <div id="venue-name" class="muted">—</div>
+        </div>
+        <div style="min-width:220px">
+          <div style="font-weight:800">Ticket sales (home team)</div>
+          <div id="ticket-cash" style="font-size:1.05rem;font-weight:800">—</div>
+          <div id="ticket-note" class="muted" style="font-size:.85rem;margin-top:4px">Calculated using stadium capacity × ₹50</div>
+        </div>
+      </div>
+      <!-- /VENUE -->
+
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px" id="batting-heading">Batting</div>
+        <div id="live-target" class="target-bar" style="display:none"></div>
+        <table>
+          <thead>
+            <tr><th style="text-align:left">Batsman</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>SR</th></tr>
+          </thead>
+          <tbody id="live-bats-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Bowler</div>
+        <table>
+          <thead>
+            <tr><th style="text-align:left">Bowler</th><th>Ov.</th><th>Runs</th><th>Wk.</th><th>Econ.</th></tr>
+          </thead>
+          <tbody id="live-bowl-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="card" id="live-summary" style="display:none"></div>
+
+      <div class="card">
+        <div style="font-weight:800;margin-bottom:8px">Commentary</div>
+        <div id="live-feed"></div>
+      </div>
+    </section>
+
+    <!-- SCORECARD -->
+    <section id="score-panel" class="panel">
+      <div class="card">
+        <div id="headline-a" style="font-weight:800;font-size:1.05rem;">—</div>
+        <div id="headline-b" style="font-weight:800;font-size:1.05rem;margin-top:6px;">—</div>
+        <div id="score-target" class="target-bar" style="display:none"></div>
+      </div>
+
+      <div id="score-i1" class="card">
+        <div style="font-weight:800;margin-bottom:8px" id="i1-title">Innings 1</div>
+        <table>
+          <thead><tr><th style="text-align:left">Batsman</th><th style="text-align:left">Dismissal</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+          <tbody id="i1-batting"></tbody>
+        </table>
+        <h4 style="margin-top:12px">Bowling</h4>
+        <table>
+          <thead><tr><th style="text-align:left">Bowler</th><th>O</th><th>R</th><th>W</th><th>Eco</th></tr></thead>
+          <tbody id="i1-bowling"></tbody>
+        </table>
+      </div>
+
+      <div id="score-i2" class="card" style="display:none">
+        <div style="font-weight:800;margin-bottom:8px" id="i2-title">Innings 2</div>
+        <table>
+          <thead><tr><th style="text-align:left">Batsman</th><th style="text-align:left">Dismissal</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>
+          <tbody id="i2-batting"></tbody>
+        </table>
+        <h4 style="margin-top:12px">Bowling</h4>
+        <table>
+          <thead><tr><th style="text-align:left">Bowler</th><th>O</th><th>R</th><th>W</th><th>Eco</th></tr></thead>
+          <tbody id="i2-bowling"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LINEUP -->
+    <section id="xi-panel" class="panel">
+      <div class="card xi">
+        <div class="grid-2">
+          <div>
+            <h4 id="xi-home-title">Home – Playing XI</h4>
+            <ul id="xi-home"></ul>
+          </div>
+          <div>
+            <h4 id="xi-away-title">Away – Playing XI</h4>
+            <ul id="xi-away"></ul>
           </div>
         </div>
-      </aside>
-    </div>
+      </div>
+    </section>
   </div>
 
   <div id="bottom-nav"></div>
 
+  <!-- Smooth UI loader (same as friendly pages) -->
   <script type="module">
-    import { loadSmoothUI } from "./js/smooth-ui.js";
-    loadSmoothUI("top-bar","bottom-nav");
+    import { loadSmoothUI } from './js/smooth-ui.js';
+    loadSmoothUI('top-bar','bottom-nav');
   </script>
 
+  <!-- Main logic (league table names: fixtures, ball_by_ball_league_s1) -->
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+    // Supabase client — replace with your project URL / anon/service key if needed
     const supabase = createClient(
       "https://iukofcmatlfhfwcechdq.supabase.co",
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE"
     );
 
+    /* Tabs */
+    const tabs = {
+      live: document.getElementById('tab-live'),
+      score: document.getElementById('tab-score'),
+      comm: document.getElementById('tab-comm'),
+      xi:   document.getElementById('tab-xi'),
+    };
+    const panels = {
+      live: document.getElementById('live-panel'),
+      score: document.getElementById('score-panel'),
+      comm: document.getElementById('comm-panel'),
+      xi:   document.getElementById('xi-panel'),
+    };
+    const activate = (key) => {
+      ['live','score','comm','xi'].forEach(k=>{
+        tabs[k].classList.toggle('active', k===key);
+        panels[k].classList.toggle('show', k===key);
+      });
+    };
+    tabs.live.onclick = ()=>activate('live');
+    tabs.score.onclick = ()=>activate('score');
+    tabs.comm.onclick = ()=>activate('comm');
+    tabs.xi.onclick   = ()=>activate('xi');
+
+    /* DOM refs */
     const qs = new URLSearchParams(location.search);
-    const fixtureId = qs.get("id");
+    const fixtureId = qs.get('id');
 
-    const el = id => document.getElementById(id);
-    const countdownEl = el("countdown");
-    const openBtn = el("open-live");
+    const liveFeed = document.getElementById('live-feed');
+    const commFeed = document.getElementById('comm-feed');
+    const liveBats = document.getElementById('live-bats-tbody');
+    const liveBowls = document.getElementById('live-bowl-tbody');
+    const liveTarget = document.getElementById('live-target');
 
-    let countdownTimer = null;
+    const scoreA = document.getElementById('live-score-a');
+    const scoreB = document.getElementById('live-score-b');
+    const teamAName = document.getElementById('team-a-name');
+    const teamBName = document.getElementById('team-b-name');
+    const battingHeading = document.getElementById('batting-heading');
+    const liveSummary = document.getElementById('live-summary');
 
-    function fmtDateTime(ts){
-      if (!ts) return "--";
-      const d = new Date(ts);
-      const dd = String(d.getDate()).padStart(2,"0");
-      const mm = String(d.getMonth()+1).padStart(2,"0");
-      const yyyy = d.getFullYear();
-      const h = String(d.getHours() % 12 || 12).padStart(2,"0");
-      const mi = String(d.getMinutes()).padStart(2,"0");
-      const ampm = d.getHours() >= 12 ? "PM" : "AM";
-      return `${dd}-${mm}-${yyyy}, ${h}:${mi} ${ampm}`;
+    const headlineA = document.getElementById('headline-a');
+    const headlineB = document.getElementById('headline-b');
+    const scoreTarget = document.getElementById('score-target');
+
+    const i1 = {
+      title: document.getElementById('i1-title'),
+      bat: document.getElementById('i1-batting'),
+      bowl: document.getElementById('i1-bowling'),
+      card: document.getElementById('score-i1'),
+    };
+    const i2 = {
+      title: document.getElementById('i2-title'),
+      bat: document.getElementById('i2-batting'),
+      bowl: document.getElementById('i2-bowling'),
+      card: document.getElementById('score-i2'),
+    };
+
+    const xiHomeTitle = document.getElementById('xi-home-title');
+    const xiAwayTitle = document.getElementById('xi-away-title');
+    const xiHome = document.getElementById('xi-home');
+    const xiAway = document.getElementById('xi-away');
+
+    const autoSel = document.getElementById('auto-refresh');
+    const btnRefresh = document.getElementById('btn-refresh');
+
+    /* State */
+    let all = []; // commentary/balls (from ball_by_ball_league_s1)
+    let players = {}; // id -> {name, team_id, ...}
+    let homeTeam, awayTeam;
+    let battingFirst = null, battingSecond = null;
+    let names = {};
+    let fixtureRow = null;
+    const roles = {};
+    const liveBatRuns = new Map();
+    let prevBall = null;
+
+    const queue = [];
+    let queueTimer = null;
+    const QUEUE_DELAY_MS = 800;
+
+    let autoTimer = null;
+
+    /* Helpers */
+    const oversText = (balls)=> `${Math.floor(balls/6)}.${balls%6}`;
+    const overLabel = (b)=> `${b.over_number - 1}.${b.ball_in_over}`;
+
+    function shortName(full){
+      if (!full) return '—';
+      const parts = String(full).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 1) return parts[0];
+      const last = parts.pop();
+      const initials = parts.map(w => (w[0] || '').toUpperCase()).filter(Boolean).join(' ');
+      return `${initials} ${last}`;
     }
 
-    function startCountdown(toTs){
-      if (countdownTimer) clearInterval(countdownTimer);
-      function tick(){
-        const diff = Math.max(0, toTs - Date.now());
-        const s = Math.floor(diff/1000);
-        const hh = String(Math.floor(s/3600)).padStart(2,"0");
-        const mm = String(Math.floor((s%3600)/60)).padStart(2,"0");
-        const ss = String(s%60).padStart(2,"0");
-        countdownEl.textContent = `${hh}:${mm}:${ss}`;
-      }
-      tick();
-      countdownTimer = setInterval(tick, 1000);
+    function hash32(str){
+      let h = 0x811c9dc5 >>> 0;
+      for (let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+      return h>>>0;
+    }
+    function pickStable(pool, b, salt=''){
+      if (!pool || pool.length===0) return "";
+      const key = `${fixtureId||''}|${b.innings}|${b.over_number}|${b.ball_in_over}|${salt}`;
+      const h = hash32(key);
+      return pool[h % pool.length];
     }
 
-    async function fetchAndRender(){
-      const { data: fx } = await supabase
-        .from("fixtures")
-        .select(`
-          *,
-          stadium:stadiums(id,name,capacity,level,pitch_type)
-        `)
-        .eq("id", fixtureId)
-        .maybeSingle();
+    const PALETTE = [
+      "#f8f532","#f3e61c","#e9d60e","#d4cf10","#b0d022",
+      "#7ec14a","#49a769","#2f9ea6","#1d78c6","#1850a1",
+      "#1a2f7a","#5d2f7a","#a9483c","#cc1f1f"
+    ];
 
-      if (!fx) { alert("Fixture not found"); return; }
+    function colorBarHTML(pid, kind){
+      // simplified: map skill to segments via numeric batting/bowling fields
+      const p = players[pid]; if(!p) return '';
+      const base = kind==='bat' ? Number(p.batting)||0 : kind==='bowl' ? Number(p.bowling)||0 : Math.max(Number(p.batting)||0, Number(p.bowling)||0);
+      const segs = Math.max(1, Math.min(PALETTE.length, Math.round((Math.max(0, base)/100) * PALETTE.length)));
+      const blocks = PALETTE.slice(0, segs).map(c=>`<span class="seg" style="background:${c}"></span>`).join('');
+      return `<div class="skillbar" title="Skill: ${base.toFixed?base.toFixed(1):base}">${blocks}</div>`;
+    }
 
-      // fetch teams
-      const { data: teams } = await supabase.from("teams").select("id,team_name").in("id",[fx.home_team_id, fx.away_team_id]);
-      const names = {};
-      (teams||[]).forEach(t => names[t.id] = t.team_name);
+    function isLegal(b){
+      const t = (b.delivery_type||'legal').toLowerCase();
+      return t !== 'wide' && t !== 'noball' && t !== 'toss';
+    }
 
-      el("match-title").textContent = `${names[fx.home_team_id]||"Home"} vs ${names[fx.away_team_id]||"Away"}`;
-      el("home-name").textContent = names[fx.home_team_id]||"Home";
-      el("away-name").textContent = names[fx.away_team_id]||"Away";
+    function totals(balls, inn) {
+      const arrAll = balls.filter(b=>b.innings===inn);
+      const arrLegals = arrAll.filter(isLegal);
+      const runs = arrAll.reduce((s,b)=> s + (b.runs_scored||0) + (b.extras||0), 0);
+      const wkts = arrAll.reduce((s,b)=> s + (b.wicket?1:0), 0);
+      return { runs, wkts, legal: arrLegals.length };
+    }
 
-      const kickoffTs = fx.kickoff_at ? new Date(fx.kickoff_at).getTime() : null;
-      el("kickoff-line").textContent = kickoffTs ? `Kickoff — ${fmtDateTime(kickoffTs)}` : "Kickoff — --";
-      el("kickoff-value").textContent = kickoffTs ? fmtDateTime(kickoffTs) : "--";
+    function aggBat(balls, inn) {
+      const map={};
+      balls.filter(b=>b.innings===inn).forEach(b=>{
+        const id=b.striker_id; if(!id) return;
+        const m = map[id] ||= {runs:0,balls:0,fours:0,sixes:0};
+        m.runs += b.runs_scored||0;
+        if (isLegal(b)) { m.balls++; if(b.runs_scored===4) m.fours++; if(b.runs_scored===6) m.sixes++; }
+      });
+      return map;
+    }
 
-      el("status-text").textContent = fx.status||"scheduled";
-      el("toss-text").textContent = fx.toss_winner_team_id ? `${names[fx.toss_winner_team_id]} • ${fx.toss_decision||""}` : "Pending";
-      el("match-state").textContent = (fx.status==="running" ? "In progress" : "Not yet started");
+    function aggBowl(balls, inn) {
+      const map={};
+      balls.filter(b=>b.innings===inn).forEach(b=>{
+        const id=b.bowler_id; if(!id) return;
+        const m = map[id] ||= {runs:0,balls:0,wkts:0};
+        m.runs += (b.runs_scored||0)+(b.extras||0);
+        if (isLegal(b)) m.balls++;
+        const t = (b.dismissal_type||'').toLowerCase();
+        if (b.wicket && t!=='runout' && t!=='run-out') m.wkts++;
+      });
+      return map;
+    }
 
-      // stadium info
-      if (fx.stadium) {
-        el("venue-name").textContent = fx.stadium.name || "—";
-        el("venue-level").textContent = fx.stadium.level ? `Level ${fx.stadium.level}` : "Level unknown";
-        el("pitch-type").textContent = fx.stadium.pitch_type || "Unknown";
-        el("pitch-note").textContent = fx.stadium.pitch_type ? "" : "Pitch details not available";
-        el("stad-cap").textContent = fx.stadium.capacity ? fx.stadium.capacity.toLocaleString() : "unknown";
+    function nameWithBadges(pid){
+      const p = players[pid]; if(!p) return '—';
+      const r = roles[p.team_id] || {};
+      const tags = [];
+      if (r.captain && r.captain===pid) tags.push('C');
+      if (r.keeper && r.keeper===pid)  tags.push('WK');
+      const nm = shortName(p.name);
+      return `${nm}${tags.length?` (${tags.join(', ')})`:''}`;
+    }
+
+    function dismissalMap(balls, inn){
+      const map={};
+      balls.filter(b=>b.innings===inn && b.wicket && b.dismissed_batsman_id)
+        .forEach(b=>{
+          map[b.dismissed_batsman_id] = {
+            type:(b.dismissal_type||'').toLowerCase() || 'out',
+            bowler:b.bowler_id||null,
+            fielder:b.fielder_id||null
+          };
+        });
+      return map;
+    }
+    function dismissText(pid, dm){
+      const d = dm[pid];
+      if(!d) return "not out";
+      const bowTxt = d.bowler ? nameWithBadges(d.bowler) : '';
+      const fldTxt = d.fielder ? nameWithBadges(d.fielder) : '';
+      const t = (d.type||'').toLowerCase();
+      if (t === 'bowled') return `b ${bowTxt}`;
+      if (t === 'lbw')    return `lbw b ${bowTxt}`;
+      if (t === 'caught') {
+        if (d.fielder && d.bowler && d.fielder === d.bowler) return `c & b ${bowTxt}`;
+        if (d.fielder) return `c ${fldTxt} b ${bowTxt}`;
+        return `c b ${bowTxt}`;
+      }
+      if (t === 'runout' || t==='run-out') return d.fielder ? `run out (${fldTxt})` : `run out`;
+      return bowTxt ? `b ${bowTxt}` : 'out';
+    }
+
+    function pillsFor(b) {
+      const pills=[];
+      if (b.wicket) pills.push(`<span class="pill pill-w">WICKET</span>`);
+      if (b.runs_scored===6) pills.push(`<span class="pill pill-6">SIX</span>`);
+      if (b.runs_scored===4) pills.push(`<span class="pill pill-4">FOUR</span>`);
+      return pills.join('');
+    }
+
+    const VARIANTS = {
+      0: ["Dot ball.","Beaten!","Good length — no run."],
+      1: ["Just a single.","Nudged for one."],
+      2: ["They come back for two.","Comfortable two."],
+      3: ["All hustle — three!","Good running — three."],
+      4: ["FOUR! Crunched.","Stroked away for four."],
+      6: ["SIX! Launched.","Into the stands — six!"],
+      W: ["Gone! Big breakthrough.","Edged and taken!","Bowled him!"]
+    };
+
+    function sanitizeText(t){ return String(t||"").replace(/^\s*runs?\s*:?\s*/i,"").trim(); }
+    function lineText(b) {
+      if (b.commentary && b.commentary.trim()) return sanitizeText(b.commentary);
+
+      const dt = (b.delivery_type||'legal').toLowerCase();
+      if (dt === 'wide')  return "Wide — +1 run";
+      if (dt === 'noball')return "No-ball — +1 run";
+      if (dt === 'bye')   return `Byes — +${(b.extras_detail?.byes)||1}`;
+
+      if (b.wicket) {
+        const t = (b.dismissal_type||"").toLowerCase();
+        if (t === "bowled") return "Bowled him!";
+        if (t === "lbw")    return "LBW given!";
+        if (t === "caught") return "Edged and taken!";
+        if (t === "runout" || t==="run-out") return "Run out!";
+        return "Wicket!";
       }
 
-      el("home-profile").href = `public-profile.html?team=${fx.home_team_id}`;
-      el("away-profile").href = `public-profile.html?team=${fx.away_team_id}`;
+      const runs = Math.min(6, Math.max(0, b.runs_scored||0));
+      const pool = VARIANTS[runs] || ["Runs added."];
+      return sanitizeText(pickStable(pool, b, "R"));
+    }
 
-      if (kickoffTs) startCountdown(kickoffTs);
+    function comLine(b, extra=[]){
+      if ((b.delivery_type||'').toLowerCase() === 'toss'){
+        const txt = sanitizeText(b.commentary || 'Toss not available');
+        return `<div class="com-line toss-line"><div class="toss-banner">🎲 ${txt}</div></div>`;
+      }
 
-      if (fx.status==="running") {
-        openBtn.disabled=false;
-        openBtn.classList.add("enabled");
-        openBtn.textContent="Open live match";
-        openBtn.onclick=()=>location.href=`league-match.html?id=${fx.id}`;
+      const bow = nameWithBadges(b.bowler_id);
+      const bat = nameWithBadges(b.striker_id);
+      const head = `Innings ${b.innings} • Over ${overLabel(b)}`;
+      const line = `Runs: ${b.runs_scored||0}, ${lineText(b)}`;
+      const extrasText = extra.length ? `<div class="sub">${extra.join("<br/>")}</div>` : "";
+      return `
+        <div class="com-line">
+          <div class="com-top">
+            <span class="ball-tag">${head}</span>
+            ${pillsFor(b)}
+          </div>
+          <div class="com-text"><strong>${bow}</strong> to <strong>${bat}</strong></div>
+          <div>${line}</div>
+          ${extrasText}
+        </div>`;
+    }
+
+    function renderCommentaryTop(list, into) {
+      const htmls = [];
+      prevBall = null;
+      liveBatRuns.clear();
+
+      const i1Finished =
+        list.some(x => x.innings === 2) ||
+        (fixtureRow && (fixtureRow.sim_innings ?? 1) >= 2) ||
+        (fixtureRow && fixtureRow.status === 'completed');
+
+      const tossRow = list.find(b => (b.delivery_type||'').toLowerCase() === "toss");
+      if (tossRow) htmls.push(comLine(tossRow, []));
+
+      const playBalls = list.filter(b => (b.delivery_type||'').toLowerCase() !== "toss");
+      for (let i = 0; i < playBalls.length; i++) {
+        const b = playBalls[i];
+        const next = playBalls[i + 1] || null;
+        const extras = buildExtras(b, next, true, i1Finished);
+        htmls.push(comLine(b, extras));
+      }
+
+      into.innerHTML = htmls.reverse().join('');
+    }
+
+    function pushToQueue(ball) {
+      queue.push(ball);
+      if (!queueTimer) {
+        queueTimer = setInterval(() => {
+          if (queue.length === 0) { clearInterval(queueTimer); queueTimer=null; return; }
+          const b = queue.shift();
+          all.push(b);
+          const extras = buildExtras(b, null, false);
+          const html = comLine(b, extras);
+          liveFeed.insertAdjacentHTML('afterbegin', html);
+          commFeed.insertAdjacentHTML('afterbegin', html);
+          updateLiveBlocks();
+          updateScorecardBlocks();
+          maybeShowSummary();
+        }, QUEUE_DELAY_MS);
+      }
+    }
+
+    function nameCell(pid, star, kind){
+      const nm = nameWithBadges(pid);
+      return `<div class="namecell">
+                <div class="nm">${nm}${star?' ★':''}</div>
+                ${colorBarHTML(pid, kind)}
+              </div>`;
+    }
+
+    function rowBatMini(pid, stat, star=false) {
+      const nmCell = nameCell(pid, star, 'bat');
+      const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
+      return `<tr><td style="text-align:left">${nmCell}</td>
+                <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
+    }
+    function rowBowl(pid, stat, star=false) {
+      const nmCell = nameCell(pid, star, 'bowl');
+      const ov = `${Math.floor(stat.balls/6)}.${stat.balls%6}`;
+      const eco = stat.balls ? (stat.runs/(stat.balls/6)).toFixed(1) : "0.0";
+      return `<tr><td style="text-align:left">${nmCell}</td>
+                <td>${ov}</td><td>${stat.runs}</td><td>${stat.wkts}</td><td>${eco}</td></tr>`;
+    }
+    function rowBatFull(pid, stat, dm) {
+      const nmCell = nameCell(pid, false, 'bat');
+      const sr = stat.balls ? ((stat.runs/stat.balls)*100).toFixed(1) : "0.0";
+      const dis = dismissText(pid, dm);
+      return `<tr><td style="text-align:left">${nmCell}</td>
+              <td style="text-align:left">${dis}</td>
+              <td>${stat.runs}</td><td>${stat.balls}</td><td>${stat.fours}</td><td>${stat.sixes}</td><td>${sr}</td></tr>`;
+    }
+
+    function targetString(t1Runs, t2) {
+      const target = t1Runs + 1;
+      const need = Math.max(0, target - t2.runs);
+      const ballsLeft = Math.max(0, 120 - t2.legal);
+      const wktsLeft = Math.max(0, 10 - t2.wkts);
+      return `${need} needed from ${ballsLeft} balls with ${wktsLeft} wickets in hand`;
+    }
+
+    function updateLiveBlocks() {
+      if (!all.length) return;
+      const latest = all[all.length-1];
+      const curInn = latest.innings;
+
+      const t1 = totals(all, 1);
+      scoreA.textContent = `${t1.runs}/${t1.wkts} - ${oversText(t1.legal)} ov`;
+      let t2 = {runs:0,wkts:0,legal:0};
+      const in2 = all.some(b=>b.innings===2);
+      if (in2) {
+        t2 = totals(all, 2);
+        scoreB.textContent = `${t2.runs}/${t2.wkts} - ${oversText(t2.legal)} ov`;
+      } else scoreB.textContent = `--/-- - --.- ov`;
+
+      battingHeading.textContent = `Batting – ${curInn===1 ? (names[battingFirst]||'Team A') : (names[battingSecond]||'Team B')}`;
+      teamAName.textContent = names[battingFirst] || 'Team A';
+      teamBName.textContent = names[battingSecond] || 'Team B';
+
+      if (curInn===2) {
+        liveTarget.style.display = 'block';
+        liveTarget.textContent = targetString(t1.runs, t2);
       } else {
-        openBtn.disabled=true;
-        openBtn.classList.remove("enabled");
-        openBtn.textContent="Match not started";
+        liveTarget.style.display = 'none';
+      }
+
+      const batAgg = aggBat(all, curInn);
+      const strikerId = latest.striker_id;
+      const nonId = latest.non_striker_id;
+      const s1 = batAgg[strikerId] || {runs:0,balls:0,fours:0,sixes:0};
+      const s2 = batAgg[nonId] || {runs:0,balls:0,fours:0,sixes:0};
+      liveBats.innerHTML = rowBatMini(strikerId, s1, true) + rowBatMini(nonId, s2, false);
+
+      const bowlAgg = aggBowl(all, curInn);
+      const curBowler = latest.bowler_id;
+      let lastBowler = null;
+      for (let i=all.length-2;i>=0;i--) {
+        const b=all[i]; if (b.innings!==curInn) break;
+        if (b.bowler_id!==curBowler) { lastBowler=b.bowler_id; break; }
+      }
+      const sb = bowlAgg[curBowler] || {runs:0,balls:0,wkts:0};
+      let html = rowBowl(curBowler, sb, true);
+      if (lastBowler) html += rowBowl(lastBowler, bowlAgg[lastBowler] || {runs:0,balls:0,wkts:0});
+      liveBowls.innerHTML = html;
+
+      headlineA.textContent = `${names[battingFirst]||'Team A'} ${t1.runs}/${t1.wkts} (${oversText(t1.legal)} ov)`;
+      headlineB.textContent = `${names[battingSecond]||'Team B'} ${t2.runs}/${t2.wkts} (${oversText(t2.legal)} ov)`;
+      if (in2) {
+        scoreTarget.style.display='block';
+        scoreTarget.textContent = targetString(t1.runs, t2);
+      } else {
+        scoreTarget.style.display='none';
       }
     }
 
-    fetchAndRender();
-    setInterval(fetchAndRender, 10000);
+    function fillFullInnings(inn, ui) {
+      const bats = aggBat(all, inn);
+      const bowls = aggBowl(all, inn);
+      const dm = dismissalMap(all, inn);
+
+      ui.bat.innerHTML = "";
+      Object.entries(bats).forEach(([pid,st])=>{
+        ui.bat.insertAdjacentHTML('beforeend', rowBatFull(pid, st, dm));
+      });
+      ui.bowl.innerHTML = "";
+      Object.entries(bowls).forEach(([pid,st])=>{
+        ui.bowl.insertAdjacentHTML('beforeend', rowBowl(pid, st));
+      });
+    }
+
+    function updateScorecardBlocks() {
+      if (!all.length) return;
+
+      // Default mapping
+      let i1Team = homeTeam, i2Team = awayTeam;
+
+      const normalized = normalizeTossFromPayload(fixtureRow);
+      if (normalized && normalized.winner_team_id) {
+        const winner = String(normalized.winner_team_id);
+        const decision = (normalized.decision||'').toLowerCase();
+        const home = String(homeTeam);
+        const away = String(awayTeam);
+        if (decision === 'bowl' || decision === 'field') {
+          if (winner === home) { i1Team = away; i2Team = home; }
+          else { i1Team = home; i2Team = away; }
+        } else if (decision === 'bat') {
+          if (winner === home) { i1Team = home; i2Team = away; }
+          else { i1Team = away; i2Team = home; }
+        }
+      } else if (Array.isArray(fixtureRow.innings) && fixtureRow.innings.length >= 2 && fixtureRow.innings[0].team_id) {
+        i1Team = fixtureRow.innings[0].team_id;
+        i2Team = fixtureRow.innings[1].team_id;
+      } else if (fixtureRow?.result?.innings && fixtureRow.result.innings.length >= 2 && fixtureRow.result.innings[0].team_id) {
+        i1Team = fixtureRow.result.innings[0].team_id;
+        i2Team = fixtureRow.result.innings[1].team_id;
+      }
+
+      i1.card.style.display = 'block';
+      i1.title.textContent = `Innings 1 – ${(names[i1Team]||'Team 1')}`;
+      fillFullInnings(1, i1);
+
+      if (all.some(b => b.innings === 2)) {
+        i2.card.style.display = 'block';
+        i2.title.textContent = `Innings 2 – ${(names[i2Team]||'Team 2')}`;
+        fillFullInnings(2, i2);
+      } else {
+        i2.card.style.display = 'none';
+      }
+    }
+
+    function maybeShowSummary() {
+      if (!fixtureRow || fixtureRow.status!=='completed') {
+        liveSummary.style.display='none';
+        return;
+      }
+
+      const t1 = totals(all,1);
+      const t2 = totals(all,2);
+      const winnerId = fixtureRow.winner_team_id;
+
+      liveSummary.style.display='block';
+
+      const team1Name = names[battingFirst] || names[homeTeam] || 'Home';
+      const team2Name = names[battingSecond] || names[awayTeam] || 'Away';
+
+      if (!winnerId) {
+        liveSummary.innerHTML = `
+          <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">Match tied</div>
+          <div>${team1Name}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+          <div>${team2Name}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+        `;
+      } else {
+        const winName = names[winnerId] || 'Winner';
+        liveSummary.innerHTML = `
+          <div style="font-size:1.05rem;font-weight:800;margin-bottom:8px">${winName} won the match</div>
+          <div>${team1Name}: ${t1.runs}/${t1.wkts} • ${oversText(t1.legal)} ov</div>
+          <div>${team2Name}: ${t2.runs}/${t2.wkts} • ${oversText(t2.legal)} ov</div>
+        `;
+      }
+    }
+
+    function buildExtras(b, nextBall = null, addInningsEnd = false, i1Finished = false) {
+      const extras = [];
+
+      const overStart = !prevBall || prevBall.innings !== b.innings || prevBall.over_number !== b.over_number;
+
+      if (overStart && prevBall) {
+        const bow = nameWithBadges(b.bowler_id);
+        extras.push(`${bow} comes into the attack.`);
+      }
+
+      const dt = (b.delivery_type||'legal').toLowerCase();
+      if (dt === 'wide')  extras.push(`Wide — +${b.extras||1}`);
+      if (dt === 'noball')extras.push(`No-ball — +${b.extras||1}`);
+      if (dt === 'bye' && (b.extras_detail?.byes)) extras.push(`Byes — +${b.extras_detail.byes}`);
+
+      const prevRuns = liveBatRuns.get(b.striker_id) || 0;
+      const newRuns  = prevRuns + (b.runs_scored || 0);
+      if (newRuns >= 50 && prevRuns < 50 && newRuns < 100) {
+        extras.push(`${nameWithBadges(b.striker_id)} scores his FIFTY`);
+      } else if (newRuns >= 100 && prevRuns < 100) {
+        extras.push(`${nameWithBadges(b.striker_id)} scores his HUNDRED`);
+      }
+
+      if (b.wicket) {
+        const type = (b.dismissal_type || '').toLowerCase();
+        const bow  = nameWithBadges(b.bowler_id);
+        const fld  = b.fielder_id ? nameWithBadges(b.fielder_id) : "";
+        let disTxt = "out";
+        if (type === "bowled") disTxt = `b ${bow}`;
+        else if (type === "lbw") disTxt = `lbw b ${bow}`;
+        else if (type === "caught") {
+          if (b.fielder_id && b.bowler_id && b.fielder_id === b.bowler_id) disTxt = `c & b ${bow}`;
+          else if (b.fielder_id) disTxt = `c ${fld} b ${bow}`;
+          else disTxt = `c b ${bow}`;
+        } else if (type === "runout" || type === "run-out") {
+          disTxt = b.fielder_id ? `run out (${fld})` : `run out`;
+        }
+        const outName  = nameWithBadges(b.dismissed_batsman_id || b.striker_id);
+        const ballsFor = all.concat([b]).filter(x => x.striker_id === (b.dismissed_batsman_id || b.striker_id)).filter(isLegal).length;
+        const runsFor  = newRuns;
+        extras.push(`${outName} ${disTxt} ${runsFor}(${ballsFor})`);
+
+        const nb = nextBall;
+        if (nb && nb.innings === b.innings) {
+          const newcomer = nb.striker_id !== b.striker_id && nb.striker_id !== (prevBall?.striker_id)
+            ? nb.striker_id : nb.non_striker_id;
+          if (newcomer) extras.push(`${nameWithBadges(newcomer)} comes in to the Crease.`);
+        }
+      }
+
+      if (addInningsEnd && i1Finished) {
+        const nxt = nextBall;
+        if (b.innings === 1 && (!nxt || nxt.innings !== 1)) {
+          const t1 = totals(all.concat([b]), 1);
+          const chasingName = names[battingSecond] || 'Team B';
+          const need = t1.runs + 1;
+          extras.push(`End of First Innings`);
+          extras.push(`${chasingName} need ${need} runs to win from 120 balls`);
+        }
+      }
+
+      liveBatRuns.set(b.striker_id, newRuns);
+      prevBall = b;
+      return extras;
+    }
+
+    /* Toss normalization (works with fixtures.result / sim_state / top-level fields) */
+    function tryParseJSON(val) {
+      if (!val) return null;
+      if (typeof val === "object") return val;
+      if (typeof val !== "string") return null;
+      try { return JSON.parse(val); } catch { return null; }
+    }
+    function normalizeTossFromPayload(fx) {
+      if (!fx) return null;
+      let resultObj = tryParseJSON(fx.result) ?? fx.result;
+      let simObj = tryParseJSON(fx.sim_state) ?? fx.sim_state;
+      if (fx.toss_winner_team_id || fx.toss_decision) {
+        return { winner_team_id: fx.toss_winner_team_id || null, decision: fx.toss_decision || null, text: null };
+      }
+      if (fx.toss) {
+        return { winner_team_id: fx.toss.winner_team_id || fx.toss.winner || null, decision: fx.toss.decision || fx.toss.elected || null, text: fx.toss.text || null };
+      }
+      if (resultObj && resultObj.toss) {
+        const rt = resultObj.toss;
+        return { winner_team_id: rt.winner_team_id || rt.winner || null, decision: rt.decision || rt.elected || null, text: rt.text || null };
+      }
+      if (simObj && simObj.toss) {
+        const st = simObj.toss;
+        return { winner_team_id: st.winner_team_id || st.winner || null, decision: st.decision || st.elected || null, text: st.text || null };
+      }
+      if (Array.isArray(fx.innings) && fx.innings.length >= 2 && fx.innings[0].team_id) {
+        return { winner_team_id: null, decision: null, text: null };
+      }
+      return null;
+    }
+
+    function renderTossBanner(fx, commentaryList) {
+      const normalized = normalizeTossFromPayload(fx);
+      const cbToss = (commentaryList||[]).find(c => (c.delivery_type||'').toLowerCase() === 'toss' && (c.commentary || '').trim());
+      let text = null;
+      if (cbToss && cbToss.commentary && !/^toss not available$/i.test(String(cbToss.commentary).trim())) {
+        text = cbToss.commentary;
+      } else if (normalized && normalized.winner_team_id) {
+        const winnerId = normalized.winner_team_id;
+        const winnerName = names[winnerId] || fx?.home_team_name || fx?.away_team_name || winnerId;
+        const decisionText = (normalized.decision || 'bat').toLowerCase() === 'bowl' || (normalized.decision||'').toLowerCase() === 'field' ? 'bowl first' : 'bat first';
+        text = `🎲 ${winnerName} won the toss and chose to ${decisionText}.`;
+      } else if (normalized && normalized.text) {
+        text = normalized.text;
+        if (!/🎲/.test(text)) text = `🎲 ${text}`;
+      } else {
+        text = null;
+      }
+
+      const bannerContainerId = 'toss-banner-inline-league';
+      let container = document.getElementById(bannerContainerId);
+      const scoreStrip = document.querySelector('.score-strip');
+      if (!text) {
+        if (container && container.parentNode) container.parentNode.removeChild(container);
+        return;
+      }
+      if (!container) {
+        container = document.createElement('div');
+        container.id = bannerContainerId;
+        container.className = 'toss-line';
+        if (scoreStrip && scoreStrip.parentNode) scoreStrip.parentNode.insertBefore(container, scoreStrip);
+        else (document.querySelector('.wrap') || document.body).insertBefore(container, (document.querySelector('.wrap')||document.body).firstChild);
+      }
+      container.innerHTML = `<div class="toss-banner">${text}</div>`;
+    }
+
+    function ensureTossInCommentary(fx, commentaryArray) {
+      if (!Array.isArray(commentaryArray)) commentaryArray = [];
+      if (commentaryArray.some(c => (c.delivery_type||'').toLowerCase() === 'toss')) return commentaryArray;
+
+      const normalized = normalizeTossFromPayload(fx);
+      let text = 'Toss not available';
+      if (normalized && normalized.winner_team_id) {
+        const friendly = names[normalized.winner_team_id] || `Team ${normalized.winner_team_id}`;
+        text = `Toss: ${friendly} won the toss and elected to ${normalized.decision || 'bat'}.`;
+      } else if (fx?.result?.toss?.text) {
+        text = fx.result.toss.text;
+      } else if (fx?.sim_state?.toss?.text) {
+        text = fx.sim_state.toss.text;
+      }
+
+      const tossRow = {
+        fixture_id: fx?.id,
+        over_number: 0,
+        ball_in_over: 0,
+        innings: 0,
+        striker_id: null,
+        non_striker_id: null,
+        bowler_id: null,
+        runs_scored: 0,
+        extras: 0,
+        wicket: false,
+        dismissed_batsman_id: null,
+        commentary: text,
+        created_at: new Date(Date.now() - 1000).toISOString(),
+        fielder_id: null,
+        delivery_type: 'toss',
+        extras_detail: {}
+      };
+
+      return [tossRow, ...commentaryArray];
+    }
+
+    function filterInitialNoisyLines(commentaryArray) {
+      if (!Array.isArray(commentaryArray)) return commentaryArray;
+      const firstRealIdx = commentaryArray.findIndex(c => {
+        const dt = (c.delivery_type || '').toLowerCase();
+        if (dt === 'toss') return false;
+        if (['legal','wide','noball','bye'].includes(dt)) return true;
+        if (typeof c.over_number === 'number' && c.over_number > 0) return true;
+        return false;
+      });
+      const cutoff = firstRealIdx === -1 ? 3 : firstRealIdx + 1;
+      const noiseRegex = /\bcomes into the attack\b/i;
+      return commentaryArray.filter((c, i) => {
+        if (i < cutoff && typeof c.commentary === 'string' && noiseRegex.test(c.commentary)) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    /* Venue & Ticket Sales: level/capacity mapping + renderer */
+    const TICKET_PRICE = 50;
+    const LEVEL_CAPACITY = {
+      "World Class": 30000,
+      "World_Class": 30000,
+      "World": 30000,
+      "National": 20000,
+      "Domestic": 15000,
+      "Professional": 10000,
+      "Local": 5000
+    };
+
+    function formatCurrencyINR(n){
+      if (typeof n !== "number") return "—";
+      const s = Math.round(n).toString();
+      let last3 = s.slice(-3), rest = s.slice(0, -3);
+      if (rest !== "") {
+        last3 = "," + last3;
+        return "₹" + rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + last3;
+      }
+      return "₹" + last3;
+    }
+
+    async function fetchStadiumAndShow(fxRow){
+      if (!fxRow) return;
+      const venueEl = document.getElementById('venue-name');
+      const cashEl = document.getElementById('ticket-cash');
+      const noteEl = document.getElementById('ticket-note');
+
+      let stadiumId = fxRow.stadium_id || fxRow.stadium || null;
+      let stadium = null;
+
+      // Use any stadium fields present on fixture
+      if (fxRow.stadium_name || fxRow.stadium_level || fxRow.stadium_capacity) {
+        stadium = {
+          id: stadiumId || null,
+          stadium_name: fxRow.stadium_name || fxRow.stadium || "Unknown venue",
+          level: fxRow.stadium_level || fxRow.level || null,
+          capacity: fxRow.stadium_capacity || fxRow.capacity || null
+        };
+      }
+
+      // If stadiumId present and missing details, fetch stadium row
+      if (stadiumId && (!stadium || (!stadium.capacity && !stadium.level && !stadium.stadium_name))) {
+        try {
+          const { data } = await supabase.from('stadiums').select('id,team_id,stadium_name,stadium_level,capacity,pitch_type').eq('id', stadiumId).maybeSingle();
+          if (data) {
+            stadium = {
+              id: data.id,
+              stadium_name: data.stadium_name || `Stadium ${String(data.id).slice(0,8)}`,
+              level: data.stadium_level || null,
+              capacity: data.capacity || null,
+              pitch_type: data.pitch_type || null
+            };
+          }
+        } catch (e) {
+          console.warn("fetchStadiumAndShow: stadium fetch failed", e);
+        }
+      }
+
+      // Final fallback: construct friendly venue name from home team
+      if (!stadium) {
+        const homeTeamName = (names && names[fxRow.home_team_id]) || (fxRow.home_team_name) || "Home Ground";
+        stadium = { id: null, stadium_name: homeTeamName + " Ground", level: null, capacity: null };
+      }
+
+      // Determine capacity from explicit capacity or stadium level mapping
+      let capacity = null;
+      if (stadium.capacity && Number(stadium.capacity) > 0) capacity = Number(stadium.capacity);
+      else if (stadium.level) {
+        const key = String(stadium.level).trim();
+        capacity = LEVEL_CAPACITY[key] || LEVEL_CAPACITY[key.replace(/\s+/g, "_")] || null;
+      }
+
+      // Try fixture-level hints too
+      if (capacity === null) {
+        if (fxRow.stadium_capacity) capacity = Number(fxRow.stadium_capacity) || null;
+        else if (fxRow.stadium_level) {
+          const k = String(fxRow.stadium_level).trim();
+          capacity = LEVEL_CAPACITY[k] || LEVEL_CAPACITY[k.replace(/\s+/g, "_")] || null;
+        }
+      }
+
+      const ticketCash = capacity ? capacity * TICKET_PRICE : null;
+
+      if (venueEl) venueEl.textContent = stadium.stadium_name || "—";
+      if (cashEl) cashEl.textContent = ticketCash ? formatCurrencyINR(ticketCash) : "Capacity unknown";
+      if (noteEl) {
+        if (capacity) noteEl.textContent = `Capacity: ${capacity.toLocaleString()} × ₹${TICKET_PRICE}`;
+        else noteEl.textContent = "Capacity/level not available — can't compute ticket sales";
+      }
+    }
+
+    async function loadMeta() {
+      if (!fixtureId) { console.error('Missing fixture id'); return; }
+      const { data: fx } = await supabase.from('fixtures').select('*').eq('id', fixtureId).maybeSingle();
+      fixtureRow = fx || null;
+      if (!fixtureRow) { console.error('fixture not found', fixtureId); return; }
+
+      homeTeam = fx.home_team_id;
+      awayTeam = fx.away_team_id;
+
+      const { data: t } = await supabase.from('teams').select('id, team_name').in('id', [homeTeam, awayTeam]);
+      (t||[]).forEach(x=> names[x.id]=x.team_name);
+
+      const { data: ps } = await supabase
+        .from('players')
+        .select('id, name, team_id, role, batting, bowling')
+        .in('team_id', [homeTeam, awayTeam]);
+      (ps||[]).forEach(p=> players[p.id] = { ...p });
+
+      const { data: lus } = await supabase
+        .from('lineups')
+        .select('team_id,captain,keeper,playing_xi,batting_order,bowling_order')
+        .in('team_id', [homeTeam, awayTeam]);
+      (lus||[]).forEach(l => {
+        roles[l.team_id] = { captain: l.captain || null, keeper: l.keeper || null, playing_xi: Array.isArray(l.playing_xi) ? l.playing_xi.slice() : null };
+      });
+
+      // Decide battingFirst / battingSecond using toss info (robust)
+      const normalized = normalizeTossFromPayload(fixtureRow);
+      if (normalized && normalized.winner_team_id) {
+        const winner = String(normalized.winner_team_id);
+        const decision = (normalized.decision||'').toLowerCase();
+        const home = String(homeTeam);
+        const away = String(awayTeam);
+        if (decision === 'bowl' || decision === 'field') {
+          if (winner === home) { battingFirst = awayTeam; battingSecond = homeTeam; }
+          else { battingFirst = homeTeam; battingSecond = awayTeam; }
+        } else {
+          if (winner === home) { battingFirst = homeTeam; battingSecond = awayTeam; }
+          else { battingFirst = awayTeam; battingSecond = homeTeam; }
+        }
+      } else if (Array.isArray(fixtureRow.innings) && fixtureRow.innings.length >= 2 && fixtureRow.innings[0].team_id) {
+        battingFirst = fixtureRow.innings[0].team_id;
+        battingSecond = fixtureRow.innings[1].team_id;
+      } else {
+        battingFirst = homeTeam; battingSecond = awayTeam;
+      }
+
+      teamAName.textContent = names[battingFirst] || 'Team A';
+      teamBName.textContent = names[battingSecond] || 'Team B';
+    }
+
+    async function loadOnce() {
+      if (!fixtureId) { console.error('Missing fixture id'); return; }
+      await loadMeta();
+
+      const { data: balls } = await supabase
+        .from('ball_by_ball_league_s1')
+        .select('*')
+        .eq('fixture_id', fixtureId)
+        .order('innings',{ascending:true})
+        .order('over_number',{ascending:true})
+        .order('ball_in_over',{ascending:true})
+        .order('created_at',{ascending:true});
+
+      let fetched = (balls || []).slice();
+      fetched = ensureTossInCommentary(fixtureRow, fetched);
+      fetched = filterInitialNoisyLines(fetched);
+
+      all = fetched.sort((a,b)=>{
+        if ((a.delivery_type||'').toLowerCase() === 'toss' && (b.delivery_type||'').toLowerCase() !== 'toss') return -1;
+        if ((b.delivery_type||'').toLowerCase() === 'toss' && (a.delivery_type||'').toLowerCase() !== 'toss') return 1;
+        if ((a.innings||0) !== (b.innings||0)) return (a.innings||0)-(b.innings||0);
+        if ((a.over_number||0) !== (b.over_number||0)) return (a.over_number||0)-(b.over_number||0);
+        if ((a.ball_in_over||0) !== (b.ball_in_over||0)) return (a.ball_in_over||0)-(b.ball_in_over||0);
+        const ta = new Date(a.created_at || 0).getTime();
+        const tb = new Date(b.created_at || 0).getTime();
+        return ta - tb;
+      });
+
+      liveBatRuns.clear();
+      prevBall = null;
+
+      renderTossBanner(fixtureRow, all);
+      renderCommentaryTop(all, liveFeed);
+      renderCommentaryTop(all, commFeed);
+      updateLiveBlocks();
+      updateScorecardBlocks();
+      maybeShowSummary();
+
+      // --- NEW: initialize Venue & Ticket card after data is loaded ---
+      try { await fetchStadiumAndShow(fixtureRow); } catch (e) { console.warn('venue init failed', e); }
+    }
+
+    function startRealtime() {
+      supabase.channel('bb-league-live')
+        .on('postgres_changes',
+          { event:'INSERT', schema:'public', table:'ball_by_ball_league_s1', filter:`fixture_id=eq.${fixtureId}` },
+          (payload)=> pushToQueue(payload.new)
+        )
+        .on('postgres_changes',
+          { event:'UPDATE', schema:'public', table:'fixtures', filter:`id=eq.${fixtureId}` },
+          (payload)=> { fixtureRow = payload.new; maybeShowSummary(); renderTossBanner(fixtureRow, all); fetchStadiumAndShow(fixtureRow); }
+        )
+        .subscribe();
+    }
+
+    function applyAuto(ms){
+      if (autoTimer) { clearInterval(autoTimer); autoTimer=null; }
+      const n = parseInt(ms,10)||0;
+      if (n>0){ autoTimer = setInterval(loadOnce, n); }
+    }
+    autoSel.onchange = (e)=> applyAuto(e.target.value);
+    btnRefresh.onclick = ()=> loadOnce();
+
+    async function init(){
+      await loadOnce();
+      startRealtime();
+      applyAuto(autoSel.value);
+    }
+
+    init();
+
   </script>
 </body>
 </html>
