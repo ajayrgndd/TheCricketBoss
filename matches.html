@@ -370,15 +370,33 @@
         ${(!live && m.status==='completed') ? `<div class="subscore">${resultText}</div>` : ''}
       `;
 
-      // New routing logic: league vs friendly, running vs not
+      // New routing logic: league vs friendly, running vs scheduled vs completed
       const isLeague = !!m.league_id || m.kind === 'league';
-      const running = ((m.status||'').toLowerCase() === 'running') || (m.started_at && !m.finished_at);
+      const status = String((m.status||'')).toLowerCase();
+      const running = (status === 'running' || status === 'inprogress' || m.started_at) || isFrontEndLive(m);
+      const completed = (status === 'completed' || status === 'finished' || !!m.winner_team_id);
 
       let dest = null;
       if (isLeague) {
-        dest = running ? `league-match.html?id=${encodeURIComponent(m.id)}` : `league-replay.html?id=${encodeURIComponent(m.id)}`;
+        if (running) {
+          dest = `league-match.html?id=${encodeURIComponent(m.id)}`;
+        } else if (completed) {
+          dest = `league-replay.html?id=${encodeURIComponent(m.id)}`;
+        } else {
+          // scheduled / not started -> open new preview
+          dest = `league-preview.html?id=${encodeURIComponent(m.id)}`;
+        }
       } else {
-        dest = running ? `friendly-match.html?id=${encodeURIComponent(m.id)}` : `friendly-replay.html?id=${encodeURIComponent(m.id)}`;
+        // friendly
+        if (running) {
+          dest = `friendly-match.html?id=${encodeURIComponent(m.id)}`;
+        } else if (completed) {
+          dest = `friendly-replay.html?id=${encodeURIComponent(m.id)}`;
+        } else {
+          // friendly scheduled: open friendly preview? keep non-clickable (original behaviour)
+          // If you want a friendly-preview page, change this branch.
+          dest = `friendly-replay.html?id=${encodeURIComponent(m.id)}`; // keep a safe fallback
+        }
       }
 
       // Attach click handler only when we have a destination to go to
@@ -464,6 +482,3 @@
   </script>
 </body>
 </html>
-
-
-
