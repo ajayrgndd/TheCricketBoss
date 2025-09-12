@@ -1,0 +1,12 @@
+cat > capacitor.config.json <<'JSON'
+{
+  "appId": "com.thecricketboss.app",
+  "appName": "TheCricketBoss",
+  "webDir": "build",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://thecricketboss.netlify.app",
+    "cleartext": true
+  }
+}
+JSON
