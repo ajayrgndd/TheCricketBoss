@@ -27,6 +27,8 @@
       margin: 0;
       padding-top: 50px; /* So content isn't hidden under top bar */
       font-family: sans-serif;
+      background: #0b0d10;
+      color: #e6eef8;
     }
 
     /* small helpers for the pitch card on mobile */
@@ -39,6 +41,25 @@
       color:#fff;
       cursor:pointer;
     }
+
+    .stadium-content {
+      max-width: 900px;
+      margin: 16px auto;
+      padding: 16px;
+    }
+
+    .stadium-card {
+      background: linear-gradient(180deg,#0e1115,#0b0d10);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+    }
+
+    .stadium-stats { display: grid; grid-template-columns: repeat(2,1fr); gap:8px; margin-top:12px; }
+    @media (max-width:600px){ .stadium-stats{ grid-template-columns:1fr; } }
+    #upgrade-btn { margin-top:12px; padding:10px 14px; border-radius:10px; background:#2d7cff; color:#fff; border:none; cursor:pointer; }
+    #upgrade-btn[disabled] { opacity:0.6; cursor:not-allowed; }
+
   </style>
 </head>
 <body>
@@ -53,10 +74,10 @@
 
   <!-- ✅ Stadium Content -->
   <main class="stadium-content">
-    <h2>Your Stadium</h2>
+    <h2 style="margin:0 0 12px 0;">Your Stadium</h2>
     <div class="stadium-card">
-      <img src="assets/stadium.png" alt="Stadium" class="stadium-image" />
-      <p class="stadium-description">
+      <img src="assets/stadium.png" alt="Stadium" class="stadium-image" style="width:100%;border-radius:8px;object-fit:cover;max-height:220px;" />
+      <p class="stadium-description" style="opacity:.9;margin-top:12px;">
         Upgrade your stadium to unlock more revenue and fanbase. Higher levels give better rewards from home matches.
       </p>
 
@@ -70,7 +91,7 @@
       </div>
 
       <button id="upgrade-btn">Upgrade Stadium</button>
-      <p id="upgrade-msg"></p>
+      <p id="upgrade-msg" style="margin-top:8px;font-size:.95rem;opacity:.95;"></p>
     </div>
 
     <!-- ✅ Pitch Type Card (added) -->
