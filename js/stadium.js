@@ -46,18 +46,54 @@ function getManagerLevelLabel(xp) {
   return label;
 }
 
+function levelTextToIndex(levelText){
+  if (!levelText) return 1;
+  const map = {
+    "Local": 1,
+    "Professional": 2,
+    "Domestic": 3,
+    "National": 4,
+    "World Class": 5
+  };
+  return map[levelText] || 1;
+}
+function indexToLevelText(idx){
+  const row = STADIUM_LEVELS[idx-1];
+  return row ? row.name : STADIUM_LEVELS[0].name;
+}
+
 // === PAGE INIT ===
 async function init() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  const { data: profile } = await supabase
+  // fetch profile (for XP/cash/manager_name/coins) and team_id
+  const { data: profile, error: pErr } = await supabase
     .from("profiles")
-    .select("stadium_level, xp, cash, stadium_upgrade_end, team_id, manager_name, coins")
+    .select("stadium_level, xp, cash, stadium_upgrade_end, team_id, manager_name, coins, user_id")
     .eq("user_id", user.id)
     .single();
 
-  if (!profile) return;
+  if (pErr || !profile) {
+    console.error("Failed loading profile:", pErr?.message);
+    return;
+  }
+
+  // fetch or create stadium row for the team
+  const teamId = profile.team_id;
+  const stadium = await ensureStadiumForTeam(teamId, user.id);
+
+  // If stadium exists, prefer stadium fields as source-of-truth
+  let stadiumState = {
+    id: stadium?.id || null,
+    team_id: stadium?.team_id || teamId,
+    level_text: stadium?.level || indexToLevelText(profile.stadium_level || 1),
+    capacity: stadium?.capacity || (STADIUM_LEVELS[(profile.stadium_level||1)-1].capacity),
+    is_upgrading: !!stadium?.is_upgrading,
+    upgrade_start_time: stadium?.upgrade_start_time || null,
+    pitch_type: stadium?.pitch_type || "balanced",
+    pitch_last_changed: stadium?.pitch_last_changed || null
+  };
 
   // Top bar
   const topU = document.getElementById("top-username");
@@ -69,30 +105,65 @@ async function init() {
   if (topC) topC.textContent = `🪙 ${profile.coins}`;
   if (top$) top$.textContent = `₹ ${profile.cash}`;
 
-  // Finalize upgrade if timer elapsed
-  if (profile.stadium_upgrade_end && new Date(profile.stadium_upgrade_end) <= new Date()) {
-    await completeUpgrade(user.id, profile.stadium_level);
+  // If upgrade has completed according to profiles (old flow) or stadium says done, finalize
+  // Prefer stadium.is_upgrading/upgradestart_time check first
+  if (stadiumState.is_upgrading && stadiumState.upgrade_start_time) {
+    // compute end from mapping (server should also supply upgrade_end ideally)
+    // We won't auto-complete here; the countdown will call completion when it reaches 0
+  } else if (profile.stadium_upgrade_end && new Date(profile.stadium_upgrade_end) <= new Date()) {
+    // backwards-compat: complete using current profile level
+    await completeUpgradeFlow(user.id, teamId, profile.stadium_level);
     profile.stadium_level += 1;
     profile.stadium_upgrade_end = null;
+    // refresh stadiumState from DB
+    const { data: s2 } = await supabase.from("stadiums").select("id,team_id,level,capacity,is_upgrading,upgrade_start_time").eq("team_id", teamId).maybeSingle();
+    if (s2) {
+      stadiumState.level_text = s2.level;
+      stadiumState.capacity = s2.capacity;
+      stadiumState.is_upgrading = !!s2.is_upgrading;
+      stadiumState.upgrade_start_time = s2.upgrade_start_time;
+    }
   }
 
-  updateStadiumDisplay(profile.stadium_level, profile.xp);
+  updateStadiumDisplayFromText(stadiumState.level_text, profile.xp, stadiumState.capacity);
 
   // Upgrade UI
   const upgradeBtn = document.getElementById('upgrade-btn');
   const upgradeMsg = document.getElementById('upgrade-msg');
 
-  if (profile.stadium_upgrade_end && new Date(profile.stadium_upgrade_end) > new Date()) {
-    disableUpgradeBtnWithCountdown(profile.stadium_upgrade_end);
+  // Use stadium-level to determine next
+  let currentLevelIndex = levelTextToIndex(stadiumState.level_text);
+
+  // If stadium row indicates an upgrade in progress, show countdown based on stadium.upgrade_start_time + duration
+  if (stadiumState.is_upgrading && stadiumState.upgrade_start_time) {
+    const upgradeStart = new Date(stadiumState.upgrade_start_time);
+    const durationMs = STADIUM_UPGRADE_DURATIONS[currentLevelIndex] || STADIUM_UPGRADE_DURATIONS[1];
+    const upgradeEnd = new Date(upgradeStart.getTime() + durationMs);
+    disableUpgradeBtnWithCountdown(upgradeEnd.toISOString(), async () => {
+      // on completion: try to run server-side completion RPC; fallback to client complete
+      await finalizeUpgradeAndRefresh(user.id, teamId, profile, stadiumState, top$);
+    });
   } else {
     upgradeBtn?.addEventListener('click', async () => {
-      const currentLevel = profile.stadium_level;
-      if (currentLevel >= 5) {
+      // re-check stadium row before starting
+      const { data: freshStadium } = await supabase
+        .from("stadiums")
+        .select("id,team_id,level,capacity,is_upgrading,upgrade_start_time")
+        .eq("team_id", teamId)
+        .maybeSingle();
+
+      if (freshStadium?.is_upgrading) {
+        upgradeMsg.innerText = "Upgrade already in progress.";
+        return;
+      }
+
+      const curLevelIdx = levelTextToIndex(freshStadium?.level || stadiumState.level_text);
+      if (curLevelIdx >= STADIUM_LEVELS.length) {
         upgradeMsg.innerText = "Max level reached.";
         return;
       }
 
-      const next = STADIUM_LEVELS[currentLevel]; // 0-indexed
+      const next = STADIUM_LEVELS[curLevelIdx]; // next index (0-based)
       if (profile.xp < next.requiredManagerXP) {
         upgradeMsg.innerText = "Not enough XP to upgrade.";
         return;
@@ -103,22 +174,77 @@ async function init() {
         return;
       }
 
-      const now = new Date();
-      const duration = STADIUM_UPGRADE_DURATIONS[currentLevel];
-      const upgradeEndTime = new Date(now.getTime() + duration).toISOString();
+      upgradeMsg.innerText = "Starting upgrade…";
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          stadium_upgrade_end: upgradeEndTime,
-          cash: profile.cash - next.cost
-        })
-        .eq("user_id", user.id);
+      // Preferred: call server-side RPC to atomically start upgrade (deduct cash, mark stadium.upgrading)
+      try {
+        const rpcResult = await supabase.rpc('stadium_start_upgrade', {
+          p_team_id: teamId,
+          p_actor: user.id
+        });
+        if (rpcResult.error) throw rpcResult.error;
 
-      if (!error) {
-        profile.cash -= next.cost;
-        if (top$) top$.textContent = `₹ ${profile.cash}`;
-        disableUpgradeBtnWithCountdown(upgradeEndTime);
+        // rpcResult.data may vary by supabase lib; modern returns { data, error }
+        const rpcData = rpcResult.data ?? rpcResult; // defensive
+        // rpc should return stadium_id, upgrade_end, remaining_cash (see suggested SQL in notes)
+        const returned = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+        const upgradeEnd = returned?.upgrade_end || returned?.upgrade_end_ts || null;
+        const remainingCash = returned?.remaining_cash ?? null;
+
+        if (remainingCash !== null && top$) top$.textContent = `₹ ${remainingCash}`;
+
+        // show countdown using the returned upgradeEnd (if available) otherwise compute from now + duration
+        const upgradeEndIso = upgradeEnd || new Date(Date.now() + (STADIUM_UPGRADE_DURATIONS[curLevelIdx] || STADIUM_UPGRADE_DURATIONS[1])).toISOString();
+
+        disableUpgradeBtnWithCountdown(upgradeEndIso, async () => {
+          await finalizeUpgradeAndRefresh(user.id, teamId, profile, stadiumState, top$);
+        });
+
+        upgradeMsg.innerText = "Upgrade started.";
+        return;
+      } catch (rpcErr) {
+        // RPC missing or errored — fallback to client-side update (less safe)
+        console.warn("stadium_start_upgrade RPC failed, falling back to client update:", rpcErr?.message || rpcErr);
+      }
+
+      // FALLBACK: try to mark stadium as upgrading and deduct cash in two operations (race possible)
+      try {
+        // deduct cash in profile
+        const { error: upErr } = await supabase
+          .from("profiles")
+          .update({ cash: profile.cash - next.cost, stadium_upgrade_end: null })
+          .eq("user_id", user.id);
+        if (upErr) throw upErr;
+
+        // mark stadium as upgrading with timestamp
+        const { data: uData, error: sErr } = await supabase
+          .from("stadiums")
+          .update({
+            is_upgrading: true,
+            upgrade_start_time: new Date().toISOString(),
+            upgrade_cost: next.cost,
+            updated_at: new Date().toISOString()
+          })
+          .eq("team_id", teamId)
+          .select("id,upgrade_start_time")
+          .maybeSingle();
+
+        if (sErr) throw sErr;
+
+        if (top$) {
+          profile.cash -= next.cost;
+          top$.textContent = `₹ ${profile.cash}`;
+        }
+
+        const upgradeEndIso = new Date(Date.now() + (STADIUM_UPGRADE_DURATIONS[curLevelIdx] || STADIUM_UPGRADE_DURATIONS[1])).toISOString();
+        disableUpgradeBtnWithCountdown(upgradeEndIso, async () => {
+          await finalizeUpgradeAndRefresh(user.id, teamId, profile, stadiumState, top$);
+        });
+
+        upgradeMsg.innerText = "Upgrade started (fallback mode).";
+      } catch (fallbackErr) {
+        console.error("Fallback upgrade failed:", fallbackErr);
+        upgradeMsg.innerText = "Failed to start upgrade. Try again later.";
       }
     });
   }
@@ -127,26 +253,125 @@ async function init() {
   await initPitchModule({ userId: user.id, teamId: profile.team_id });
 }
 
-async function completeUpgrade(userId, currentLevel) {
-  const newLevel = currentLevel + 1;
-  if (newLevel > 5) return;
+// Helper: complete upgrade for older flow (profile-based)
+async function completeUpgradeFlow(userId, teamId, currentProfileLevel) {
+  // This will try server-side completion RPCs or do best-effort update
+  try {
+    // prefer team-specific RPC
+    const tryTeam = await supabase.rpc('stadium_complete_for_team', { p_team_id: teamId });
+    if (!tryTeam.error) return;
+  } catch (e) { /* ignore */ }
+
+  try {
+    const tryGlobal = await supabase.rpc('stadium_complete_upgrades');
+    if (!tryGlobal.error) return;
+  } catch (e) { /* ignore */ }
+
+  // last resort: client-side compute and update
+  const newLevelIdx = Math.min((currentProfileLevel || 1) + 1, STADIUM_LEVELS.length);
+  const newLevelText = indexToLevelText(newLevelIdx);
+  const newCapacity = STADIUM_LEVELS[newLevelIdx-1].capacity;
 
   await supabase
-    .from("profiles")
+    .from("stadiums")
     .update({
-      stadium_level: newLevel,
-      stadium_upgrade_end: null
+      level: newLevelText,
+      capacity: newCapacity,
+      is_upgrading: false,
+      upgrade_start_time: null,
+      updated_at: new Date().toISOString()
     })
-    .eq("user_id", userId);
-
-  await addManagerXP(supabase, userId, `stadium_lvl${newLevel}`);
+    .eq("team_id", teamId);
 }
 
-function disableUpgradeBtnWithCountdown(endTime) {
+// finalizeUpgradeAndRefresh: called when countdown hits zero
+async function finalizeUpgradeAndRefresh(userId, teamId, profile, stadiumState, topCashEl) {
+  // Try RPC that completes upgrade for a single team first
+  try {
+    const { data, error } = await supabase.rpc('stadium_complete_for_team', { p_team_id: teamId });
+    if (!error) {
+      // refresh stadium and profile
+      await refreshAfterCompletion(userId, teamId, profile, topCashEl);
+      return;
+    }
+  } catch (e) {
+    // ignore and fallback
+    console.warn("stadium_complete_for_team RPC missing or failed:", e?.message || e);
+  }
+
+  // fallback: try global completion RPC
+  try {
+    const { data, error } = await supabase.rpc('stadium_complete_upgrades');
+    if (!error) {
+      await refreshAfterCompletion(userId, teamId, profile, topCashEl);
+      return;
+    }
+  } catch (e) {
+    console.warn("stadium_complete_upgrades RPC missing or failed:", e?.message || e);
+  }
+
+  // last resort: compute locally and update stadium row
+  try {
+    // fetch current stadium row to determine current level
+    const { data: sRow } = await supabase.from("stadiums").select("id,level,capacity").eq("team_id", teamId).maybeSingle();
+    const curIdx = levelTextToIndex(sRow?.level || indexToLevelText(profile.stadium_level || 1));
+    const newIdx = Math.min(curIdx + 1, STADIUM_LEVELS.length);
+    const newLevelText = indexToLevelText(newIdx);
+    const newCapacity = STADIUM_LEVELS[newIdx-1].capacity;
+
+    await supabase.from("stadiums").update({
+      level: newLevelText,
+      capacity: newCapacity,
+      is_upgrading: false,
+      upgrade_start_time: null,
+      updated_at: new Date().toISOString()
+    }).eq("team_id", teamId);
+
+    // update profiles.stadium_level numeric cache, and award XP locally
+    await supabase.from("profiles").update({
+      stadium_level: newIdx,
+      stadium_upgrade_end: null
+    }).eq("user_id", userId);
+
+    // award XP using client helper (fallback)
+    await addManagerXP(supabase, userId, `stadium_lvl${newIdx}`);
+
+    await refreshAfterCompletion(userId, teamId, profile, topCashEl);
+  } catch (e) {
+    console.error("Failed to finalize upgrade locally:", e);
+  }
+}
+
+async function refreshAfterCompletion(userId, teamId, profile, topCashEl) {
+  // refresh stadium and profile values to show updated UI
+  const { data: s } = await supabase.from("stadiums")
+    .select("id,team_id,level,capacity,is_upgrading,upgrade_start_time")
+    .eq("team_id", teamId)
+    .maybeSingle();
+
+  const { data: p } = await supabase.from("profiles")
+    .select("xp,cash,stadium_level,manager_name,coins")
+    .eq("user_id", userId)
+    .single();
+
+  if (p && topCashEl) topCashEl.textContent = `₹ ${p.cash}`;
+
+  const levelText = s?.level || indexToLevelText(p?.stadium_level || 1);
+  const capacity = s?.capacity || (STADIUM_LEVELS[(p?.stadium_level||1)-1].capacity);
+  updateStadiumDisplayFromText(levelText, p?.xp || 0, capacity);
+
+  // reload page to ensure other modules see updated stadium (optional)
+  // but to be gentle, only reload if necessary
+  // location.reload();
+}
+
+function disableUpgradeBtnWithCountdown(endTime, onComplete) {
   const btn = document.getElementById('upgrade-btn');
   const msg = document.getElementById('upgrade-msg');
   if (!btn || !msg) return;
   btn.disabled = true;
+
+  let timerId = null;
 
   function updateCountdown() {
     const now = new Date();
@@ -156,7 +381,7 @@ function disableUpgradeBtnWithCountdown(endTime) {
     if (diff <= 0) {
       msg.innerText = "Upgrade complete!";
       btn.disabled = false;
-      location.reload();
+      if (typeof onComplete === 'function') onComplete().catch(e => console.error(e));
       return;
     }
 
@@ -165,33 +390,31 @@ function disableUpgradeBtnWithCountdown(endTime) {
     const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
     msg.innerText = `Upgrade in progress: ${hrs}h ${mins}m ${secs}s`;
-    setTimeout(updateCountdown, 1000);
+    timerId = setTimeout(updateCountdown, 1000);
   }
 
   updateCountdown();
 }
 
-function updateStadiumDisplay(level, xp) {
+function updateStadiumDisplayFromText(levelText, xp, capacityOverride = null) {
   const el = (id) => document.getElementById(id);
-  if (!el("stadium-level-name")) return;
-
-  const stadium = STADIUM_LEVELS[level - 1];
-  const next = STADIUM_LEVELS[level] || null;
-
-  el("stadium-level-name").innerText = `Level ${stadium.level} (${stadium.name})`;
-  el("stadium-capacity").innerText = stadium.capacity.toLocaleString();
-  el("stadium-revenue").innerText = stadium.revenue.toLocaleString();
-  el("stadium-upgrade-cost").innerText = next ? next.cost.toLocaleString() : "—";
-  el("required-manager-level").innerText = next
-    ? getManagerLevelLabel(next.requiredManagerXP)
-    : "Max";
+  const idx = levelTextToIndex(levelText);
+  const stadium = STADIUM_LEVELS[idx - 1] || STADIUM_LEVELS[0];
+  if (el("stadium-level-name")) el("stadium-level-name").innerText = `Level ${stadium.level} (${stadium.name})`;
+  if (el("stadium-capacity")) el("stadium-capacity").innerText = (capacityOverride ?? stadium.capacity).toLocaleString();
+  if (el("stadium-revenue")) el("stadium-revenue").innerText = stadium.revenue.toLocaleString();
+  if (el("stadium-upgrade-cost")) {
+    const next = STADIUM_LEVELS[idx] || null;
+    el("stadium-upgrade-cost").innerText = next ? next.cost.toLocaleString() : "—";
+  }
+  if (el("required-manager-level")) {
+    const next = STADIUM_LEVELS[idx] || null;
+    el("required-manager-level").innerText = next ? getManagerLevelLabel(next.requiredManagerXP) : "Max";
+  }
 }
 
-// Kick off
-init();
-
 /* =========================
-   PITCH TYPE MODULE (NEW)
+   PITCH TYPE MODULE (UNCHANGED)
    ========================= */
 
 const PITCH_COST = 1_000_000; // ₹10,00,000
@@ -243,7 +466,7 @@ function effectLines(mods){
 async function ensureStadiumForTeam(teamId, userId) {
   let { data: sRow, error } = await supabase
     .from("stadiums")
-    .select("id, team_id, user_id, name, pitch_type, pitch_last_changed")
+    .select("id, team_id, user_id, name, pitch_type, pitch_last_changed, level, capacity, is_upgrading, upgrade_start_time")
     .eq("team_id", teamId)
     .maybeSingle();
 
@@ -253,20 +476,24 @@ async function ensureStadiumForTeam(teamId, userId) {
     if (status) status.textContent = "Admin: please add columns pitch_type (text) & pitch_last_changed (timestamptz) to stadiums.";
     const { data: sFallback } = await supabase
       .from("stadiums")
-      .select("id, team_id, user_id, name")
+      .select("id, team_id, user_id, name, level, capacity")
       .eq("team_id", teamId)
       .maybeSingle();
     return sFallback || null;
   }
 
   if (!sRow) {
-    // Create minimal row if none exists
+    // Create minimal row if none exists (now includes level & capacity)
     const defaultName = "Home Stadium";
-    const { data: inserted } = await supabase
+    const { data: inserted, error: iErr } = await supabase
       .from("stadiums")
-      .insert([{ team_id: teamId, user_id: userId, name: defaultName }])
-      .select("id, team_id, user_id, name, pitch_type, pitch_last_changed")
+      .insert([{ team_id: teamId, user_id: userId, name: defaultName, level: indexToLevelText(1), capacity: STADIUM_LEVELS[0].capacity }])
+      .select("id, team_id, user_id, name, pitch_type, pitch_last_changed, level, capacity")
       .single();
+    if (iErr) {
+      console.error("Failed to create stadium row:", iErr);
+      return null;
+    }
     sRow = inserted;
   }
   return sRow;
@@ -399,3 +626,6 @@ window.TCB_Pitch = {
     return { key, ...PITCH_TYPES[key] };
   }
 };
+
+// Kick off
+init();
