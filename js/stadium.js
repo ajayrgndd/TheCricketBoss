@@ -19,11 +19,11 @@ const STADIUM_UPGRADE_DURATIONS = {
 };
 
 const STADIUM_LEVELS = [
-  { level: 1, name: "Local",        capacity: 5000,  revenue: 500,  cost: 100000,  requiredManagerXP: 1 },
-  { level: 2, name: "Professional", capacity: 10000, revenue: 1000, cost: 250000,  requiredManagerXP: 750 },
-  { level: 3, name: "Domestic",     capacity: 15000, revenue: 2000, cost: 500000,  requiredManagerXP: 3500 },
-  { level: 4, name: "National",     capacity: 20000, revenue: 4000, cost: 1000000, requiredManagerXP: 5500 },
-  { level: 5, name: "World Class",  capacity: 30000, revenue: 8000, cost: 2000000, requiredManagerXP: 8500 },
+  { level: 1, name: "Local",        capacity: 5000,  revenue: 250000,  cost: 100000,  requiredManagerXP: 1 },
+  { level: 2, name: "Professional", capacity: 10000, revenue: 500000, cost: 250000,  requiredManagerXP: 750 },
+  { level: 3, name: "Domestic",     capacity: 15000, revenue: 750000, cost: 500000,  requiredManagerXP: 3500 },
+  { level: 4, name: "National",     capacity: 20000, revenue: 1000000, cost: 1000000, requiredManagerXP: 5500 },
+  { level: 5, name: "World Class",  capacity: 30000, revenue: 1500000, cost: 2000000, requiredManagerXP: 8500 },
 ];
 
 const MANAGER_LEVELS = [
