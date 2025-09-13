@@ -7,13 +7,14 @@
   <link rel="stylesheet" href="styles/global.css" />
   <style>
     body {
-      background-color: #121212;
+      background-color: #1f1630; /* changed to deep purple like scout page */
       color: #fff;
       font-family: sans-serif;
       margin: 0;
       padding-bottom: 80px;
     }
 
+    /* ensure content clears top nav */
     .main {
       padding: 20px;
       padding-top: 2px;
@@ -94,97 +95,32 @@
       color: #ccc;
     }
 
-    .quick-links {
-      margin-top: 24px;
-      text-align: center;
-    }
+    .quick-links { margin-top: 24px; text-align: center; }
+    .quick-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; }
+    .quick-grid a { display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #1e1e1e; padding: 14px 10px; border-radius: 8px; text-decoration: none; color: #00e676; box-shadow: 0 2px 5px rgba(0,0,0,0.4); transition: background 0.2s ease; }
+    .quick-grid a:hover { background-color: #2e2e2e; }
+    .quick-grid .icon { font-size: 24px; margin-bottom: 6px; }
+    .quick-grid .label { font-size: 0.85rem; }
 
-    .quick-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-      gap: 12px;
-    }
-
-    .quick-grid a {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background-color: #1e1e1e;
-      padding: 14px 10px;
-      border-radius: 8px;
-      text-decoration: none;
-      color: #00e676;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-      transition: background 0.2s ease;
-    }
-
-    .quick-grid a:hover {
-      background-color: #2e2e2e;
-    }
-
-    .quick-grid .icon {
-      font-size: 24px;
-      margin-bottom: 6px;
-    }
-
-    .quick-grid .label {
-      font-size: 0.85rem;
-    }
-
-    /* NEXT MATCH tweaks: smaller text and smaller logo, no boxed table behind name */
-    .match-card {
-      display:flex;
-      gap:10px;
-      align-items:center;
-    }
-    .team-block {
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    .team-logo {
-      width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04);
-    }
-    .team-text {
-      display:flex;
-      flex-direction:column;
-      gap:3px;
-    }
+    /* NEXT MATCH tweaks */
+    .match-card { display:flex; gap:10px; align-items:center; }
+    .team-block { display:flex; gap:8px; align-items:center; }
+    .team-logo { width:44px; height:44px; border-radius:8px; object-fit:cover; background:#222; border:1px solid rgba(255,255,255,0.04); }
+    .team-text { display:flex; flex-direction:column; gap:3px; }
     .team-name { font-weight:700; font-size:14px; color:#fff; }
     .ovr-row { font-size:12px; color:#cfd3ff; display:flex; align-items:center; gap:6px; }
-
     .match-meta { margin-left:10px; color:#cfd3ff; text-align:center; }
     .badge { font-size:11px; padding:4px 7px; border-radius:8px; background:#222; color:#cfd3ff; border:1px solid rgba(255,255,255,0.04); display:inline-block }
     .kickoff { margin-top:6px; font-weight:700; font-size:13px; }
     .countdown { font-weight:700; font-size:13px; color:#00e676; margin-top:6px; }
 
-    /* NEW: Preparation bar — reduced size + multi-color gradient (yellow -> light green -> orange -> red) */
-    .prep {
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .prep-bar {
-      height: 8px; /* reduced size */
-      background:#2b2b2b;
-      border-radius:6px;
-      overflow:hidden;
-    }
-    .prep-fill {
-      height:100%;
-      /* gradient: yellow -> light-green -> orange -> red */
-      background: linear-gradient(90deg, #FFD54F 0%, #C8E6C9 35%, #FFB74D 70%, #FF5252 100%);
-      width:0%;
-      transition: width .45s ease;
-    }
-    .prep-percent {
-      font-weight:800;
-      color:#cfd3ff;
-      font-size:12px; /* reduced */
-    }
+    /* Preparation bar */
+    .prep { display:flex; flex-direction:column; gap:6px; }
+    .prep-bar { height: 8px; background:#2b2b2b; border-radius:6px; overflow:hidden; }
+    .prep-fill { height:100%; background: linear-gradient(90deg, #FFD54F 0%, #C8E6C9 35%, #FFB74D 70%, #FF5252 100%); width:0%; transition: width .45s ease; }
+    .prep-percent { font-weight:800; color:#cfd3ff; font-size:12px; }
     .prep-tasks { display:flex;flex-direction:column;gap:6px; margin-top:6px }
-    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px } /* reduced */
+    .task { display:flex;align-items:center;gap:8px;color:#cfd3ff;font-size:12px }
     .task .dot { width:12px;height:12px;border-radius:50%;display:inline-block;text-align:center;line-height:12px;font-weight:800; font-size:11px }
     .task.done .dot { background:#00e676;color:#000 }
     .task.pending .dot { background:#444;color:#999 }
@@ -192,7 +128,7 @@
     .task a { color:#00e676; text-decoration:none; font-weight:700; font-size:11px }
 
     /* Top 3 tweaks */
-    .top-player-name { font-size:13px; font-weight:700; color:#fff; } /* reduced size */
+    .top-player-name { font-size:13px; font-weight:700; color:#fff; }
     .top-player-role { font-size:12px; color:#cfd3ff; }
     .top-player-skill { font-size:12px; color:#a8f5c6; display:flex; align-items:center; gap:8px; justify-content:center; }
 
@@ -207,8 +143,6 @@
   <!-- Top bar & bottom nav will be injected by shared-ui.js -->
 
   <div class="main">
-    <!-- (Welcome header removed as requested) -->
-
     <!-- XP Progress Bar -->
     <div class="xp-bar-container">
       <div class="xp-bar-top">
@@ -251,7 +185,7 @@
 
     </div>
 
-    <!-- Quick Access (heading removed as requested) -->
+    <!-- Quick Access -->
     <div class="quick-links">
       <div class="quick-grid">
         <a href="league.html"><div class="icon">🏆</div><div class="label">League</div></a>
@@ -295,7 +229,7 @@
     }
 
     // ----------------------
-    // Helper functions reused/adapted from your profile files
+    // Helpers
     // ----------------------
     const toNum = (v) => (v == null || v === '') ? 0 : Number(v);
 
@@ -635,6 +569,10 @@
         const oppRates = computeRatings(oppSelection);
 
         const kickoffDt = parseKickoff(nextMatch) || new Date();
+
+        /* ===== FIXED OVR DISPLAY: use ourRates / oppRates appropriately for each side =====
+           Previously code recomputed pickByLineupOrAuto inline which caused the away view to
+           display the away team's OVR for both teams. Now we use the precomputed values. */
         fixtureInfo.innerHTML = `
           <div class="match-card">
             <div class="team-block">
@@ -643,7 +581,11 @@
                 <div class="team-name">${homeInfo.team_name}</div>
                 <div class="ovr-row">
                   <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
-                  <span>${fmtOne(computeRatings(pickByLineupOrAuto((homeId===team.id?players:opponentPlayers), (homeId===team.id?lineup:oppLineupRes?.data))).ovr)}</span>
+                  <span>${
+                    homeId === team.id
+                      ? fmtOne(ourRates.ovr)
+                      : fmtOne(oppRates.ovr)
+                  }</span>
                 </div>
               </div>
             </div>
@@ -658,7 +600,11 @@
               <div class="team-text" style="text-align:right">
                 <div class="team-name">${awayInfo.team_name}</div>
                 <div class="ovr-row" style="justify-content:flex-end">
-                  <span>${fmtOne(oppRates.ovr)}</span>
+                  <span>${
+                    awayId === team.id
+                      ? fmtOne(ourRates.ovr)
+                      : fmtOne(oppRates.ovr)
+                  }</span>
                   <img src="assets/rating/ovr.png" alt="OVR" style="width:16px;height:16px;vertical-align:middle" />
                 </div>
               </div>
@@ -770,10 +716,12 @@
       prepPercent.textContent = `${score}%`;
       document.getElementById('t-fitness').textContent = fmtOne(avgFitness);
 
-      // periodic refresh every 20s for tasks & countdown is already running
+      // periodic refresh every 20s for tasks & countdown
       setInterval(async () => {
         try {
-          const { data: rt } = await supabase.from('training_sessions').select('id').eq('user_id', user.id).gte('created_at', sevenDaysAgo.toISOString().split('T')[0]).limit(1);
+          // re-check training using same logic (profile fast path + training_sessions fallback)
+          const sevenDaysAgoInner = new Date(); sevenDaysAgoInner.setDate(sevenDaysAgoInner.getDate() - 7);
+          const { data: rt } = await supabase.from('training_sessions').select('id').eq('user_id', user.id).gte('created_at', sevenDaysAgoInner.toISOString().split('T')[0]).limit(1);
           const newTrainingDone = (rt && rt.length>0);
           const { data: pf } = await supabase.from('profiles').select('last_scouted_date,last_scouted').eq('user_id', user.id).single();
           let newScoutDone = false;
@@ -833,6 +781,3 @@
   </script>
 </body>
 </html>
-
-
-
