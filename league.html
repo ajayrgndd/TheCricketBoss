@@ -5,11 +5,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>League — The Cricket Boss</title>
   <style>
-    :root{--bg:#071029;--panel:rgba(255,255,255,0.02);--muted:#9aa5bf;--accent:#ffd54f;--text:#e6eef8}
+    :root{
+      --bg:#071029;
+      --panel:rgba(255,255,255,0.02);
+      --muted:#9aa5bf;
+      --accent:#ffd54f;
+      --text:#e6eef8;
+    }
     html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071020);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
     .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
-    .topbar-placeholder{height:64px}
-    .league-header{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
+
+    /* Shared UI placeholder (actual shared-ui.js will replace this) */
+    .tcb-topbar { height:64px; display:flex; align-items:center; padding:8px 12px; gap:12px; background:linear-gradient(90deg,#182b4d,#111d3a); color:#fff; box-sizing:border-box; }
+    .tcb-topbar img.logo { height:44px; width:auto; }
+    .tcb-topbar .manager { font-weight:700; margin-left:6px; }
+
+    .league-header{display:flex;align-items:center;gap:12px;margin:16px 0;flex-wrap:wrap}
     .league-name{font-size:20px;font-weight:700}
     .controls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .search-input{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);min-width:140px;max-width:60%;box-sizing:border-box}
@@ -17,39 +28,55 @@
     .tabs{display:flex;gap:10px;margin:12px 0}
     .tab{padding:8px 12px;border-radius:8px;background:var(--panel);cursor:pointer;font-weight:700}
     .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
+
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
+
     .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
-    table.league-table{width:100%;border-collapse:collapse;min-width:650px;table-layout:fixed}
+    /* fixed layout but responsive percentages — keeps 75% / 25% split */
+    table.league-table{width:100%;border-collapse:collapse;table-layout:fixed}
     table.league-table thead th{ text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
     table.league-table tbody td{ padding:12px 8px;font-size:14px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
+
+    /* percentages: pos+logo+team ≈ 75% ; stats (M + Pts) ≈ 25% */
     .col-pos{width:8%}
-    .col-logo{width:10%}
-    .col-team{width:57%}
-    .col-stat{width:12%;text-align:center;font-weight:700}
+    .col-logo{width:12%}
+    .col-team{width:55%}
+    .col-stat{width:12.5%;text-align:center;font-weight:700}
+
     .team-cell{display:flex;align-items:center;gap:10px;min-width:0}
     .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover}
     .team-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;font-weight:600}
+
     .detail-row td{ background: rgba(255,255,255,0.015); font-size:13px; color:var(--muted); padding:10px 12px }
     .clickable-row{cursor:pointer}
+
+    /* small screens adjustments - still keep the 75/25 split */
     @media (max-width:720px){
       .col-pos{width:8%}
       .col-logo{width:12%}
-      .col-team{width:60%}
-      .col-stat{width:10%}
+      .col-team{width:55%}
+      .col-stat{width:12.5%}
       .team-logo{width:30px;height:30px}
-      table.league-table{min-width:540px}
     }
     @media (max-width:420px){
       .search-input{max-width:58%}
-      table.league-table{min-width:520px}
-      .col-stat{width:10%}
+      .team-name{font-size:14px}
     }
+
     a.team-link{color:inherit;text-decoration:none}
     .muted{color:var(--muted)}
   </style>
 </head>
 <body>
-  <div class="topbar-placeholder"></div>
+  <!-- topbar (shared-ui.js will try to replace this if present) -->
+  <div id="topbar" class="tcb-topbar">
+    <img src="assets/logo.png" class="logo" alt="logo"/>
+    <div class="manager">Manager</div>
+    <div style="margin-left:auto;display:flex;gap:12px;align-items:center">
+      <div class="muted">XP</div><div class="muted">CB</div><div class="muted">Cash</div>
+    </div>
+  </div>
+
   <div class="container">
     <div class="league-header">
       <div><div class="league-name" id="leagueName">League</div></div>
@@ -83,11 +110,11 @@
       </div>
 
       <div style="margin-top:14px; display:flex; gap:20px; flex-wrap:wrap;">
-        <div style="flex:1; min-width:220px">
+        <div style="flex:1; min-width:200px">
           <h4 style="margin:6px 0">Top 5 Batters</h4>
           <div id="topBatters" class="muted">No data yet</div>
         </div>
-        <div style="flex:1; min-width:220px">
+        <div style="flex:1; min-width:200px">
           <h4 style="margin:6px 0">Top 5 Bowlers</h4>
           <div id="topBowlers" class="muted">No data yet</div>
         </div>
@@ -99,8 +126,26 @@
     </div>
   </div>
 
-  <script type="module" src="./js/shared-ui.js" defer></script>
-  <script type="module" src="./js/league.js"></script>
+  <!-- try to load shared-ui.js (optional) then league.js -->
+  <script type="module">
+    // Attempt to dynamically import shared-ui.js and call loadSharedUI if available.
+    // If it fails, leave the small fallback bar (already present above).
+    (async function(){
+      try {
+        const mod = await import('./shared-ui.js');
+        // expose a global for other modules to reuse
+        window.__loadSharedUI = mod.loadSharedUI;
+      } catch (err) {
+        console.warn('shared-ui.js not available — using fallback topbar', err);
+        window.__loadSharedUI = null;
+      } finally {
+        // now load league script
+        const s = document.createElement('script');
+        s.type = 'module';
+        s.src = './league.js';
+        document.body.appendChild(s);
+      }
+    })();
+  </script>
 </body>
 </html>
-
