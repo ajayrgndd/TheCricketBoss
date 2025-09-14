@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>League — The Cricket Boss</title>
   <style>
-    :root{--bg:#071029;--panel:rgba(255,255,255,0.02);--muted:#9aa5bf;--accent:#ffd54f;--text:#e6eef8}
+    :root{
+      --bg:#071029;
+      --panel:rgba(255,255,255,0.02);
+      --muted:#9aa5bf;
+      --accent:#ffd54f;
+      --text:#e6eef8;
+    }
     html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071020);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
     .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
-    /* topbar placeholder (shared-ui.js will inject into this) */
-    #topbarContainer{width:100%;min-height:64px}
-
+    /* placeholder for injected topbar (shared-ui or fallback) */
+    .topbar-placeholder{height:64px}
     .league-header{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
     .league-name{font-size:20px;font-weight:700}
     .controls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -21,44 +26,56 @@
     .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
     .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
-    /* Use table but with relative % widths tuned for mobile */
-    table.league-table{width:100%;border-collapse:collapse;min-width:480px;table-layout:fixed}
+    /* fixed layout but flexible shrink: remove forced min-width to allow percentage based shrink on mobile */
+    table.league-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}
     table.league-table thead th{ text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
     table.league-table tbody td{ padding:12px 8px;font-size:14px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
-    /* 75%/25% idea implemented by assigning team column large percent, stats small */
+    /* NOTE: these percentages are tuned to give ~75% width to Pos+Logo+Team area and ~25% to both stats combined */
     .col-pos{width:8%}
-    .col-logo{width:10%}
-    .col-team{width:60%}
-    .col-stat{width:11%;text-align:center;font-weight:700}
+    .col-logo{width:12%}
+    .col-team{width:55%}
+    .col-stat{width:12%;text-align:center;font-weight:700}
     .team-cell{display:flex;align-items:center;gap:10px;min-width:0}
     .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover}
     .team-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;font-weight:600}
     .detail-row td{ background: rgba(255,255,255,0.015); font-size:13px; color:var(--muted); padding:10px 12px }
     .clickable-row{cursor:pointer}
+    .muted{color:var(--muted)}
+    a.team-link{color:inherit;text-decoration:none;display:inline-block;width:100%}
+    /* responsive tweaks: keep percentages but reduce logo & spacing */
     @media (max-width:720px){
       .col-pos{width:8%}
-      .col-logo{width:12%}
-      .col-team{width:58%}
-      .col-stat{width:10%}
+      .col-logo{width:13%}
+      .col-team{width:56%}
+      .col-stat{width:11%}
       .team-logo{width:30px;height:30px}
-      table.league-table{min-width:480px}
     }
-    @media (max-width:420px){
-      .search-input{max-width:58%}
-      table.league-table{min-width:420px}
-      .col-stat{width:10%}
+    @media (max-width:480px){
+      /* on very narrow screens shrink logo slightly and reduce paddings */
+      .team-logo{width:28px;height:28px}
+      table.league-table thead th, table.league-table tbody td { padding:10px 6px }
       .team-name{font-size:14px}
+      .search-input{max-width:56%}
     }
-    a.team-link{color:inherit;text-decoration:none}
-    .muted{color:var(--muted)}
-    /* small tweaks for the expanding detail row to occupy full width comfortably */
-    .detail-inner { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
-    .detail-item { min-width:78px; flex:1 1 110px; font-weight:600; }
+    /* ensure expandable detail is compact single-line on small screens */
+    .detail-row .compact-detail { display:flex; gap:12px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .detail-row .compact-detail > div { min-width:60px; }
+    /* fallback topbar styles (used if shared-ui fails) */
+    .fallback-topbar {
+      position:fixed;top:0;left:0;right:0;height:64px;
+      background:linear-gradient(90deg,#182b4d,#111d3a);
+      color:#fff;display:flex;align-items:center;padding:6px 12px;box-sizing:border-box;z-index:9999;
+      box-shadow:0 4px 14px rgba(0,0,0,0.25);
+    }
+    .fallback-topbar .left { display:flex; align-items:center; gap:10px; }
+    .fallback-topbar .logo { height:44px; width:auto }
+    .fallback-topbar .manager { font-weight:700; font-size:15px }
+    .fallback-topbar .right { margin-left:auto; display:flex; gap:10px; align-items:center }
+    .fallback-topbar .stat { font-size:13px; opacity:0.95 }
   </style>
 </head>
 <body>
-  <!-- shared-ui.js injects topbar here; league.js will fallback if import fails -->
-  <div id="topbarContainer"></div>
+  <div id="topbarContainer" class="topbar-placeholder"></div>
 
   <div class="container">
     <div class="league-header">
@@ -91,26 +108,25 @@
           <tbody id="pointsBody"></tbody>
         </table>
       </div>
-    </div>
 
-    <div id="statsCard" class="card" style="display:none; margin-top:12px" aria-labelledby="tabStats">
-      <div style="display:flex;gap:20px;flex-wrap:wrap">
-        <div style="flex:1;min-width:220px">
+      <div style="margin-top:14px; display:flex; gap:20px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:220px">
           <h4 style="margin:6px 0">Top 5 Batters</h4>
           <div id="topBatters" class="muted">No data yet</div>
         </div>
-        <div style="flex:1;min-width:220px">
+        <div style="flex:1; min-width:220px">
           <h4 style="margin:6px 0">Top 5 Bowlers</h4>
           <div id="topBowlers" class="muted">No data yet</div>
         </div>
       </div>
+    </div>
 
-      <div id="statistics" style="margin-top:12px"></div>
+    <div id="statsCard" class="card" style="display:none; margin-top:12px" aria-labelledby="tabStats">
+      <div id="statistics">Statistics will appear here</div>
     </div>
   </div>
 
-  <!-- keep shared-ui and league.js modules at these paths (as you use) -->
-  <script type="module" src="./js/shared-ui.js" defer></script>
+  <!-- league.js will attempt to load shared-ui dynamically and fall back if unavailable -->
   <script type="module" src="./js/league.js"></script>
 </body>
 </html>
