@@ -1,13 +1,12 @@
-// public/league.js (patched)
-// Compact league table (Pos | Logo | Team | M | Pts) with expandable single-line detail
-// Place in public/ and ensure league.html loads it as module.
+// public/league.js (patched — responsive expanding detail row)
+// Compact league table (Pos | Logo | Team | M | Pts) with expandable responsive detail
 // Replace SUPABASE_URL / SUPABASE_ANON_KEY with your project values if needed.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// --- CONFIG: Use your project's values here (or keep as environment shim) ---
-const SUPABASE_URL = window.PROJECT_URL || window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
-const SUPABASE_ANON_KEY = window.ANON_KEY || window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
+// --- CONFIG: use env overrides if available
+const SUPABASE_URL = window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
+const SUPABASE_ANON_KEY = window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -19,22 +18,36 @@ let myTeamId = null;
 let currentLeagueId = null;
 let expandedTeam = null;
 
-// Compact single-line detail row HTML (M W T L Pts NRR)
-function compactDetailRow(stats) {
+/**
+ * Responsive detail HTML:
+ * - Uses flexbox with wrap so on narrow screens tiles will wrap onto new lines
+ * - Each stat box uses flex:1 1 120px (so they try to share available width but can become full-width on tiny screens)
+ */
+function responsiveDetailRowHtml(stats) {
   const M = stats.matches_played ?? 0;
   const W = stats.wins ?? 0;
   const T = stats.ties ?? 0;
   const L = stats.losses ?? 0;
   const P = stats.points ?? (W*2 + T*1);
   const N = Number(stats.nrr ?? 0).toFixed(3);
-  return `<div class="compact-detail" style="align-items:center">
-    <div><strong>M:</strong> ${M}</div>
-    <div><strong>W:</strong> ${W}</div>
-    <div><strong>T:</strong> ${T}</div>
-    <div><strong>L:</strong> ${L}</div>
-    <div><strong>Pts:</strong> ${P}</div>
-    <div><strong>NRR:</strong> ${N}</div>
-  </div>`;
+
+  return `
+    <div style="
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      align-items:center;
+      width:100%;
+      box-sizing:border-box;
+    ">
+      <div style="flex:1 1 120px; min-width:120px;"><strong>M:</strong> ${M}</div>
+      <div style="flex:1 1 120px; min-width:120px;"><strong>W:</strong> ${W}</div>
+      <div style="flex:1 1 120px; min-width:120px;"><strong>T:</strong> ${T}</div>
+      <div style="flex:1 1 120px; min-width:120px;"><strong>L:</strong> ${L}</div>
+      <div style="flex:1 1 140px; min-width:140px;"><strong>Pts:</strong> ${P}</div>
+      <div style="flex:1 1 140px; min-width:140px;"><strong>NRR:</strong> ${N}</div>
+    </div>
+  `;
 }
 
 function clearExpanded() {
@@ -68,11 +81,15 @@ function renderRows(rows) {
     tr.dataset.teamId = teamId;
     tr.innerHTML = `
       <td class="col-pos" style="padding:12px 8px;color:#9aa5bf">${idx+1}</td>
-      <td class="col-logo" style="padding:8px 6px"><img src="${esc(logo)}" alt="logo" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/></td>
+      <td class="col-logo" style="padding:8px 6px">
+        <img src="${esc(logo)}" alt="logo" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/>
+      </td>
       <td class="col-team">
         <div class="team-cell">
           <div style="flex:1;min-width:0">
-            <a class="team-link" href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="display:inline-block;color:inherit;text-decoration:none;width:100%"><span class="team-name">${esc(teamName)}</span></a>
+            <a class="team-link" href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="display:inline-block;color:inherit;text-decoration:none;width:100%">
+              <span class="team-name">${esc(teamName)}</span>
+            </a>
           </div>
         </div>
       </td>
@@ -82,24 +99,28 @@ function renderRows(rows) {
 
     // clicking the row (not the anchor) toggles detail
     tr.addEventListener('click', (ev) => {
-      // ignore clicks that originated on the team link
+      // ignore clicks that originate on the team link (anchor)
       let el = ev.target;
       while (el && el !== tr) {
         if (el.tagName === 'A' && el.classList.contains('team-link')) return;
         el = el.parentElement;
       }
+
       const tid = tr.dataset.teamId;
       if (expandedTeam === tid) {
         clearExpanded();
         return;
       }
       clearExpanded();
+
+      // create responsive detail row
       const detail = document.createElement('tr');
       detail.className = 'detail-row';
       detail.dataset.team = tid;
       const td = document.createElement('td');
       td.colSpan = 5;
-      td.innerHTML = compactDetailRow({
+      td.style.padding = '12px 16px';
+      td.innerHTML = responsiveDetailRowHtml({
         matches_played: matches,
         wins, ties, losses,
         points, nrr
@@ -107,13 +128,19 @@ function renderRows(rows) {
       detail.appendChild(td);
       tr.parentNode.insertBefore(detail, tr.nextSibling);
       expandedTeam = tid;
-      if (window.innerWidth < 640) detail.scrollIntoView({behavior:'smooth', block:'nearest'});
+
+      // scroll into view on small screens so detail is visible
+      if (window.innerWidth < 640) {
+        // smooth and ensure the detail row is visible
+        detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     });
 
     tb.appendChild(tr);
   });
 }
 
+// fetch standings via RPC; fallback to teams list if RPC not available
 async function fetchStandings(leagueId) {
   if (!leagueId) {
     renderRows([]);
@@ -122,20 +149,19 @@ async function fetchStandings(leagueId) {
   try {
     const { data, error } = await supabase.rpc('get_league_standings', { p_league_id: leagueId });
     if (error) {
-      console.warn('RPC error, falling back to teams list:', error);
+      console.warn('RPC error (get_league_standings), falling back to teams list:', error);
       const { data: teams } = await supabase.from('teams').select('id,team_name,logo_url').eq('league_id', leagueId);
       const rows = (teams || []).map(t => ({ team_id: t.id, team_name: t.team_name, logo_url: t.logo_url, matches_played:0, wins:0, ties:0, losses:0, points:0, nrr:0 }));
       renderRows(rows);
       return;
     }
     if (!data || data.length === 0) {
-      // no standings data - show teams w/ zeros
+      // show teams with zero stats
       const { data: teams } = await supabase.from('teams').select('id,team_name,logo_url').eq('league_id', leagueId);
       const rows = (teams || []).map(t => ({ team_id: t.id, team_name: t.team_name, logo_url: t.logo_url, matches_played:0, wins:0, ties:0, losses:0, points:0, nrr:0 }));
       renderRows(rows);
       return;
     }
-    // normalize
     const normalized = (data || []).map(r => ({
       team_id: r.team_id ?? r.id,
       team_name: r.team_name ?? r.team ?? r.name,
@@ -154,6 +180,7 @@ async function fetchStandings(leagueId) {
   }
 }
 
+// fetch stats (top batters / bowlers)
 async function fetchStats(leagueId) {
   const b = $('topBatters'), bw = $('topBowlers');
   if (b) b.innerHTML = 'Loading...';
@@ -223,24 +250,19 @@ function injectFallbackTopbar(managerName = 'Manager') {
       <div class="manager">${esc(managerName)}</div>
     </div>
     <div class="right">
-      <div class="stat">XP</div>
-      <div class="stat">CB</div>
-      <div class="stat">Cash</div>
-      <div class="stat">Inbox</div>
+      <div class="stat">XP</div><div class="stat">CB</div><div class="stat">Cash</div><div class="stat">Inbox</div>
     </div>
   `;
   container.appendChild(bar);
-  // reduce placeholder height now that we injected topbar
   container.style.height = '64px';
 }
 
 // attempt to import shared-ui and call loadSharedUI; if fails inject fallback
 async function tryLoadSharedUI(profile) {
   const container = document.getElementById('topbarContainer');
-  // clear placeholder height so shared-ui can position correctly
   container.style.height = '64px';
   try {
-    const sharedModule = await import('./shared-ui.js');
+    const sharedModule = await import('./js/shared-ui.js');
     if (sharedModule && typeof sharedModule.loadSharedUI === 'function') {
       try {
         sharedModule.loadSharedUI({
@@ -256,11 +278,9 @@ async function tryLoadSharedUI(profile) {
         console.warn('shared-ui.loadSharedUI failed', e);
       }
     }
-    // fallback
     injectFallbackTopbar(profile?.manager_name || 'Manager');
   } catch (err) {
-    // module not found or network error: inject fallback topbar
-    console.warn('shared-ui.js import failed, using fallback topbar', err);
+    console.warn('shared-ui import failed, using fallback topbar', err);
     injectFallbackTopbar(profile?.manager_name || 'Manager');
   }
 }
@@ -278,7 +298,6 @@ async function init() {
       if (pf) {
         profile = pf;
         myTeamId = pf.team_id;
-        // prefer user's team league
         if (myTeamId) {
           try {
             const { data: team } = await supabase.from('teams').select('league_id').eq('id', myTeamId).maybeSingle();
@@ -294,7 +313,7 @@ async function init() {
   // load shared UI (or fallback)
   await tryLoadSharedUI(profile);
 
-  // if still no league chosen: look for league_id in querystring, else first league fallback
+  // determine league id (querystring / fallback)
   const qs = new URLSearchParams(window.location.search);
   if (!currentLeagueId) currentLeagueId = qs.get('league_id') || null;
   if (!currentLeagueId) {
@@ -306,7 +325,6 @@ async function init() {
       }
     } catch (err) { /* ignore */ }
   } else {
-    // load name too
     try {
       const { data } = await supabase.from('leagues').select('name').eq('id', currentLeagueId).maybeSingle();
       if (data && data.name) $('leagueName').innerText = data.name;
