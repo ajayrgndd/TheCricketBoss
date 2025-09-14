@@ -1,19 +1,14 @@
-// public/league.js
-// Full patched version — injects responsive CSS, uses .team-link, robust DOM fallback.
+// public/league.js (patched)
+// Injects responsive CSS, robust DOM fallback, renders table rows correctly.
 // Assumes shared-ui.js exists and is importable.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadSharedUI } from "./shared-ui.js";
 
 /* ========== CONFIG ========== */
-// Runtime-injected env (Netlify or similar) preferred; fallback to placeholders for local dev.
 const SUPABASE_URL = (window._env_ && window._env_.SUPABASE_URL) || window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
 const SUPABASE_ANON_KEY =
   (window._env_ && window._env_.SUPABASE_ANON_KEY) || window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn("Supabase URL / ANON KEY missing — set window._env_.SUPABASE_URL and SUPABASE_ANON_KEY or provide PROJECT_URL/ANON_KEY for local test.");
-}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -142,8 +137,8 @@ function ensurePointsHeader() {
       <th style="padding:8px 6px;text-align:center">W</th>
       <th style="padding:8px 6px;text-align:center">T</th>
       <th style="padding:8px 6px;text-align:center">L</th>
-      <th style="padding:8px 6px;text-align:center">P</th>
-      <th style="padding:8px 6px;text-align:center">NRR</th>
+      <th style="padding:8px 6px;text-align:center" class="stat-p">P</th>
+      <th style="padding:8px 6px;text-align:center" class="stat-nrr">NRR</th>
     </tr>
   `;
 }
@@ -172,26 +167,37 @@ function renderPointsRows(rows) {
     const p = safeNum(r.p ?? r.points);
     const nrr = formatNRR(r.nrr);
 
+    const linkHref = teamId ? `public-profile.html?team_id=${teamId}` : "#";
+
     const tr = document.createElement("tr");
     tr.style.height = "56px";
     tr.style.borderBottom = "1px solid rgba(255,255,255,0.03)";
+
+    // Use the computed local variables (pos, teamName, etc.) — previously code referenced undefined names
     tr.innerHTML = `
-  <td>${index + 1}</td>
-  <td><img src="${row.logo_url || "assets/logo.png"}" alt="logo"
-       style="width:24px;height:24px;object-fit:cover;border-radius:4px;"></td>
-  <td class="team-name" style="font-weight:400;font-size:13px;max-width:140px;
-       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-    <a href="${linkHref}" style="color:inherit;text-decoration:none;">
-      ${escapeHtml(row.team_name)}
-    </a>
-  </td>
-  <td>${row.m ?? row.matches_played ?? 0}</td>
-  <td>${row.w ?? row.wins ?? 0}</td>
-  <td>${row.t ?? row.ties ?? 0}</td>
-  <td>${row.l ?? row.losses ?? 0}</td>
-  <td class="stat-p">${row.p ?? row.points ?? 0}</td>
-  <td class="stat-nrr">${nrrText}</td>
-`;
+      <td style="padding:8px 6px;">${pos}</td>
+      <td style="padding:8px 6px;text-align:center">
+        <img src="${escapeHtml(logo)}" alt="logo" style="width:24px;height:24px;object-fit:cover;border-radius:4px;" onerror="this.src='/assets/logo.png'">
+      </td>
+      <td style="padding:8px 6px;min-width:140px;">
+        <a class="team-link" href="${escapeHtml(linkHref)}" title="${escapeHtml(teamName)}">
+          ${escapeHtml(teamName)}
+        </a>
+      </td>
+      <td style="text-align:center">${m}</td>
+      <td style="text-align:center">${w}</td>
+      <td style="text-align:center">${t}</td>
+      <td style="text-align:center">${l}</td>
+      <td class="stat-p" style="text-align:center">${p}</td>
+      <td class="stat-nrr" style="text-align:center">${nrr}</td>
+    `;
+    // click anywhere on row should go to team page too (accessibility)
+    tr.addEventListener("click", (e) => {
+      // avoid double navigation if the anchor clicked
+      if (e.target && e.target.tagName && e.target.tagName.toLowerCase() === "a") return;
+      if (teamId) window.location.href = `public-profile.html?team_id=${teamId}`;
+    });
+
     tbody.appendChild(tr);
   });
 }
@@ -302,7 +308,7 @@ function renderStatisticsIntoStatsCard(batters, bowlers) {
         <div style="font-weight:600">${isBatter ? safeNum(it.runs) : safeNum(it.wickets)}</div>
       `;
       row.addEventListener("click", () => {
-        const gotoTeam = myTeamId || it.team_id;
+        const gotoTeam = it.team_id || myTeamId;
         if (gotoTeam) window.location.href = `public-profile.html?team_id=${gotoTeam}&player_id=${it.player_id || ''}`;
       });
       s.appendChild(row);
@@ -388,8 +394,8 @@ function setupLeagueSearch() {
 }
 
 function setupTabs() {
-  const pointsTab = $("tabPoints") || $("tab-points") || ensureEl("tabPoints", "button", "#app");
-  const statsTab = $("tabStats") || $("tab-stats") || ensureEl("tabStats", "button", "#app");
+  const pointsTab = $("tabPoints") || ensureEl("tabPoints", "button", "#app");
+  const statsTab = $("tabStats") || ensureEl("tabStats", "button", "#app");
 
   pointsTab.innerText = pointsTab.innerText || "POINT TABLE";
   statsTab.innerText = statsTab.innerText || "STATISTICS";
