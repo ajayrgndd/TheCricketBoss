@@ -12,9 +12,8 @@
       --accent:#ffd54f;
       --text:#e6eef8;
     }
-    /* IMPORTANT: increase bottom padding so expanded detail or last rows aren't hidden by fixed bottom nav */
     html,body{
-      padding-bottom: 140px;                /* <- increased from 84 to 140 */
+      padding-bottom: 140px;
       box-sizing: border-box;
       height:100%;
       margin:0;
@@ -23,7 +22,6 @@
       font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial
     }
     .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
-    /* placeholder for injected topbar (shared-ui or fallback) */
     .topbar-placeholder{height:64px}
     .league-header{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
     .league-name{font-size:20px;font-weight:700}
@@ -34,16 +32,13 @@
     .tab{padding:8px 12px;border-radius:8px;background:var(--panel);cursor:pointer;font-weight:700}
     .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
-    /* add bottom padding inside scrollable area too so content has breathing room */
-    .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px;padding-bottom:128px} /* <- added padding-bottom */
-    /* fixed layout but flexible shrink: remove forced min-width to allow percentage based shrink on mobile */
+    .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px;padding-bottom:128px}
     table.league-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}
     table.league-table thead th{ text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
     table.league-table tbody td{ padding:12px 8px;font-size:14px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
-    /* NOTE: these percentages are tuned to give ~75% width to Pos+Logo+Team area and ~25% to both stats combined */
-    .col-pos{width:8%}
-    .col-logo{width:12%}
-    .col-team{width:55%}
+    .col-pos{width:7%}
+    .col-logo{width:10%}
+    .col-team{width:48%}
     .col-stat{width:12%;text-align:center;font-weight:700}
     .team-cell{display:flex;align-items:center;gap:10px;min-width:0}
     .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover}
@@ -52,37 +47,27 @@
     .clickable-row{cursor:pointer}
     .muted{color:var(--muted)}
     a.team-link{color:inherit;text-decoration:none;display:inline-block;width:100%}
-    /* responsive tweaks: keep percentages but reduce logo & spacing */
+    /* Matches table specifics */
+    table.matches-table{width:100%;border-collapse:collapse}
+    .match-team { display:flex; gap:10px; align-items:center; min-width:0 }
+    .match-score { font-weight:700; text-align:right }
+    .match-status { font-size:12px; color:var(--muted) }
     @media (max-width:720px){
-      .col-pos{width:8%}
-      .col-logo{width:13%}
-      .col-team{width:56%}
-      .col-stat{width:11%}
+      .col-pos{width:7%}
+      .col-logo{width:12%}
+      .col-team{width:54%}
+      .col-stat{width:10%}
       .team-logo{width:30px;height:30px}
     }
     @media (max-width:480px){
-      /* on very narrow screens shrink logo slightly and reduce paddings */
       .team-logo{width:28px;height:28px}
       table.league-table thead th, table.league-table tbody td { padding:10px 6px }
       .team-name{font-size:14px}
       .search-input{max-width:56%}
     }
-    /* ensure expandable detail is compact single-line on small screens (wraps sensibly) */
     .detail-row .compact-detail { display:flex; gap:12px; flex-wrap:wrap; white-space:normal; overflow:visible; }
     .detail-row .compact-detail > div { min-width:60px; flex:0 0 auto; }
-    /* fallback topbar styles (used if shared-ui fails) */
-    .fallback-topbar {
-      position:fixed;top:0;left:0;right:0;height:64px;
-      background:linear-gradient(90deg,#182b4d,#111d3a);
-      color:#fff;display:flex;align-items:center;padding:6px 12px;box-sizing:border-box;z-index:9999;
-      box-shadow:0 4px 14px rgba(0,0,0,0.25);
-    }
-    .fallback-topbar .left { display:flex; align-items:center; gap:10px; }
-    .fallback-topbar .logo { height:44px; width:auto }
-    .fallback-topbar .manager { font-weight:700; font-size:15px }
-    .fallback-topbar .right { margin-left:auto; display:flex; gap:10px; align-items:center }
-    .fallback-topbar .stat { font-size:13px; opacity:0.95 }
-    /* Keep stats panel small inside STATISTICS card */
+    .fallback-topbar { position:fixed;top:0;left:0;right:0;height:64px; background:linear-gradient(90deg,#182b4d,#111d3a); color:#fff;display:flex;align-items:center;padding:6px 12px;box-sizing:border-box;z-index:9999; box-shadow:0 4px 14px rgba(0,0,0,0.25); }
     .stats-grid { display:flex; gap:20px; flex-wrap:wrap; margin-top:8px }
     .stats-panel { flex:1; min-width:220px; }
   </style>
@@ -102,9 +87,11 @@
 
     <div class="tabs" role="tablist">
       <div id="tabPoints" class="tab active" role="tab" aria-selected="true">POINT TABLE</div>
+      <div id="tabMatches" class="tab" role="tab" aria-selected="false">MATCHES</div>
       <div id="tabStats" class="tab" role="tab" aria-selected="false">STATISTICS</div>
     </div>
 
+    <!-- POINT TABLE -->
     <div id="pointsCard" class="card" aria-labelledby="tabPoints">
       <div class="table-wrap">
         <table class="league-table" id="pointsTable" aria-describedby="pointsCaption">
@@ -123,6 +110,24 @@
       </div>
     </div>
 
+    <!-- MATCHES -->
+    <div id="matchesCard" class="card" style="display:none; margin-top:8px" aria-labelledby="tabMatches">
+      <div class="table-wrap">
+        <table class="matches-table" id="matchesTable">
+          <thead>
+            <tr>
+              <th class="col-pos">#</th>
+              <th class="col-team">Fixture</th>
+              <th class="col-stat">OVR</th>
+              <th class="col-stat">Score</th>
+            </tr>
+          </thead>
+          <tbody id="matchesBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STATISTICS -->
     <div id="statsCard" class="card" style="display:none; margin-top:12px" aria-labelledby="tabStats">
       <div id="statistics">Statistics will appear here</div>
 
@@ -139,7 +144,6 @@
     </div>
   </div>
 
-  <!-- league.js will attempt to load shared-ui dynamically and fall back if unavailable -->
   <script type="module" src="./js/league.js"></script>
 </body>
 </html>
