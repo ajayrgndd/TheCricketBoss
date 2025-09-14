@@ -4,60 +4,49 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>League — The Cricket Boss</title>
-
-  <!-- Mobile-friendly, always-show-columns CSS -->
   <style>
     :root{
-      --bg: #071029;
-      --panel: rgba(255,255,255,0.02);
-      --muted: #9aa5bf;
-      --accent:#ffd54f;
-      --text: #e6eef8;
+      --bg:#071029; --panel:rgba(255,255,255,0.02); --muted:#9aa5bf; --accent:#ffd54f; --text:#e6eef8;
     }
     html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071020);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
     .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
 
-    /* Header area (below shared topbar injected by shared-ui.js) */
+    /* minimal topbar to avoid external dependency */
+    .topbar{height:64px;display:flex;align-items:center;gap:12px;padding:8px 12px;background:linear-gradient(90deg,#14243b,#0f2338);box-shadow:0 4px 14px rgba(0,0,0,0.25);position:sticky;top:0;z-index:1000}
+    .topbar .logo{height:44px}
+    .topbar .manager{display:flex;flex-direction:column}
+    .topbar .stats{margin-left:auto;display:flex;gap:12px;align-items:center}
+    .topbar .stat{display:flex;flex-direction:column;align-items:center;font-weight:700;font-size:12px}
+
     .league-header{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
     .league-name{font-size:20px;font-weight:700}
     .controls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .search-input{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);min-width:140px;max-width:60%;box-sizing:border-box}
-    .btn{padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);cursor:pointer;color:var(--text)}
+    .btn{padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid rgba(255,255,255,0.04);cursor:pointer;color:var(--text)}
 
     .tabs{display:flex;gap:10px;margin:12px 0}
     .tab{padding:8px 12px;border-radius:8px;background:var(--panel);cursor:pointer;font-weight:700}
     .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
 
-    /* Panel */
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
 
-    /* TABLE: always show Pos Logo Team M W T L NRR.
-       On tiny screens we enable horizontal scroll (preserves columns) */
     .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
-    table.league-table{width:100%;border-collapse:collapse;min-width:720px; /* ensure layout keeps all columns */ }
-    table.league-table thead th{
-      text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)
-    }
-    table.league-table tbody td{
-      padding:12px 8px;font-size:14px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle
-    }
+    table.league-table{width:100%;border-collapse:collapse;min-width:720px}
+    table.league-table thead th{ text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
+    table.league-table tbody td{ padding:12px 8px;font-size:14px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
 
-    /* column sizing */
     .col-pos{width:48px}
     .col-logo{width:56px}
     .col-team{min-width:220px}
     .col-stat{width:56px;text-align:center;font-weight:700}
 
-    /* team cell content */
     .team-cell{display:flex;align-items:center;gap:10px;min-width:0}
     .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover;flex:0 0 36px}
     .team-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 
-    /* statistics area below table */
     .stats-row{display:flex;gap:20px;margin-top:12px;flex-wrap:wrap}
     .stat-col{flex:1;min-width:220px}
 
-    /* mobile tweaks */
     @media (max-width:720px){
       .col-pos{width:40px}
       .col-logo{width:48px}
@@ -75,14 +64,27 @@
       .team-name{font-size:13px}
       .search-input{max-width:58%}
     }
-    /* small visual helpers */
+
     a.team-link{color:inherit;text-decoration:none;display:inline-block;width:100%}
     .muted{color:var(--muted)}
     .center{display:flex;align-items:center;justify-content:center}
   </style>
 </head>
 <body>
-  <!-- shared-ui.js will inject top and bottom nav -->
+  <div class="topbar">
+    <img src="assets/logo.png" class="logo" alt="logo" />
+    <div class="manager">
+      <div id="topManagerName">Manager</div>
+      <div id="topManagerSub" style="font-size:12px;color:var(--muted)"></div>
+    </div>
+    <div class="stats" id="topStats">
+      <div class="stat"><div style="font-size:12px">XP</div><div id="topXP">0</div></div>
+      <div class="stat"><div style="font-size:12px">CB</div><div id="topCB">0</div></div>
+      <div class="stat"><div style="font-size:12px">Cash</div><div id="topCash">0</div></div>
+      <div style="width:36px;height:36px;border-radius:6px;background:#1b3358;display:flex;align-items:center;justify-content:center">✉</div>
+    </div>
+  </div>
+
   <div class="container" id="app">
     <div class="league-header">
       <div>
@@ -116,9 +118,7 @@
               <th class="col-stat">NRR</th>
             </tr>
           </thead>
-          <tbody id="pointsBody">
-            <!-- rows inserted by JS -->
-          </tbody>
+          <tbody id="pointsBody"></tbody>
         </table>
       </div>
 
@@ -139,8 +139,218 @@
     </div>
   </div>
 
-  <!-- scripts -->
-  <script type="module" src="./shared-ui.js"></script>
-  <script type="module" src="./league.js"></script>
+  <!-- Supabase + app logic (inlined to avoid 404) -->
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    // Read runtime env (Netlify: create _env.js to populate window._env_)
+    const SUPABASE_URL = (window._env_ && window._env_.SUPABASE_URL) || window.PROJECT_URL || '';
+    const SUPABASE_ANON_KEY = (window._env_ && window._env_.SUPABASE_ANON_KEY) || window.ANON_KEY || '';
+
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.warn('Supabase config not found on window._env_ / window.PROJECT_URL. Set them for production.');
+    }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // state
+    let currentLeagueId = null;
+    let myTeamId = null;
+    let currentUserId = null;
+
+    const $ = (id) => document.getElementById(id);
+    const escapeHtml = (s) => (s === null || s === undefined ? '' : String(s).replace(/[&<>"'`]/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])) );
+    const formatNRR = (n)=>{ const x = Number(n ?? 0); return Number.isFinite(x)? x.toFixed(3) : '0.000'; };
+
+    // render
+    function renderStandingsRows(rows){
+      const tbody = $('pointsBody');
+      tbody.innerHTML = '';
+      if (!rows || rows.length === 0){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="8" class="muted" style="padding:16px;text-align:center">No teams found in this league.</td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+      rows.forEach((r,i)=>{
+        const tr = document.createElement('tr');
+        const pos = i+1;
+        const logo = r.logo_url || r.logo || '/assets/logo.png';
+        const teamName = r.team_name || r.team || r.name || 'Team';
+        const teamId = r.team_id || r.id || '';
+        const m = Number(r.m ?? r.matches_played ?? 0);
+        const w = Number(r.w ?? r.wins ?? 0);
+        const t = Number(r.t ?? r.ties ?? 0);
+        const l = Number(r.l ?? r.losses ?? 0);
+        const nrr = formatNRR(r.nrr ?? 0);
+
+        tr.innerHTML = `
+          <td class="col-pos">${pos}</td>
+          <td class="col-logo center"><img class="team-logo" src="${escapeHtml(logo)}" alt="logo" onerror="this.src='/assets/logo.png'"/></td>
+          <td class="col-team">
+            <div class="team-cell">
+              <a href="#" class="team-link" data-teamid="${escapeHtml(teamId)}">
+                <img class="team-logo" src="${escapeHtml(logo)}" alt="logo" onerror="this.src='/assets/logo.png'"/>
+                <span class="team-name">${escapeHtml(teamName)}</span>
+              </a>
+            </div>
+          </td>
+          <td class="col-stat">${m}</td>
+          <td class="col-stat">${w}</td>
+          <td class="col-stat">${t}</td>
+          <td class="col-stat">${l}</td>
+          <td class="col-stat">${nrr}</td>
+        `;
+
+        const link = tr.querySelector('a.team-link');
+        if (link){
+          link.addEventListener('click', (ev)=>{
+            ev.preventDefault();
+            // prefer redirect to logged-in user's team if available
+            const target = (myTeamId && typeof myTeamId === 'string') ? myTeamId : link.dataset.teamid;
+            if (target) window.location.href = `public-profile.html?team_id=${encodeURIComponent(target)}`;
+            else if (link.dataset.teamid) window.location.href = `public-profile.html?team_id=${encodeURIComponent(link.dataset.teamid)}`;
+            else console.warn('No team id available');
+          });
+        }
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function fallbackTeams(leagueId){
+      try {
+        const { data: teams, error } = await supabase.from('teams').select('id,team_name,logo_url').eq('league_id', leagueId).order('team_name');
+        if (error || !teams) return renderStandingsRows([]);
+        const rows = teams.map(t=>({ team_id:t.id, team_name:t.team_name, logo_url:t.logo_url, m:0,w:0,t:0,l:0,nrr:0 }));
+        renderStandingsRows(rows);
+      } catch (err){
+        console.error('fallbackTeams err', err);
+        renderStandingsRows([]);
+      }
+    }
+
+    async function fetchStandingsForLeague(leagueId){
+      if (!leagueId) return renderStandingsRows([]);
+      try {
+        const { data, error } = await supabase.rpc('get_league_standings', { p_league_id: leagueId });
+        if (error) {
+          console.warn('RPC error', error); return fallbackTeams(leagueId);
+        }
+        if (!data || data.length === 0) return fallbackTeams(leagueId);
+        const normalized = data.map(r=>({
+          team_id: r.team_id || r.id,
+          team_name: r.team_name || r.team || r.name,
+          logo_url: r.logo_url || r.logo,
+          m: r.m ?? r.matches_played ?? 0,
+          w: r.w ?? r.wins ?? 0,
+          t: r.t ?? r.ties ?? 0,
+          l: r.l ?? r.losses ?? 0,
+          nrr: r.nrr ?? 0
+        }));
+        renderStandingsRows(normalized);
+      } catch (err){
+        console.error('fetchStandingsForLeague err', err);
+        fallbackTeams(leagueId);
+      }
+    }
+
+    async function fetchStatistics(leagueId){
+      const batEl = $('topBatters'), bowlEl = $('topBowlers');
+      batEl.innerHTML = 'Loading...'; bowlEl.innerHTML = 'Loading...';
+      if (!leagueId) { batEl.innerHTML='No data yet'; bowlEl.innerHTML='No data yet'; return; }
+      try {
+        const { data, error } = await supabase.rpc('get_league_statistics', { p_league_id: leagueId });
+        if (error || !data) { batEl.innerHTML='No data yet'; bowlEl.innerHTML='No data yet'; return; }
+        // handle array or object shape
+        let bat = [], bowl = [];
+        if (Array.isArray(data)) {
+          bat = data.filter(x=>x.kind==='batter').slice(0,5);
+          bowl = data.filter(x=>x.kind==='bowler').slice(0,5);
+        } else {
+          bat = (data.batters || data.bat || []).slice(0,5);
+          bowl = (data.bowlers || data.bowl || []).slice(0,5);
+        }
+        renderPlayerList(batEl, bat, 'runs');
+        renderPlayerList(bowlEl, bowl, 'wickets');
+      } catch (err){ console.error('fetchStatistics err', err); batEl.innerHTML='No data yet'; bowlEl.innerHTML='No data yet'; }
+    }
+    function renderPlayerList(container, arr, key){
+      container.innerHTML=''; if (!arr||arr.length===0) { container.innerHTML='<div class="muted">No data yet</div>'; return; }
+      arr.forEach(p=>{
+        const d = document.createElement('div'); d.style.display='flex'; d.style.justifyContent='space-between'; d.style.padding='6px 0';
+        d.innerHTML = `<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${escapeHtml(p.player_name||p.name||p.player||p.player_name)}</div><div style="font-weight:700">${escapeHtml(p[key]??0)}</div>`;
+        container.appendChild(d);
+      });
+    }
+
+    async function refreshAll(){
+      if (!currentLeagueId) {
+        try {
+          const { data: one } = await supabase.from('leagues').select('id,name').limit(1).maybeSingle();
+          if (one) { currentLeagueId = one.id; $('leagueName').innerText = one.name || 'League'; }
+        } catch(e){}
+      }
+      if (currentLeagueId) { await Promise.all([ fetchStandingsForLeague(currentLeagueId), fetchStatistics(currentLeagueId) ]); }
+      else { renderStandingsRows([]); $('topBatters').innerText='No data yet'; $('topBowlers').innerText='No data yet'; }
+    }
+
+    function wireUI(){
+      $('tabPoints').addEventListener('click', ()=>{
+        $('pointsCard').style.display='block'; $('statsCard').style.display='none'; $('tabPoints').classList.add('active'); $('tabStats').classList.remove('active');
+      });
+      $('tabStats').addEventListener('click', ()=>{
+        $('pointsCard').style.display='none'; $('statsCard').style.display='block'; $('tabStats').classList.add('active'); $('tabPoints').classList.remove('active');
+      });
+      $('searchBtn').addEventListener('click', ()=> searchAndSetLeague(($('leagueSearch').value||'').trim()));
+      $('leagueSearch').addEventListener('keypress', (e)=>{ if (e.key==='Enter') searchAndSetLeague(($('leagueSearch').value||'').trim()); });
+      $('myLeagueBtn').addEventListener('click', async ()=>{
+        if (!myTeamId) { alert('You have no team in your profile'); return; }
+        try {
+          const { data } = await supabase.from('teams').select('league_id').eq('id', myTeamId).maybeSingle();
+          if (data && data.league_id) { currentLeagueId = data.league_id; const { data: L } = await supabase.from('leagues').select('name').eq('id', currentLeagueId).maybeSingle(); if (L && L.name) $('leagueName').innerText = L.name; await refreshAll(); }
+          else alert('Your team is not in a league yet');
+        } catch (err){ console.error(err); alert('Error'); }
+      });
+    }
+
+    async function searchAndSetLeague(q){
+      if (!q) return;
+      try {
+        const { data, error } = await supabase.from('leagues').select('id,name').ilike('name', `%${q}%`).limit(1);
+        if (error || !data || data.length===0) { alert('League not found'); return; }
+        currentLeagueId = data[0].id; $('leagueName').innerText = data[0].name || 'League'; await refreshAll();
+      } catch (err){ console.error(err); alert('Search failed'); }
+    }
+
+    async function init(){
+      wireUI();
+      try {
+        const s = await supabase.auth.getSession();
+        currentUserId = s?.data?.session?.user?.id || null;
+        if (currentUserId) {
+          const { data: profile, error } = await supabase.from('profiles').select('manager_name,xp,coins,cash,team_id').eq('user_id', currentUserId).maybeSingle();
+          if (!error && profile) {
+            myTeamId = profile.team_id || null;
+            $('topManagerName').innerText = profile.manager_name || 'Manager';
+            $('topXP').innerText = profile.xp || 0;
+            $('topCB').innerText = profile.coins || 0;
+            $('topCash').innerText = profile.cash || 0;
+          }
+        }
+      } catch (err){ console.warn('session/profile load failed', err); }
+
+      // optionally set league from querystring
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const lid = params.get('league_id');
+        if (lid) { currentLeagueId = lid; try { const { data: L } = await supabase.from('leagues').select('name').eq('id', currentLeagueId).maybeSingle(); if (L && L.name) $('leagueName').innerText = L.name; } catch(e){} }
+      } catch(e){}
+
+      await refreshAll();
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
