@@ -1,14 +1,19 @@
-// public/league.js (patched)
-// Injects responsive CSS, robust DOM fallback, renders table rows correctly.
+// public/league.js
+// Full patched version — injects responsive CSS, uses .team-link, robust DOM fallback.
 // Assumes shared-ui.js exists and is importable.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadSharedUI } from "./shared-ui.js";
 
 /* ========== CONFIG ========== */
-const SUPABASE_URL = (window._env_ && window._env_.SUPABASE_URL) || window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
+// Runtime-injected env (Netlify or similar) preferred; fallback to placeholders for local dev.
+const SUPABASE_URL = (window._env_ && window._env_.SUPABASE_URL) || window.PROJECT_URL || "https://YOUR-PROJECT-REF.supabase.co";
 const SUPABASE_ANON_KEY =
-  (window._env_ && window._env_.SUPABASE_ANON_KEY) || window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
+  (window._env_ && window._env_.SUPABASE_ANON_KEY) || window.ANON_KEY || "YOUR-ANON-KEY-HERE";
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn("Supabase URL / ANON KEY missing — set window._env_.SUPABASE_URL and SUPABASE_ANON_KEY or provide PROJECT_URL/ANON_KEY for local test.");
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -137,8 +142,8 @@ function ensurePointsHeader() {
       <th style="padding:8px 6px;text-align:center">W</th>
       <th style="padding:8px 6px;text-align:center">T</th>
       <th style="padding:8px 6px;text-align:center">L</th>
-      <th style="padding:8px 6px;text-align:center" class="stat-p">P</th>
-      <th style="padding:8px 6px;text-align:center" class="stat-nrr">NRR</th>
+      <th style="padding:8px 6px;text-align:center">P</th>
+      <th style="padding:8px 6px;text-align:center">NRR</th>
     </tr>
   `;
 }
@@ -184,48 +189,6 @@ function renderPointsRows(rows) {
       <td style="text-align:center">${nrr}</td>
     `;
     tbody.appendChild(tr);
-  });
-}
-
-  // if no table, fallback to list rendering (old approach)
-  const list = document.getElementById("pointsList");
-  if (!list) return;
-  list.innerHTML = "";
-  if (!rows || rows.length === 0) {
-    document.getElementById("pointsEmpty").style.display = "block";
-    return;
-  } else {
-    document.getElementById("pointsEmpty").style.display = "none";
-  }
-  rows.forEach((r, idx) => {
-    const teamId = r.team_id;
-    const teamName = r.team_name || r.team || "Unknown";
-    const logo = r.logo_url || "/assets/logo.png";
-    const m = Number(r.m ?? r.matches_played ?? 0);
-    const w = Number(r.w ?? r.wins ?? 0);
-    const t = Number(r.t ?? r.ties ?? 0);
-    const l = Number(r.l ?? r.losses ?? 0);
-    const p = Number(r.p ?? r.points ?? 0);
-    const nrr = (r.nrr ?? 0);
-    const row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = `
-      <div class="col-pos">${idx+1}</div>
-      <div class="col-logo"><img src="${escapeHtml(logo)}" class="team-logo" onerror="this.src='assets/logo.png'"/></div>
-      <div class="col-name"><span class="team-name">${escapeHtml(teamName)}</span></div>
-      <div class="col-stat">${m}</div>
-      <div class="col-stat">${w}</div>
-      <div class="col-stat">${t}</div>
-      <div class="col-stat">${l}</div>
-      <div class="col-stat stat-p">${p}</div>
-      <div class="col-stat stat-nrr">${Number(nrr).toFixed(3)}</div>
-    `;
-    row.addEventListener("click", () => {
-      const targetTeam = (typeof myTeamId === "string" && myTeamId) ? myTeamId : teamId;
-      if (targetTeam) window.location.href = `public-profile.html?team_id=${encodeURIComponent(targetTeam)}`;
-      else window.location.href = `public-profile.html?team_id=${encodeURIComponent(teamId)}`;
-    });
-    list.appendChild(row);
   });
 }
 
@@ -335,7 +298,7 @@ function renderStatisticsIntoStatsCard(batters, bowlers) {
         <div style="font-weight:600">${isBatter ? safeNum(it.runs) : safeNum(it.wickets)}</div>
       `;
       row.addEventListener("click", () => {
-        const gotoTeam = it.team_id || myTeamId;
+        const gotoTeam = myTeamId || it.team_id;
         if (gotoTeam) window.location.href = `public-profile.html?team_id=${gotoTeam}&player_id=${it.player_id || ''}`;
       });
       s.appendChild(row);
@@ -421,8 +384,8 @@ function setupLeagueSearch() {
 }
 
 function setupTabs() {
-  const pointsTab = $("tabPoints") || ensureEl("tabPoints", "button", "#app");
-  const statsTab = $("tabStats") || ensureEl("tabStats", "button", "#app");
+  const pointsTab = $("tabPoints") || $("tab-points") || ensureEl("tabPoints", "button", "#app");
+  const statsTab = $("tabStats") || $("tab-stats") || ensureEl("tabStats", "button", "#app");
 
   pointsTab.innerText = pointsTab.innerText || "POINT TABLE";
   statsTab.innerText = statsTab.innerText || "STATISTICS";
