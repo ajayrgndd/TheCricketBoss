@@ -12,7 +12,16 @@
       --accent:#ffd54f;
       --text:#e6eef8;
     }
-    html,body{padding-bottom: 84px; box-sizing: border-box;height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071020);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
+    /* IMPORTANT: increase bottom padding so expanded detail or last rows aren't hidden by fixed bottom nav */
+    html,body{
+      padding-bottom: 140px;                /* <- increased from 84 to 140 */
+      box-sizing: border-box;
+      height:100%;
+      margin:0;
+      background:linear-gradient(180deg,var(--bg),#071020);
+      color:var(--text);
+      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial
+    }
     .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
     /* placeholder for injected topbar (shared-ui or fallback) */
     .topbar-placeholder{height:64px}
@@ -25,7 +34,8 @@
     .tab{padding:8px 12px;border-radius:8px;background:var(--panel);cursor:pointer;font-weight:700}
     .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
-    .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
+    /* add bottom padding inside scrollable area too so content has breathing room */
+    .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px;padding-bottom:128px} /* <- added padding-bottom */
     /* fixed layout but flexible shrink: remove forced min-width to allow percentage based shrink on mobile */
     table.league-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:0}
     table.league-table thead th{ text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
@@ -57,7 +67,7 @@
       .team-name{font-size:14px}
       .search-input{max-width:56%}
     }
-    /* ensure expandable detail is compact single-line on small screens */
+    /* ensure expandable detail is compact single-line on small screens (wraps sensibly) */
     .detail-row .compact-detail { display:flex; gap:12px; flex-wrap:wrap; white-space:normal; overflow:visible; }
     .detail-row .compact-detail > div { min-width:60px; flex:0 0 auto; }
     /* fallback topbar styles (used if shared-ui fails) */
@@ -133,4 +143,3 @@
   <script type="module" src="./js/league.js"></script>
 </body>
 </html>
-
