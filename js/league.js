@@ -147,7 +147,7 @@ function renderPointsRows(rows) {
       <td style="padding:8px 10px;white-space:nowrap">${pos}</td>
       <td style="padding:6px;text-align:center"><img src="${escapeHtml(logo)}" alt="logo" style="width:22px;height:22px;border-radius:6px;object-fit:cover"></td>
       <td style="padding:8px 10px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-        <a href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="font-weight:400;color:inherit;text-decoration:none;display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        <a href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="font-weight:400;color:inherit;text-decoration:none;display:inline-block;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           ${escapeHtml(teamName)}
         </a>
       </td>
