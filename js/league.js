@@ -1,7 +1,7 @@
 // public/league.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// --- CONFIG: use env overrides if available
+// CONFIG - keep these values or override via window.PROJECT_URL / window.ANON_KEY
 const SUPABASE_URL = window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
 const SUPABASE_ANON_KEY = window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
 
@@ -15,6 +15,8 @@ let myTeamId = null;
 let currentLeagueId = null;
 let expandedTeam = null;
 
+/* responsive detail row HTML; uses .detail-inner and .detail-item classes so it wraps
+   properly and NRR stays visible on small screens */
 function responsiveDetailRowHtml(stats) {
   const M = stats.matches_played ?? 0;
   const W = stats.wins ?? 0;
@@ -24,13 +26,13 @@ function responsiveDetailRowHtml(stats) {
   const N = Number(stats.nrr ?? 0).toFixed(3);
 
   return `
-    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;width:100%;box-sizing:border-box;">
-      <div style="flex:1 1 120px;min-width:120px;"><strong>M:</strong> ${M}</div>
-      <div style="flex:1 1 120px;min-width:120px;"><strong>W:</strong> ${W}</div>
-      <div style="flex:1 1 120px;min-width:120px;"><strong>T:</strong> ${T}</div>
-      <div style="flex:1 1 120px;min-width:120px;"><strong>L:</strong> ${L}</div>
-      <div style="flex:1 1 140px;min-width:140px;"><strong>Pts:</strong> ${P}</div>
-      <div style="flex:1 1 140px;min-width:140px;"><strong>NRR:</strong> ${N}</div>
+    <div class="detail-inner">
+      <div class="detail-item"><strong>M:</strong> ${M}</div>
+      <div class="detail-item"><strong>W:</strong> ${W}</div>
+      <div class="detail-item"><strong>T:</strong> ${T}</div>
+      <div class="detail-item"><strong>L:</strong> ${L}</div>
+      <div class="detail-item"><strong>Pts:</strong> ${P}</div>
+      <div class="detail-item"><strong>NRR:</strong> ${N}</div>
     </div>
   `;
 }
@@ -82,18 +84,16 @@ function renderRows(rows) {
       <td class="col-stat">${points}</td>
     `;
 
+    // clicking row toggles expanded detail (but not when clicking the team link)
     tr.addEventListener('click', (ev) => {
       let el = ev.target;
       while (el && el !== tr) {
-        if (el.tagName === 'A' && el.classList.contains('team-link')) return;
+        if (el.tagName === 'A' && el.classList.contains('team-link')) return; // don't toggle if team link clicked
         el = el.parentElement;
       }
 
       const tid = tr.dataset.teamId;
-      if (expandedTeam === tid) {
-        clearExpanded();
-        return;
-      }
+      if (expandedTeam === tid) { clearExpanded(); return; }
       clearExpanded();
 
       const detail = document.createElement('tr');
@@ -118,10 +118,7 @@ function renderRows(rows) {
 }
 
 async function fetchStandings(leagueId) {
-  if (!leagueId) {
-    renderRows([]);
-    return;
-  }
+  if (!leagueId) { renderRows([]); return; }
   try {
     const { data, error } = await supabase.rpc('get_league_standings', { p_league_id: leagueId });
     if (error) {
@@ -161,11 +158,7 @@ async function fetchStats(leagueId) {
   if (bw) bw.innerHTML = 'Loading...';
   try {
     const { data } = await supabase.rpc('get_league_statistics', { p_league_id: leagueId });
-    if (!data) {
-      if (b) b.innerHTML = 'No data yet';
-      if (bw) bw.innerHTML = 'No data yet';
-      return;
-    }
+    if (!data) { if (b) b.innerHTML = 'No data yet'; if (bw) bw.innerHTML = 'No data yet'; return; }
     const batters = data.batters || data.top_batters || [];
     const bowlers = data.bowlers || data.top_bowlers || [];
     if (b) b.innerHTML = (batters.length ? batters.slice(0,5).map(x=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><div>${esc(x.player_name||x.name)}</div><div style="font-weight:700">${x.runs||0}</div></div>`).join('') : 'No data yet');
@@ -212,6 +205,7 @@ function wireUI() {
   if (searchInput) searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { const btn = $('searchBtn'); if (btn) btn.click(); } });
 }
 
+/* fallback topbar if shared-ui can't be imported or fails */
 function injectFallbackTopbar(managerName = 'Manager') {
   const container = document.getElementById('topbarContainer');
   container.innerHTML = '';
@@ -225,14 +219,13 @@ function injectFallbackTopbar(managerName = 'Manager') {
   container.appendChild(bar);
 }
 
+/* try to import shared-ui.js (your path). If import fails, fallback */
 async function tryLoadSharedUI(profile) {
-  const container = document.getElementById('topbarContainer');
-  container.style.height = '64px';
   try {
-    const sharedModule = await import('./shared-ui.js');
-    if (sharedModule && typeof sharedModule.loadSharedUI === 'function') {
+    const shared = await import('./js/shared-ui.js');
+    if (shared && typeof shared.loadSharedUI === 'function') {
       try {
-        sharedModule.loadSharedUI({
+        shared.loadSharedUI({
           supabase,
           manager_name: profile?.manager_name || 'Manager',
           xp: profile?.xp || 0,
@@ -273,9 +266,7 @@ async function init() {
         }
       }
     }
-  } catch (err) {
-    console.warn('session fetch failed', err);
-  }
+  } catch (err) { console.warn('session fetch failed', err); }
 
   // load shared UI (or fallback)
   await tryLoadSharedUI(profile);
