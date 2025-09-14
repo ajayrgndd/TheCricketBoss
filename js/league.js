@@ -145,60 +145,110 @@ function ensurePointsHeader() {
 
 /* ========== Render Points ========== */
 function renderPointsRows(rows) {
-  ensurePointsHeader();
-  const table = $("pointsTable");
-  const tbody = table.querySelector("tbody");
-  tbody.innerHTML = "";
+  ensurePointsHeader?.(); // if you have a header helper
+  // prefer table if exists else use pointsCard list
+  const table = document.querySelector("#pointsTable");
+  if (table) {
+    // clear tbody or create one
+    let tbody = table.querySelector("tbody");
+    if (!tbody) {
+      tbody = document.createElement("tbody");
+      table.appendChild(tbody);
+    }
+    tbody.innerHTML = "";
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="padding:12px;color:var(--muted)">No teams found in this league.</td></tr>';
+      return;
+    }
 
-  if (!rows || rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" style="padding:12px;color:#9aa5bf">No teams found in this league.</td></tr>`;
+    rows.forEach((r, idx) => {
+      const pos = idx + 1;
+      const teamId = r.team_id;
+      const teamName = r.team_name || r.team || "Unknown";
+      const logo = r.logo_url || "/assets/logo.png";
+      const m = Number(r.m ?? r.matches_played ?? 0);
+      const w = Number(r.w ?? r.wins ?? 0);
+      const t = Number(r.t ?? r.ties ?? 0);
+      const l = Number(r.l ?? r.losses ?? 0);
+      const p = Number(r.p ?? r.points ?? 0);
+      const nrr = (r.nrr ?? 0);
+
+      // build row using table cells — add classes so CSS can hide NRR if needed
+      const tr = document.createElement("tr");
+      tr.style.height = "56px";
+      tr.style.borderBottom = "1px solid rgba(255,255,255,0.03)";
+
+      tr.innerHTML = `
+        <td class="col-pos">${pos}</td>
+        <td class="col-logo"><img src="${escapeHtml(logo)}" class="team-logo" onerror="this.src='assets/logo.png'"/></td>
+        <td class="col-name"><a href="#" class="team-name-link">${escapeHtml(teamName)}</a></td>
+        <td class="col-stat stat-m">${m}</td>
+        <td class="col-stat stat-w">${w}</td>
+        <td class="col-stat stat-t">${t}</td>
+        <td class="col-stat stat-l">${l}</td>
+        <td class="col-stat stat-p stat-p-cell">${p}</td>
+        <td class="col-stat stat-nrr">${Number(nrr).toFixed(3)}</td>
+      `;
+
+      // attach click: if myTeamId exists redirect to user's public-profile, else go to clicked team
+      const link = tr.querySelector(".team-name-link");
+      link.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        // myTeamId should be set when user profile loaded (if logged in)
+        const targetTeam = (typeof myTeamId === "string" && myTeamId) ? myTeamId : teamId;
+        if (targetTeam) {
+          window.location.href = `public-profile.html?team_id=${encodeURIComponent(targetTeam)}`;
+        } else {
+          // fallback to clicked team if no myTeamId
+          window.location.href = `public-profile.html?team_id=${encodeURIComponent(teamId)}`;
+        }
+      });
+
+      tbody.appendChild(tr);
+    });
+
     return;
   }
 
+  // if no table, fallback to list rendering (old approach)
+  const list = document.getElementById("pointsList");
+  if (!list) return;
+  list.innerHTML = "";
+  if (!rows || rows.length === 0) {
+    document.getElementById("pointsEmpty").style.display = "block";
+    return;
+  } else {
+    document.getElementById("pointsEmpty").style.display = "none";
+  }
   rows.forEach((r, idx) => {
-    const pos = idx + 1;
     const teamId = r.team_id;
     const teamName = r.team_name || r.team || "Unknown";
     const logo = r.logo_url || "/assets/logo.png";
-    const m = safeNum(r.m ?? r.matches_played);
-    const w = safeNum(r.w ?? r.wins);
-    const t = safeNum(r.t ?? r.ties);
-    const l = safeNum(r.l ?? r.losses);
-    const p = safeNum(r.p ?? r.points);
-    const nrr = formatNRR(r.nrr);
-
-    const linkHref = teamId ? `public-profile.html?team_id=${teamId}` : "#";
-
-    const tr = document.createElement("tr");
-    tr.style.height = "56px";
-    tr.style.borderBottom = "1px solid rgba(255,255,255,0.03)";
-
-    // Use the computed local variables (pos, teamName, etc.) — previously code referenced undefined names
-    tr.innerHTML = `
-      <td style="padding:8px 6px;">${pos}</td>
-      <td style="padding:8px 6px;text-align:center">
-        <img src="${escapeHtml(logo)}" alt="logo" style="width:24px;height:24px;object-fit:cover;border-radius:4px;" onerror="this.src='/assets/logo.png'">
-      </td>
-      <td style="padding:8px 6px;min-width:140px;">
-        <a class="team-link" href="${escapeHtml(linkHref)}" title="${escapeHtml(teamName)}">
-          ${escapeHtml(teamName)}
-        </a>
-      </td>
-      <td style="text-align:center">${m}</td>
-      <td style="text-align:center">${w}</td>
-      <td style="text-align:center">${t}</td>
-      <td style="text-align:center">${l}</td>
-      <td class="stat-p" style="text-align:center">${p}</td>
-      <td class="stat-nrr" style="text-align:center">${nrr}</td>
+    const m = Number(r.m ?? r.matches_played ?? 0);
+    const w = Number(r.w ?? r.wins ?? 0);
+    const t = Number(r.t ?? r.ties ?? 0);
+    const l = Number(r.l ?? r.losses ?? 0);
+    const p = Number(r.p ?? r.points ?? 0);
+    const nrr = (r.nrr ?? 0);
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `
+      <div class="col-pos">${idx+1}</div>
+      <div class="col-logo"><img src="${escapeHtml(logo)}" class="team-logo" onerror="this.src='assets/logo.png'"/></div>
+      <div class="col-name"><span class="team-name">${escapeHtml(teamName)}</span></div>
+      <div class="col-stat">${m}</div>
+      <div class="col-stat">${w}</div>
+      <div class="col-stat">${t}</div>
+      <div class="col-stat">${l}</div>
+      <div class="col-stat stat-p">${p}</div>
+      <div class="col-stat stat-nrr">${Number(nrr).toFixed(3)}</div>
     `;
-    // click anywhere on row should go to team page too (accessibility)
-    tr.addEventListener("click", (e) => {
-      // avoid double navigation if the anchor clicked
-      if (e.target && e.target.tagName && e.target.tagName.toLowerCase() === "a") return;
-      if (teamId) window.location.href = `public-profile.html?team_id=${teamId}`;
+    row.addEventListener("click", () => {
+      const targetTeam = (typeof myTeamId === "string" && myTeamId) ? myTeamId : teamId;
+      if (targetTeam) window.location.href = `public-profile.html?team_id=${encodeURIComponent(targetTeam)}`;
+      else window.location.href = `public-profile.html?team_id=${encodeURIComponent(teamId)}`;
     });
-
-    tbody.appendChild(tr);
+    list.appendChild(row);
   });
 }
 
