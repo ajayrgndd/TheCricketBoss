@@ -107,13 +107,26 @@ function renderRows(rows) {
       detail.appendChild(td);
       tr.parentNode.insertBefore(detail, tr.nextSibling);
       expandedTeam = tid;
-      if (window.innerWidth < 640) {
-      // center the expanded detail in the viewport so bottom nav won't overlap it
-      detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // bonus: small additional offset if you want to nudge it a bit up from center:
-      // window.scrollBy(0, -12);
-}
 
+      // ---------- Patched scrolling logic ----------
+      // Ensure expanded detail is visible and not obscured by bottom nav.
+      // If shared-ui bottom nav exists it uses .tcb-bottomnav; otherwise fallback navHeight is used.
+      try {
+        const bottomNav = document.querySelector('.tcb-bottomnav');
+        const navHeight = bottomNav ? bottomNav.offsetHeight : 64; // sensible fallback
+        // Bring the element into view at the bottom, then nudge it up by nav height + small buffer
+        detail.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        // small timeout allows scrollIntoView animation to start/complete before nudging
+        window.setTimeout(() => {
+          const offset = Math.round(navHeight + 12); // 12px buffer
+          // Negative top to move content up, ensuring detail sits above nav
+          window.scrollBy({ top: -offset, left: 0, behavior: 'smooth' });
+        }, 180);
+      } catch (e) {
+        // fallback: center if anything fails
+        detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      // ---------- End patched scrolling logic ----------
     });
 
     tb.appendChild(tr);
