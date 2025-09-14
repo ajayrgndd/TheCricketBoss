@@ -1,9 +1,11 @@
-// public/league.js (robust, tolerant, creates fallback DOM elements if missing)
+// public/league.js
+// Patched: statistics render moved to #statsCard and tab toggling fixed.
+// Robust env fallback and DOM creation if elements missing.
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadSharedUI } from "./shared-ui.js";
 
 /* ========== CONFIG ========== */
-// Prefer runtime injected env (Netlify, etc), fallback to placeholders for local dev
 const SUPABASE_URL = (window._env_ && window._env_.SUPABASE_URL) || window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
 const SUPABASE_ANON_KEY =
   (window._env_ && window._env_.SUPABASE_ANON_KEY) || window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
@@ -16,10 +18,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /* ========== DOM HELPERS ========== */
 const $ = (id) => document.getElementById(id);
-const q = (sel) => document.querySelector(sel);
-
-// ensures an element with id exists; if not creates tag (default div) and appends to parentSelector (default #app)
-function ensureEl(id, tag = "div", parentSelector = "#app", attrs = {}) {
+const ensureEl = (id, tag = "div", parentSelector = "#app", attrs = {}) => {
   let el = document.getElementById(id);
   if (el) return el;
   const parent = document.querySelector(parentSelector) || document.body;
@@ -28,15 +27,13 @@ function ensureEl(id, tag = "div", parentSelector = "#app", attrs = {}) {
   Object.keys(attrs).forEach((k) => el.setAttribute(k, attrs[k]));
   parent.appendChild(el);
   return el;
-}
-
-// safe escape
-function escapeHtml(str) {
-  if (str === null || str === undefined) return "";
-  return String(str).replace(/[&<>"'`]/g, (c) =>
+};
+const escapeHtml = (s) => {
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/[&<>"'`]/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "`": "&#96;" }[c] || c)
   );
-}
+};
 const safeNum = (v) => (v === null || v === undefined ? 0 : v);
 const formatNRR = (n) => {
   if (n === null || n === undefined) return "0.000";
@@ -44,26 +41,31 @@ const formatNRR = (n) => {
   return Number.isFinite(x) ? x.toFixed(3) : "0.000";
 };
 
-/* ========== ELEMENT SETUP (create fallbacks if missing) ========== */
+/* ========== ENSURE PAGE STRUCTURE ========== */
 function ensureStructure() {
-  // top league name
-  ensureEl("leagueName", "div", "#app");
+  // App root
+  ensureEl("app", "div", "body");
 
-  // header controls
+  // Top: league name and search controls (don't overwrite if present)
+  ensureEl("leagueName", "div", "#app");
   ensureEl("leagueSearch", "input", "#app", { placeholder: "Search league by name" });
   ensureEl("searchBtn", "button", "#app");
   ensureEl("myLeagueBtn", "button", "#app");
 
-  // tabs container
-  // we support both id variants: tabPoints / tab-points
+  // Tabs (two buttons)
   ensureEl("tabPoints", "button", "#app");
   ensureEl("tabStats", "button", "#app");
 
-  // Points card and container
-  ensureEl("pointsCard", "div", "#app");
-  // prefer a table with id pointsTable; create if missing
-  const pointsCard = $("pointsCard");
-  let table = $("pointsTable");
+  // Panels: pointsCard and statsCard (dedicated panels)
+  const pointsCard = ensureEl("pointsCard", "div", "#app");
+  pointsCard.style.width = "100%";
+  const statsCard = ensureEl("statsCard", "div", "#app");
+  statsCard.style.width = "100%";
+  // Stats panel hidden by default
+  statsCard.style.display = "none";
+
+  // Points table: prefer existing table if present; otherwise create one inside pointsCard
+  let table = document.querySelector("#pointsTable");
   if (!table) {
     table = document.createElement("table");
     table.id = "pointsTable";
@@ -71,19 +73,12 @@ function ensureStructure() {
     table.style.borderCollapse = "collapse";
     pointsCard.appendChild(table);
   }
-  if (!table.querySelector("tbody")) {
-    table.appendChild(document.createElement("tbody"));
-  }
+  if (!table.querySelector("tbody")) table.appendChild(document.createElement("tbody"));
 
-  // pointsList fallback (div-based)
-  ensureEl("pointsList", "div", "#app");
-  ensureEl("pointsEmpty", "div", "#app");
-
-  // stats card and container
-  ensureEl("statsCard", "div", "#app");
-  ensureEl("statistics", "div", "#app");
+  // Also create a fallback div list for teams (not used if table exists)
+  ensureEl("pointsList", "div", "#pointsCard");
+  ensureEl("pointsEmpty", "div", "#pointsCard");
 }
-
 ensureStructure();
 
 /* ========== STATE ========== */
@@ -103,7 +98,7 @@ function ensurePointsHeader() {
     <tr style="color:#9aa5bf;font-size:13px;">
       <th style="width:40px;text-align:left;padding:8px 10px;">Pos</th>
       <th style="width:36px;padding:8px 6px;">Logo</th>
-      <th style="text-align:left;padding:8px 10px;min-width:100px;">Team</th>
+      <th style="text-align:left;padding:8px 10px;min-width:140px;">Team</th>
       <th style="width:44px;text-align:center">M</th>
       <th style="width:44px;text-align:center">W</th>
       <th style="width:44px;text-align:center">T</th>
@@ -114,17 +109,15 @@ function ensurePointsHeader() {
   `;
 }
 
-/* ========== RENDERING ========== */
+/* ========== RENDER POINTS ========== */
 function renderPointsRows(rows) {
   ensurePointsHeader();
   const table = $("pointsTable");
   const tbody = table.querySelector("tbody");
   tbody.innerHTML = "";
 
-  // If rows empty, fall back to pointsList div
   if (!rows || rows.length === 0) {
-    const list = $("pointsList");
-    list.innerHTML = `<div style="padding:12px;color:#9aa5bf">No teams found in this league.</div>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="padding:12px;color:#9aa5bf">No teams found in this league.</td></tr>`;
     return;
   }
 
@@ -145,9 +138,9 @@ function renderPointsRows(rows) {
     tr.style.borderBottom = "1px solid rgba(255,255,255,0.03)";
     tr.innerHTML = `
       <td style="padding:8px 10px;white-space:nowrap">${pos}</td>
-      <td style="padding:6px;text-align:center"><img src="${escapeHtml(logo)}" alt="logo" style="width:22px;height:22px;border-radius:6px;object-fit:cover"></td>
+      <td style="padding:6px;text-align:center"><img src="${escapeHtml(logo)}" alt="logo" style="width:22px;height:22px;border-radius:6px;object-fit:cover"/></td>
       <td style="padding:8px 10px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-        <a href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="font-weight:400;color:inherit;text-decoration:none;display:inline-block;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        <a href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="font-weight:400;color:inherit;text-decoration:none;display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
           ${escapeHtml(teamName)}
         </a>
       </td>
@@ -162,11 +155,11 @@ function renderPointsRows(rows) {
   });
 }
 
-/* ========== FALLBACK RENDER TEAMS ========== */
+/* ========== FALLBACK TEAMS ========== */
 async function fallbackRenderTeams(leagueId) {
   try {
     const { data: teams, error } = await supabase.from("teams").select("id,team_name,logo_url").eq("league_id", leagueId);
-    if (error || !teams) {
+    if (error || !teams || teams.length === 0) {
       renderPointsRows([]);
       return;
     }
@@ -174,12 +167,7 @@ async function fallbackRenderTeams(leagueId) {
       team_id: t.id,
       team_name: t.team_name,
       logo_url: t.logo_url,
-      m: 0,
-      w: 0,
-      t: 0,
-      l: 0,
-      p: 0,
-      nrr: 0
+      m: 0, w: 0, t: 0, l: 0, p: 0, nrr: 0
     }));
     renderPointsRows(rows);
   } catch (err) {
@@ -188,7 +176,7 @@ async function fallbackRenderTeams(leagueId) {
   }
 }
 
-/* ========== FETCH & RENDER ========== */
+/* ========== FETCH & RENDER STANDINGS ========== */
 async function fetchAndRenderStandings(leagueId) {
   if (!leagueId) {
     renderPointsRows([]);
@@ -205,8 +193,6 @@ async function fetchAndRenderStandings(leagueId) {
       await fallbackRenderTeams(leagueId);
       return;
     }
-
-    // normalize shape if RPC returned fields with different names
     const normalized = data.map((r) => ({
       team_id: r.team_id,
       team_name: r.team_name || r.team,
@@ -218,7 +204,6 @@ async function fetchAndRenderStandings(leagueId) {
       p: r.p ?? r.points ?? 0,
       nrr: r.nrr ?? 0
     }));
-
     renderPointsRows(normalized);
   } catch (err) {
     console.error("fetchAndRenderStandings exception", err);
@@ -226,10 +211,22 @@ async function fetchAndRenderStandings(leagueId) {
   }
 }
 
-/* ========== STATISTICS ========== */
-function renderStatisticsFromArrays(batters, bowlers) {
-  const container = $("statistics");
-  container.innerHTML = "";
+/* ========== STATISTICS (render into statsCard) ========== */
+function normalizePlayerRow(r) {
+  return {
+    player_id: r.player_id || r.id || null,
+    player_name: r.player_name || r.name || r.player || "",
+    team_id: r.team_id || r.team || null,
+    team_name: r.team_name || r.team || "",
+    runs: r.runs ?? r.runs_scored ?? 0,
+    wickets: r.wickets ?? r.wicket_count ?? 0,
+    image_url: r.image_url || r.image || r.avatar || ""
+  };
+}
+
+function renderStatisticsIntoStatsCard(batters, bowlers) {
+  const statsCard = $("statsCard") || ensureEl("statsCard", "div", "#app");
+  statsCard.innerHTML = "";
   const wrap = document.createElement("div");
   wrap.style.display = "flex";
   wrap.style.gap = "12px";
@@ -256,16 +253,16 @@ function renderStatisticsFromArrays(batters, bowlers) {
       row.style.gap = "8px";
       row.style.padding = "6px 0";
       row.innerHTML = `
-        <img src="${escapeHtml(it.image_url || it.image || '/assets/logo.png')}" style="width:36px;height:36px;border-radius:6px;object-fit:cover"/>
+        <img src="${escapeHtml(it.image_url || '/assets/logo.png')}" style="width:36px;height:36px;border-radius:6px;object-fit:cover"/>
         <div style="flex:1;min-width:0">
-          <div style="font-weight:400;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.player_name || it.name || it.player || '')}</div>
-          <div style="font-size:12px;color:#9aa5bf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.team_name || '')}</div>
+          <div style="font-weight:400;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.player_name)}</div>
+          <div style="font-size:12px;color:#9aa5bf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.team_name)}</div>
         </div>
         <div style="font-weight:600">${isBatter ? safeNum(it.runs) : safeNum(it.wickets)}</div>
       `;
       row.addEventListener("click", () => {
-        const gotoTeam = myTeamId || it.team_id || it.team;
-        if (gotoTeam) window.location.href = `public-profile.html?team_id=${gotoTeam}&player_id=${it.player_id || it.id || ''}`;
+        const gotoTeam = myTeamId || it.team_id;
+        if (gotoTeam) window.location.href = `public-profile.html?team_id=${gotoTeam}&player_id=${it.player_id || ''}`;
       });
       s.appendChild(row);
     });
@@ -274,56 +271,43 @@ function renderStatisticsFromArrays(batters, bowlers) {
 
   wrap.appendChild(makeSection("Top 5 Batters", batters, true));
   wrap.appendChild(makeSection("Top 5 Bowlers", bowlers, false));
-  container.appendChild(wrap);
+  statsCard.appendChild(wrap);
 }
 
+/* fetch & render statistics into statsCard */
 async function fetchAndRenderStatistics(leagueId) {
+  const statsCard = $("statsCard") || ensureEl("statsCard", "div", "#app");
+  statsCard.innerHTML = ""; // clear first
   if (!leagueId) {
-    renderStatisticsFromArrays([], []);
+    renderStatisticsIntoStatsCard([], []);
     return;
   }
   try {
     const { data, error } = await supabase.rpc("get_league_statistics", { p_league_id: leagueId });
     if (error) {
       console.error("get_league_statistics RPC error", error);
-      renderStatisticsFromArrays([], []);
+      renderStatisticsIntoStatsCard([], []);
       return;
     }
 
-    // Support two shapes:
-    // 1) { batters: [...], bowlers: [...] }
-    // 2) array of rows with kind = 'batter' or 'bowler'
     if (Array.isArray(data)) {
       const bat = data.filter((r) => r.kind === "batter").slice(0, 5).map(normalizePlayerRow);
       const bowl = data.filter((r) => r.kind === "bowler").slice(0, 5).map(normalizePlayerRow);
-      renderStatisticsFromArrays(bat, bowl);
+      renderStatisticsIntoStatsCard(bat, bowl);
     } else if (data && typeof data === "object") {
       const bat = (data.batters || data.bat || []).slice(0, 5).map(normalizePlayerRow);
       const bowl = (data.bowlers || data.bowl || []).slice(0, 5).map(normalizePlayerRow);
-      renderStatisticsFromArrays(bat, bowl);
+      renderStatisticsIntoStatsCard(bat, bowl);
     } else {
-      renderStatisticsFromArrays([], []);
+      renderStatisticsIntoStatsCard([], []);
     }
   } catch (err) {
     console.error("fetchAndRenderStatistics exception", err);
-    renderStatisticsFromArrays([], []);
+    renderStatisticsIntoStatsCard([], []);
   }
 }
 
-function normalizePlayerRow(r) {
-  // unify common fields used by renderer
-  return {
-    player_id: r.player_id || r.id || null,
-    player_name: r.player_name || r.name || r.player || "",
-    team_id: r.team_id || r.team || null,
-    team_name: r.team_name || r.team_name || r.team || "",
-    runs: r.runs ?? r.runs_scored ?? 0,
-    wickets: r.wickets ?? r.wicket_count ?? 0,
-    image_url: r.image_url || r.image || r.avatar || ""
-  };
-}
-
-/* ========== SEARCH & TABS ========== */
+/* ========== UI: search & tabs ========== */
 function setupLeagueSearch() {
   const searchInput = ensureEl("leagueSearch", "input", "#app", { placeholder: "Search league by name" });
   const searchBtn = ensureEl("searchBtn", "button", "#app");
@@ -364,15 +348,18 @@ function setupLeagueSearch() {
 }
 
 function setupTabs() {
-  // support multiple possible id names
   const pointsTab = $("tabPoints") || $("tab-points") || ensureEl("tabPoints", "button", "#app");
   const statsTab = $("tabStats") || $("tab-stats") || ensureEl("tabStats", "button", "#app");
 
   pointsTab.innerText = pointsTab.innerText || "POINT TABLE";
   statsTab.innerText = statsTab.innerText || "STATISTICS";
 
-  const pointsPanel = ensureEl("points", "div", "#app");
-  const statsPanel = ensureEl("statistics", "div", "#app");
+  const pointsPanel = $("pointsCard") || ensureEl("pointsCard", "div", "#app");
+  const statsPanel = $("statsCard") || ensureEl("statsCard", "div", "#app");
+
+  // hide stats by default
+  pointsPanel.style.display = "block";
+  statsPanel.style.display = "none";
 
   pointsTab.addEventListener("click", () => {
     pointsPanel.style.display = "block";
@@ -392,31 +379,27 @@ function setupTabs() {
 /* ========== LOAD / REFRESH ========== */
 async function refreshAll() {
   if (!currentLeagueId) {
-    // attempt to pick first league if none set
     try {
       const { data: one } = await supabase.from("leagues").select("id,name").limit(1).maybeSingle();
       currentLeagueId = one?.id || null;
       if (one?.name) {
-        const ln = ensureEl("leagueName", "div", "#app");
-        ln.innerText = one.name;
+        ensureEl("leagueName", "div", "#app").innerText = one.name;
       }
     } catch (err) {
       console.warn("couldn't fetch default league", err);
     }
   }
+
   if (!currentLeagueId) {
     renderPointsRows([]);
-    renderStatisticsFromArrays([], []);
+    renderStatisticsIntoStatsCard([], []);
     return;
   }
 
   // set league name
   try {
     const { data: L } = await supabase.from("leagues").select("name").eq("id", currentLeagueId).maybeSingle();
-    if (L && L.name) {
-      const ln = ensureEl("leagueName", "div", "#app");
-      ln.innerText = L.name;
-    }
+    if (L && L.name) ensureEl("leagueName", "div", "#app").innerText = L.name;
   } catch (err) {
     console.warn("load league name failed", err);
   }
@@ -433,11 +416,9 @@ async function initLeaguePage() {
     const { data: sessionData } = await supabase.auth.getSession();
     const userId = sessionData?.session?.user?.id || null;
 
-    // optional: if no user, we continue but warn (don't force redirect)
     if (!userId) {
       console.warn("No authenticated user; page will still show public league info (if allowed by RLS).");
     } else {
-      // fetch profile for topbar and myTeam
       try {
         const { data: profile } = await supabase.from("profiles").select("manager_name,xp,coins,cash,team_id").eq("user_id", userId).maybeSingle();
         if (profile) {
@@ -453,7 +434,6 @@ async function initLeaguePage() {
       }
     }
 
-    // determine league: url -> myTeam -> first league
     const urlParams = new URLSearchParams(window.location.search);
     currentLeagueId = urlParams.get("league_id") || null;
     if (!currentLeagueId && myTeamId) {
@@ -461,11 +441,8 @@ async function initLeaguePage() {
       currentLeagueId = t?.league_id || null;
     }
 
-    // wire UI
     setupTabs();
     setupLeagueSearch();
-
-    // initial refresh
     await refreshAll();
   } catch (err) {
     console.error("initLeaguePage error", err);
