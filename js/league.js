@@ -1,5 +1,5 @@
-// public/league.js (patched)
-// Compact league table (Pos | Logo | Team | M | Pts) with MATCHES tab & expandable single-line detail
+// public/league.js (patched - fixtures support)
+// Compact league table (Pos | Logo | Team | M | Pts) with MATCHES tab & fixtures (db table 'fixtures')
 // Place in public/ and ensure league.html loads it as module.
 // Replace SUPABASE_URL / SUPABASE_ANON_KEY with your project values if needed.
 
@@ -44,7 +44,7 @@ function clearExpanded() {
   expandedTeam = null;
 }
 
-// POINTS table rendering (unchanged)
+// POINTS table rendering
 function renderPointsRows(rows) {
   const tb = $('pointsBody');
   tb.innerHTML = '';
@@ -119,7 +119,7 @@ function renderPointsRows(rows) {
   });
 }
 
-// MATCHES rendering
+// MATCHES rendering (fixtures)
 function renderMatches(matches, teamsById) {
   const tb = $('matchesBody');
   tb.innerHTML = '';
@@ -129,43 +129,43 @@ function renderMatches(matches, teamsById) {
   }
 
   matches.forEach((m, idx) => {
-    // Try to map various common column names
-    const id = m.id ?? m.match_id;
-    const status = (m.status || m.match_status || '').toString().toLowerCase() || 'scheduled';
-    const homeId = m.home_team_id ?? m.home_team ?? m.team_a;
-    const awayId = m.away_team_id ?? m.away_team ?? m.team_b;
+    const id = m.id;
+    const status = (m.status || '').toString().toLowerCase() || 'scheduled';
+    const homeId = m.home_team_id;
+    const awayId = m.away_team_id;
     const home = teamsById[homeId] || {};
     const away = teamsById[awayId] || {};
-    // score display logic: support different naming
-    const homeRuns = m.home_runs ?? m.home_score ?? m.home_total ?? m.home;
-    const awayRuns = m.away_runs ?? m.away_score ?? m.away_total ?? m.away;
-    const homeWickets = m.home_wickets ?? m.home_wkts ?? null;
-    const awayWickets = m.away_wickets ?? m.away_wkts ?? null;
-    const homeOvers = m.home_overs ?? m.home_ovr ?? m.home_overs_faced ?? m.home_overs_played;
-    const awayOvers = m.away_overs ?? m.away_ovr ?? m.away_overs_faced ?? m.away_overs_played;
 
-    // OVR: if match has overs (e.g., 20.0/20) show combined or scheduled overs else '-'
+    // result JSON: many fixtures store runs/wickets/overs in result JSON
+    const result = m.result || {};
+    // try to read common places for score/overs
+    const homeRuns = (result?.home?.runs ?? result?.home_runs ?? m.home_runs ?? null);
+    const awayRuns = (result?.away?.runs ?? result?.away_runs ?? m.away_runs ?? null);
+    const homeWkts = (result?.home?.wickets ?? result?.home_wickets ?? m.home_wickets ?? null);
+    const awayWkts = (result?.away?.wickets ?? result?.away_wickets ?? m.away_wickets ?? null);
+    const homeOvs = (result?.home?.overs ?? result?.home_overs ?? m.home_overs ?? m.sim_over ?? null);
+    const awayOvs = (result?.away?.overs ?? result?.away_overs ?? m.away_overs ?? null);
+
+    // OVR display: prefer scheduled/max overs if available else show overs from result
     let ovr = '-';
-    if (homeOvers != null || awayOvers != null) {
-      // prefer "homeOvers / awayOvers" if both present, else show whichever
-      if (homeOvers != null && awayOvers != null) ovr = `${homeOvers} / ${awayOvers}`;
-      else ovr = String(homeOvers ?? awayOvers);
-    } else if (m.overs) {
-      ovr = String(m.overs);
+    if (m.scheduled_at) {
+      // if match has scheduled overs somewhere use it; otherwise prefer shown overs
+      ovr = (m.overs ?? result?.overs ?? homeOvs ?? awayOvs ?? '-') ;
+    } else {
+      ovr = (homeOvs ?? awayOvs ?? '-');
     }
 
-    // Score display: for live/completed show "120/3" or "120 (20.0)"
+    // Score display: for live/completed show "hr/hr — ar/ar"
     let scoreTxt = '-';
-    if (status === 'live' || status === 'completed') {
-      const hr = (homeRuns != null) ? `${homeRuns}${homeWickets != null ? '/' + homeWickets : ''}` : '-';
-      const ar = (awayRuns != null) ? `${awayRuns}${awayWickets != null ? '/' + awayWickets : ''}` : '-';
+    if (status === 'live' || status === 'running' || status === 'finished' || status === 'completed') {
+      const hr = (homeRuns != null) ? `${homeRuns}${homeWkts != null ? '/' + homeWkts : ''}` : '-';
+      const ar = (awayRuns != null) ? `${awayRuns}${awayWkts != null ? '/' + awayWkts : ''}` : '-';
       scoreTxt = `${hr} — ${ar}`;
-      // if overs present, append small overs for each side in parentheses (prefer home)
-      const ov = homeOvers ?? awayOvers;
+      const ov = homeOvs ?? awayOvs;
       if (ov != null) scoreTxt += ` (${ov})`;
     } else {
-      // scheduled: show local date/time if available
-      const sched = m.scheduled_at ?? m.start_time ?? m.match_time;
+      // scheduled: show human date/time
+      const sched = m.scheduled_at ?? (m.date ? (m.date + ' ' + (m.start_time ?? '')) : null);
       if (sched) {
         const d = new Date(sched);
         if (!isNaN(d)) scoreTxt = d.toLocaleString();
@@ -183,7 +183,7 @@ function renderMatches(matches, teamsById) {
             <img src="${esc(home.logo_url || home.logo || '/assets/logo.png')}" alt="h" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/>
             <div style="min-width:0">
               <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(home.team_name || home.name || '')}</div>
-              <div class="match-status" style="font-size:12px">${status === 'live' ? 'LIVE' : (status === 'completed' ? 'Completed' : 'Scheduled')}</div>
+              <div class="match-status" style="font-size:12px">${status === 'live' ? 'LIVE' : (status === 'finished' || status === 'completed' ? 'Completed' : 'Scheduled')}</div>
             </div>
           </div>
           <div style="margin-left:8px;display:inline-block;color:var(--muted);font-weight:600">vs</div>
@@ -195,20 +195,18 @@ function renderMatches(matches, teamsById) {
           </div>
         </div>
       </td>
-      <td class="col-stat" style="text-align:center">${esc(ovr)}</td>
+      <td class="col-stat" style="text-align:center">${esc(ovr ?? '-')}</td>
       <td class="col-stat match-score">${esc(scoreTxt)}</td>
     `;
 
-    // row click -> redirect depending on status
     tr.addEventListener('click', () => {
       const st = status;
       const mid = encodeURIComponent(id);
-      if (st === 'live') {
+      if (st === 'live' || st === 'running') {
         window.location.href = `league-match.html?match_id=${mid}`;
-      } else if (st === 'completed' || st === 'finished' || st === 'complete') {
+      } else if (st === 'finished' || st === 'completed') {
         window.location.href = `league-replay.html?match_id=${mid}`;
       } else {
-        // scheduled or default
         window.location.href = `league-preview.html?match_id=${mid}`;
       }
     });
@@ -217,34 +215,32 @@ function renderMatches(matches, teamsById) {
   });
 }
 
-// fetch matches and related teams
+// fetch fixtures for league (shows all fixtures in the league)
 async function fetchMatches(leagueId) {
   if (!leagueId) {
     renderMatches([], {});
     return;
   }
   try {
-    // fetch matches for league (common fields considered)
-    const { data: matches, error: mErr } = await supabase
-      .from('matches')
+    // Query fixtures table (your DB uses 'fixtures')
+    const { data: fixtures, error: fErr } = await supabase
+      .from('fixtures')
       .select('*')
       .eq('league_id', leagueId)
       .order('scheduled_at', { ascending: true });
 
-    if (mErr) {
-      console.warn('matches fetch error', mErr);
+    if (fErr) {
+      console.warn('fixtures fetch error', fErr);
       renderMatches([], {});
       return;
     }
-    const list = matches || [];
+    const list = fixtures || [];
 
-    // collect unique team ids used in matches
+    // gather team ids used
     const teamIds = new Set();
-    list.forEach(m => {
-      const home = m.home_team_id ?? m.home_team ?? m.team_a;
-      const away = m.away_team_id ?? m.away_team ?? m.team_b;
-      if (home != null) teamIds.add(home);
-      if (away != null) teamIds.add(away);
+    list.forEach(f => {
+      if (f.home_team_id) teamIds.add(f.home_team_id);
+      if (f.away_team_id) teamIds.add(f.away_team_id);
     });
 
     let teamsById = {};
@@ -252,7 +248,7 @@ async function fetchMatches(leagueId) {
       const ids = Array.from(teamIds);
       const { data: teams, error: tErr } = await supabase.from('teams').select('id,team_name,logo_url,name,logo').in('id', ids);
       if (tErr) {
-        console.warn('teams fetch for matches failed', tErr);
+        console.warn('teams fetch for fixtures failed', tErr);
       } else if (teams) {
         teamsById = teams.reduce((acc, t) => { acc[t.id] = t; return acc; }, {});
       }
@@ -265,7 +261,11 @@ async function fetchMatches(leagueId) {
   }
 }
 
-// existing fetchStandings & fetchStats left intact (reuse earlier code)
+// fetchStandings, fetchStats, wireUI, shared-ui load & init are unchanged (reuse previous implementations)
+// ... copy/paste the existing functions fetchStandings, fetchStats, wireUI, tryLoadSharedUI, injectFallbackTopbar, init ...
+// For brevity, assume the rest of the file below remains exactly as in your previous working version,
+// including wireUI(), fetchStandings(), fetchStats(), tryLoadSharedUI(), injectFallbackTopbar(), and init().
+
 async function fetchStandings(leagueId) {
   if (!leagueId) { renderPointsRows([]); return; }
   try {
@@ -359,7 +359,6 @@ function wireUI() {
   if (searchInput) searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { const btn = $('searchBtn'); if (btn) btn.click(); } });
 }
 
-// shared-ui fallback & load (unchanged from previous)
 function injectFallbackTopbar(managerName = 'Manager') {
   const container = document.getElementById('topbarContainer');
   container.innerHTML = '';
