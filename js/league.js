@@ -155,6 +155,7 @@ async function fetchStandings(leagueId) {
 }
 
 async function fetchStats(leagueId) {
+  // Render top players only in the STATISTICS tab; POINT TABLE no longer contains these nodes.
   const b = $('topBatters'), bw = $('topBowlers');
   if (b) b.innerHTML = 'Loading...';
   if (bw) bw.innerHTML = 'Loading...';
