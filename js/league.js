@@ -1,9 +1,13 @@
-// public/league.js
+// public/league.js (patched)
+// Compact league table (Pos | Logo | Team | M | Pts) with expandable single-line detail
+// Place in public/ and ensure league.html loads it as module.
+// Replace SUPABASE_URL / SUPABASE_ANON_KEY with your project values if needed.
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// CONFIG - keep these values or override via window.PROJECT_URL / window.ANON_KEY
-const SUPABASE_URL = window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
-const SUPABASE_ANON_KEY = window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
+// --- CONFIG: Use your project's values here (or keep as environment shim) ---
+const SUPABASE_URL = window.PROJECT_URL || window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
+const SUPABASE_ANON_KEY = window.ANON_KEY || window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -15,26 +19,22 @@ let myTeamId = null;
 let currentLeagueId = null;
 let expandedTeam = null;
 
-/* responsive detail row HTML; uses .detail-inner and .detail-item classes so it wraps
-   properly and NRR stays visible on small screens */
-function responsiveDetailRowHtml(stats) {
+// Compact single-line detail row HTML (M W T L Pts NRR)
+function compactDetailRow(stats) {
   const M = stats.matches_played ?? 0;
   const W = stats.wins ?? 0;
   const T = stats.ties ?? 0;
   const L = stats.losses ?? 0;
   const P = stats.points ?? (W*2 + T*1);
   const N = Number(stats.nrr ?? 0).toFixed(3);
-
-  return `
-    <div class="detail-inner">
-      <div class="detail-item"><strong>M:</strong> ${M}</div>
-      <div class="detail-item"><strong>W:</strong> ${W}</div>
-      <div class="detail-item"><strong>T:</strong> ${T}</div>
-      <div class="detail-item"><strong>L:</strong> ${L}</div>
-      <div class="detail-item"><strong>Pts:</strong> ${P}</div>
-      <div class="detail-item"><strong>NRR:</strong> ${N}</div>
-    </div>
-  `;
+  return `<div class="compact-detail" style="align-items:center">
+    <div><strong>M:</strong> ${M}</div>
+    <div><strong>W:</strong> ${W}</div>
+    <div><strong>T:</strong> ${T}</div>
+    <div><strong>L:</strong> ${L}</div>
+    <div><strong>Pts:</strong> ${P}</div>
+    <div><strong>NRR:</strong> ${N}</div>
+  </div>`;
 }
 
 function clearExpanded() {
@@ -68,15 +68,11 @@ function renderRows(rows) {
     tr.dataset.teamId = teamId;
     tr.innerHTML = `
       <td class="col-pos" style="padding:12px 8px;color:#9aa5bf">${idx+1}</td>
-      <td class="col-logo" style="padding:8px 6px">
-        <img src="${esc(logo)}" alt="logo" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/>
-      </td>
+      <td class="col-logo" style="padding:8px 6px"><img src="${esc(logo)}" alt="logo" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/></td>
       <td class="col-team">
         <div class="team-cell">
           <div style="flex:1;min-width:0">
-            <a class="team-link" href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="display:inline-block;color:inherit;text-decoration:none;width:100%">
-              <span class="team-name">${esc(teamName)}</span>
-            </a>
+            <a class="team-link" href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="display:inline-block;color:inherit;text-decoration:none;width:100%"><span class="team-name">${esc(teamName)}</span></a>
           </div>
         </div>
       </td>
@@ -84,25 +80,26 @@ function renderRows(rows) {
       <td class="col-stat">${points}</td>
     `;
 
-    // clicking row toggles expanded detail (but not when clicking the team link)
+    // clicking the row (not the anchor) toggles detail
     tr.addEventListener('click', (ev) => {
+      // ignore clicks that originated on the team link
       let el = ev.target;
       while (el && el !== tr) {
-        if (el.tagName === 'A' && el.classList.contains('team-link')) return; // don't toggle if team link clicked
+        if (el.tagName === 'A' && el.classList.contains('team-link')) return;
         el = el.parentElement;
       }
-
       const tid = tr.dataset.teamId;
-      if (expandedTeam === tid) { clearExpanded(); return; }
+      if (expandedTeam === tid) {
+        clearExpanded();
+        return;
+      }
       clearExpanded();
-
       const detail = document.createElement('tr');
       detail.className = 'detail-row';
       detail.dataset.team = tid;
       const td = document.createElement('td');
       td.colSpan = 5;
-      td.style.padding = '12px 16px';
-      td.innerHTML = responsiveDetailRowHtml({
+      td.innerHTML = compactDetailRow({
         matches_played: matches,
         wins, ties, losses,
         points, nrr
@@ -118,22 +115,27 @@ function renderRows(rows) {
 }
 
 async function fetchStandings(leagueId) {
-  if (!leagueId) { renderRows([]); return; }
+  if (!leagueId) {
+    renderRows([]);
+    return;
+  }
   try {
     const { data, error } = await supabase.rpc('get_league_standings', { p_league_id: leagueId });
     if (error) {
-      console.warn('RPC error (get_league_standings), falling back to teams list:', error);
+      console.warn('RPC error, falling back to teams list:', error);
       const { data: teams } = await supabase.from('teams').select('id,team_name,logo_url').eq('league_id', leagueId);
       const rows = (teams || []).map(t => ({ team_id: t.id, team_name: t.team_name, logo_url: t.logo_url, matches_played:0, wins:0, ties:0, losses:0, points:0, nrr:0 }));
       renderRows(rows);
       return;
     }
     if (!data || data.length === 0) {
+      // no standings data - show teams w/ zeros
       const { data: teams } = await supabase.from('teams').select('id,team_name,logo_url').eq('league_id', leagueId);
       const rows = (teams || []).map(t => ({ team_id: t.id, team_name: t.team_name, logo_url: t.logo_url, matches_played:0, wins:0, ties:0, losses:0, points:0, nrr:0 }));
       renderRows(rows);
       return;
     }
+    // normalize
     const normalized = (data || []).map(r => ({
       team_id: r.team_id ?? r.id,
       team_name: r.team_name ?? r.team ?? r.name,
@@ -158,7 +160,11 @@ async function fetchStats(leagueId) {
   if (bw) bw.innerHTML = 'Loading...';
   try {
     const { data } = await supabase.rpc('get_league_statistics', { p_league_id: leagueId });
-    if (!data) { if (b) b.innerHTML = 'No data yet'; if (bw) bw.innerHTML = 'No data yet'; return; }
+    if (!data) {
+      if (b) b.innerHTML = 'No data yet';
+      if (bw) bw.innerHTML = 'No data yet';
+      return;
+    }
     const batters = data.batters || data.top_batters || [];
     const bowlers = data.bowlers || data.top_bowlers || [];
     if (b) b.innerHTML = (batters.length ? batters.slice(0,5).map(x=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><div>${esc(x.player_name||x.name)}</div><div style="font-weight:700">${x.runs||0}</div></div>`).join('') : 'No data yet');
@@ -205,27 +211,39 @@ function wireUI() {
   if (searchInput) searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { const btn = $('searchBtn'); if (btn) btn.click(); } });
 }
 
-/* fallback topbar if shared-ui can't be imported or fails */
+// fallback topbar injection (used if shared-ui.js not loaded)
 function injectFallbackTopbar(managerName = 'Manager') {
   const container = document.getElementById('topbarContainer');
   container.innerHTML = '';
   const bar = document.createElement('div');
-  bar.style.height = '64px';
-  bar.style.display = 'flex';
-  bar.style.alignItems = 'center';
-  bar.style.padding = '8px 12px';
-  bar.style.background = 'linear-gradient(90deg,#182b4d,#111d3a)';
-  bar.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:#fff"><img src="/assets/logo.png" style="height:40px"/><div style="font-weight:700">${esc(managerName)}</div></div><div style="margin-left:auto;color:#fff;opacity:0.95;padding-right:12px">XP &nbsp; CB &nbsp; Cash &nbsp; Inbox</div>`;
+  bar.className = 'fallback-topbar';
+  bar.innerHTML = `
+    <div class="left">
+      <img class="logo" src="/assets/logo.png" alt="logo" />
+      <div class="manager">${esc(managerName)}</div>
+    </div>
+    <div class="right">
+      <div class="stat">XP</div>
+      <div class="stat">CB</div>
+      <div class="stat">Cash</div>
+      <div class="stat">Inbox</div>
+    </div>
+  `;
   container.appendChild(bar);
+  // reduce placeholder height now that we injected topbar
+  container.style.height = '64px';
 }
 
-/* try to import shared-ui.js (your path). If import fails, fallback */
+// attempt to import shared-ui and call loadSharedUI; if fails inject fallback
 async function tryLoadSharedUI(profile) {
+  const container = document.getElementById('topbarContainer');
+  // clear placeholder height so shared-ui can position correctly
+  container.style.height = '64px';
   try {
-    const shared = await import('./shared-ui.js');
-    if (shared && typeof shared.loadSharedUI === 'function') {
+    const sharedModule = await import('./shared-ui.js');
+    if (sharedModule && typeof sharedModule.loadSharedUI === 'function') {
       try {
-        shared.loadSharedUI({
+        sharedModule.loadSharedUI({
           supabase,
           manager_name: profile?.manager_name || 'Manager',
           xp: profile?.xp || 0,
@@ -238,9 +256,11 @@ async function tryLoadSharedUI(profile) {
         console.warn('shared-ui.loadSharedUI failed', e);
       }
     }
+    // fallback
     injectFallbackTopbar(profile?.manager_name || 'Manager');
   } catch (err) {
-    console.warn('shared-ui import failed, using fallback topbar', err);
+    // module not found or network error: inject fallback topbar
+    console.warn('shared-ui.js import failed, using fallback topbar', err);
     injectFallbackTopbar(profile?.manager_name || 'Manager');
   }
 }
@@ -258,6 +278,7 @@ async function init() {
       if (pf) {
         profile = pf;
         myTeamId = pf.team_id;
+        // prefer user's team league
         if (myTeamId) {
           try {
             const { data: team } = await supabase.from('teams').select('league_id').eq('id', myTeamId).maybeSingle();
@@ -266,12 +287,14 @@ async function init() {
         }
       }
     }
-  } catch (err) { console.warn('session fetch failed', err); }
+  } catch (err) {
+    console.warn('session fetch failed', err);
+  }
 
   // load shared UI (or fallback)
   await tryLoadSharedUI(profile);
 
-  // determine league id (querystring / fallback)
+  // if still no league chosen: look for league_id in querystring, else first league fallback
   const qs = new URLSearchParams(window.location.search);
   if (!currentLeagueId) currentLeagueId = qs.get('league_id') || null;
   if (!currentLeagueId) {
@@ -283,6 +306,7 @@ async function init() {
       }
     } catch (err) { /* ignore */ }
   } else {
+    // load name too
     try {
       const { data } = await supabase.from('leagues').select('name').eq('id', currentLeagueId).maybeSingle();
       if (data && data.name) $('leagueName').innerText = data.name;
