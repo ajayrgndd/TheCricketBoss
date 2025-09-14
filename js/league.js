@@ -225,8 +225,8 @@ async function fetchMatches(leagueId) {
   }
   try {
     // fetch matches for league (common fields considered)
-    const { data: matches, error: mErr } = await supabase
-      .from('matches')
+    const { data: fixtures, error: mErr } = await supabase
+      .from('fixtures')
       .select('*')
       .eq('league_id', leagueId)
       .order('scheduled_at', { ascending: true });
@@ -236,7 +236,7 @@ async function fetchMatches(leagueId) {
       renderMatches([], {});
       return;
     }
-    const list = matches || [];
+    const list = fixtures || [];
 
     // collect unique team ids used in matches
     const teamIds = new Set();
