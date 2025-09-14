@@ -7,7 +7,7 @@ import { loadSharedUI } from './shared-ui.js';
 const PROJECT_URL = window.PROJECT_URL || (window.__env && window.__env.PROJECT_URL) || '';
 const ANON_KEY = window.ANON_KEY || (window.__env && window.__env.ANON_KEY) || '';
 
-const supabase = createClient(PROJECT_URL, ANON_KEY);
+const supabase = createClient('https://iukofcmatlfhfwcechdq.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE');
 
 function q(id){ return document.getElementById(id); }
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>'"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":"&#39;"}[c])); }
