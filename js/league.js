@@ -222,7 +222,7 @@ function injectFallbackTopbar(managerName = 'Manager') {
 /* try to import shared-ui.js (your path). If import fails, fallback */
 async function tryLoadSharedUI(profile) {
   try {
-    const shared = await import('./js/shared-ui.js');
+    const shared = await import('./shared-ui.js');
     if (shared && typeof shared.loadSharedUI === 'function') {
       try {
         shared.loadSharedUI({
