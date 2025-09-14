@@ -229,7 +229,7 @@ async function tryLoadSharedUI(profile) {
   const container = document.getElementById('topbarContainer');
   container.style.height = '64px';
   try {
-    const sharedModule = await import('./js/shared-ui.js');
+    const sharedModule = await import('./shared-ui.js');
     if (sharedModule && typeof sharedModule.loadSharedUI === 'function') {
       try {
         sharedModule.loadSharedUI({
