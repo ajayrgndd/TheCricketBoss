@@ -1,119 +1,69 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>League – TheCricketBoss</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="styles/global.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>League — TheCricketBoss</title>
+  <link rel="icon" href="/assets/logo.png" />
+  <style>
+    :root{--accent:#ffd54f;--muted:#9aa5bf;--bg:#071029;--text:#e6eef8}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;margin:0;background:linear-gradient(180deg,#071029,#071020);color:var(--text)}
+    .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
+    .league-header{display:flex;align-items:center;gap:12px;margin:8px 0}
+    .league-name{font-size:18px;font-weight:800}
+    .controls{margin-left:auto;display:flex;gap:8px}
+    .search-input{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text)}
+    .tabs{display:flex;gap:8px;margin:12px 0}
+    .tab{padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.02);cursor:pointer;font-weight:700}
+    .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
+    .row{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);height:56px}
+    .col-logo{width:40px;flex:0 0 40px}
+    .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover}
+    .col-name{flex:1 1 auto;min-width:120px}
+    .team-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+    .col-stat{width:54px;flex:0 0 54px;text-align:center;font-weight:700}
+    @media(max-width:640px){.team-name{max-width:140px;font-size:13px}.col-stat{width:44px;flex:0 0 44px}.row{height:64px}}
+  </style>
 </head>
 <body>
-  <div class="main">
-    <h2>Your League</h2>
-    <div id="pointsTable"></div>
-    <div id="rewardContainer" style="margin-top: 24px;"></div>
+  <!-- shared-ui.js is expected at /shared-ui.js and will inject top/bottom bars -->
+  <script type="module" src="/shared-ui.js"></script>
+
+  <div class="container" id="app">
+    <div class="league-header">
+      <div class="league-name" id="leagueName">League</div>
+      <div class="controls">
+        <input id="leagueSearch" class="search-input" placeholder="Search league by name" />
+        <button id="searchBtn" class="tab">Search</button>
+        <button id="myLeagueBtn" class="tab">My League</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div id="tabPoints" class="tab active">POINT TABLE</div>
+      <div id="tabStats" class="tab">STATISTICS</div>
+    </div>
+
+    <div id="pointsCard" class="card">
+      <div id="pointsList"></div>
+      <div id="pointsEmpty" style="display:none;padding:12px;color:var(--muted)">No standings yet.</div>
+    </div>
+
+    <div id="statsCard" class="card" style="display:none;margin-top:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <h4 style="margin:6px 0">Top 5 Batters</h4>
+          <div id="topBatters"></div>
+        </div>
+        <div style="flex:1;min-width:260px">
+          <h4 style="margin:6px 0">Top 5 Bowlers</h4>
+          <div id="topBowlers"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    import { getRewardAmount } from './js/reward-amount.js';
-    import { loadSharedUI } from './js/shared-ui.js';
-
-    const supabase = createClient(
-      "https://iukofcmatlfhfwcechdq.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE" // anon key
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) location.href = "index.html";
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    loadSharedUI({
-      manager_name: profile.manager_name,
-      xp: profile.xp,
-      coins: 15,
-      cash: profile.cash
-    });
-
-    const { data: team } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("owner_id", user.id)
-      .single();
-
-    const { data: leagueTeams } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("league_tier", team.league_tier);
-
-    const sorted = leagueTeams.sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      return b.net_run_rate - a.net_run_rate;
-    });
-
-    const table = document.createElement("table");
-    table.innerHTML = `
-      <tr>
-        <th>Rank</th>
-        <th>Team</th>
-        <th>Points</th>
-        <th>NRR</th>
-      </tr>
-    `;
-
-    for (let i = 0; i < sorted.length; i++) {
-      const t = sorted[i];
-      table.innerHTML += `
-        <tr${t.id === team.id ? ' style="background:#d0f0c0"' : ''}>
-          <td>${i + 1}</td>
-          <td>${t.team_name}</td>
-          <td>${t.points}</td>
-          <td>${t.net_run_rate?.toFixed(2) || "0.00"}</td>
-        </tr>
-      `;
-    }
-
-    document.getElementById("pointsTable").appendChild(table);
-
-    // ✅ Show Claim Reward Option
-    const seasonEnded = new Date() > new Date(profile.season_end_date);
-    const rewardClaimed = profile.reward_claimed;
-    const rank = team.season_rank;
-    const reward = getRewardAmount(team.league_tier, rank);
-
-    if (seasonEnded && !rewardClaimed && reward > 0) {
-      const claimBtn = document.createElement("button");
-      claimBtn.textContent = `🎁 Claim ₹${reward.toLocaleString()} Reward`;
-      claimBtn.style.padding = "10px 20px";
-      claimBtn.style.fontSize = "16px";
-      claimBtn.style.background = "#00e676";
-      claimBtn.style.border = "none";
-      claimBtn.style.borderRadius = "6px";
-      claimBtn.style.cursor = "pointer";
-
-      claimBtn.onclick = async () => {
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            cash: profile.cash + reward,
-            reward_claimed: true
-          })
-          .eq("id", user.id);
-
-        if (!error) {
-          alert("✅ Reward Claimed!");
-          location.reload();
-        } else {
-          alert("❌ Failed to claim reward.");
-        }
-      };
-
-      document.getElementById("rewardContainer").appendChild(claimBtn);
-    }
-  </script>
+  <script type="module" src="/league.js"></script>
 </body>
 </html>
