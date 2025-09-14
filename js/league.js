@@ -7,9 +7,9 @@ import { loadSharedUI } from "./shared-ui.js";
 
 /* ========== CONFIG ========== */
 // Runtime-injected env (Netlify or similar) preferred; fallback to placeholders for local dev.
-const SUPABASE_URL = (window._env_ && window._env_.SUPABASE_URL) || window.PROJECT_URL || "https://YOUR-PROJECT-REF.supabase.co";
+const SUPABASE_URL = (window._env_ && window._env_.SUPABASE_URL) || window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
 const SUPABASE_ANON_KEY =
-  (window._env_ && window._env_.SUPABASE_ANON_KEY) || window.ANON_KEY || "YOUR-ANON-KEY-HERE";
+  (window._env_ && window._env_.SUPABASE_ANON_KEY) || window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.warn("Supabase URL / ANON KEY missing — set window._env_.SUPABASE_URL and SUPABASE_ANON_KEY or provide PROJECT_URL/ANON_KEY for local test.");
