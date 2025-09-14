@@ -132,7 +132,7 @@
     // If it fails, leave the small fallback bar (already present above).
     (async function(){
       try {
-        const mod = await import('./shared-ui.js');
+        const mod = await import('./js/shared-ui.js');
         // expose a global for other modules to reuse
         window.__loadSharedUI = mod.loadSharedUI;
       } catch (err) {
@@ -142,10 +142,11 @@
         // now load league script
         const s = document.createElement('script');
         s.type = 'module';
-        s.src = './league.js';
+        s.src = './js/league.js';
         document.body.appendChild(s);
       }
     })();
   </script>
 </body>
 </html>
+
