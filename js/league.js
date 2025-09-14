@@ -176,18 +176,22 @@ function renderPointsRows(rows) {
     tr.style.height = "56px";
     tr.style.borderBottom = "1px solid rgba(255,255,255,0.03)";
     tr.innerHTML = `
-      <td style="padding:8px 10px;white-space:nowrap">${pos}</td>
-      <td style="padding:6px;text-align:center"><img src="${escapeHtml(logo)}" alt="logo" onerror="this.src='assets/logo.png'"></td>
-      <td style="padding:8px 10px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-        <a class="team-link" href="public-profile.html?team_id=${encodeURIComponent(teamId)}">${escapeHtml(teamName)}</a>
-      </td>
-      <td style="text-align:center">${m}</td>
-      <td style="text-align:center">${w}</td>
-      <td style="text-align:center">${t}</td>
-      <td style="text-align:center">${l}</td>
-      <td style="text-align:center">${p}</td>
-      <td style="text-align:center">${nrr}</td>
-    `;
+  <td>${index + 1}</td>
+  <td><img src="${row.logo_url || "assets/logo.png"}" alt="logo"
+       style="width:24px;height:24px;object-fit:cover;border-radius:4px;"></td>
+  <td class="team-name" style="font-weight:400;font-size:13px;max-width:140px;
+       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+    <a href="${linkHref}" style="color:inherit;text-decoration:none;">
+      ${escapeHtml(row.team_name)}
+    </a>
+  </td>
+  <td>${row.m ?? row.matches_played ?? 0}</td>
+  <td>${row.w ?? row.wins ?? 0}</td>
+  <td>${row.t ?? row.ties ?? 0}</td>
+  <td>${row.l ?? row.losses ?? 0}</td>
+  <td class="stat-p">${row.p ?? row.points ?? 0}</td>
+  <td class="stat-nrr">${nrrText}</td>
+`;
     tbody.appendChild(tr);
   });
 }
