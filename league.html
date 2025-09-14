@@ -6,84 +6,28 @@
   <title>League — TheCricketBoss</title>
   <link rel="icon" href="/assets/logo.png" />
   <style>
-:root{
-  --accent:#ffd54f;
-  --muted:#9aa5bf;
-  --bg:#071029;
-  --text:#e6eef8;
-}
-
-/* Base */
-body{
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
-  margin:0;
-  background: linear-gradient(180deg,#071029,#071020);
-  color: var(--text);
-}
-.container{ max-width:1100px; margin:0 auto; padding:12px; box-sizing:border-box; }
-
-/* Topbar */
-.tcb-topbar-container{ display:flex; align-items:center; gap:10px; padding:6px 10px; flex-wrap:wrap; }
-.tcb-topbar-inner{ display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box; }
-.tcb-logo{ height:40px; width:auto; }
-.tcb-manager{ min-width:0; overflow:hidden; }
-.tcb-manager .line1, .tcb-manager .line2{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px; }
-.tcb-stats{ margin-left:auto; display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.tcb-stat img{ width:18px; height:18px; }
-.tcb-stat .tcb-stat-text{ font-size:11px; display:block; white-space:nowrap; }
-
-/* Header area */
-.league-header{ display:flex; align-items:center; gap:12px; margin:8px 0; flex-wrap:wrap; }
-.league-name{ font-size:18px; font-weight:700; }
-.controls{ margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.search-input{ padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--text); min-width:120px; max-width:60%; box-sizing:border-box; font-size:13px; }
-
-/* Tabs */
-.tabs{ display:flex; gap:8px; margin:12px 0; flex-wrap:wrap; }
-.tab{ padding:8px 12px; border-radius:8px; background:rgba(255,255,255,0.02); cursor:pointer; font-weight:700; }
-.tab.active{ background:linear-gradient(90deg,#1b3358,#14243b); color:var(--accent); }
-
-/* Card + rows mobile-first */
-.card{ background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01)); border-radius:10px; padding:6px; }
-.row{ display:flex; align-items:center; gap:6px; padding:6px; border-bottom:1px solid rgba(255,255,255,0.03); height:48px; box-sizing:border-box; }
-.col-pos{ width:28px; flex:0 0 28px; text-align:center; color:var(--muted); font-size:12px; }
-.col-logo{ width:32px; flex:0 0 32px; display:flex; align-items:center; justify-content:center; }
-.team-logo{ width:26px; height:26px; border-radius:6px; object-fit:cover; display:block; }
-
-/* Team name flexible */
-.col-name{ flex:1 1 auto; min-width:80px; margin-left:2px; }
-.team-name{ font-weight:400; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:inline-block; vertical-align:middle; color:var(--text); }
-
-/* Stat columns compact */
-.col-stat{ width:32px; flex:0 0 32px; text-align:center; font-weight:600; color:var(--text); font-size:12px; }
-
-/* Table fallback */
-#pointsTable{ width:100%; border-collapse:collapse; table-layout:auto; }
-#pointsTable thead th, #pointsTable tbody td{ padding:6px 4px; font-size:12px; color:var(--text); }
-
-/* Keep NRR visible; hide only on very small screens */
-.stat-p, .stat-nrr{ display:table-cell; }
-
-/* Responsive tweaks */
-@media (max-width:520px){
-  .team-logo{ width:24px; height:24px; }
-  .col-pos{ width:24px; flex:0 0 24px; font-size:11px; }
-  .col-logo{ width:28px; flex:0 0 28px; }
-  .col-stat{ width:28px; flex:0 0 28px; font-size:11px; }
-  .team-name{ font-size:12px; }
-  .search-input{ max-width:54%; font-size:12px; }
-  .tcb-stat .tcb-stat-text{ font-size:10px; }
-}
-@media (max-width:380px){
-  .stat-nrr{ display:none!important; } /* hide NRR if space too tight */
-  .team-name{ max-width:calc(100% - 120px); }
-  .col-stat{ width:26px; flex:0 0 26px; }
-}
-</style>
-
+    :root{--accent:#ffd54f;--muted:#9aa5bf;--bg:#071029;--text:#e6eef8}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;margin:0;background:linear-gradient(180deg,#071029,#071020);color:var(--text)}
+    .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
+    .league-header{display:flex;align-items:center;gap:12px;margin:8px 0}
+    .league-name{font-size:18px;font-weight:800}
+    .controls{margin-left:auto;display:flex;gap:8px}
+    .search-input{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text)}
+    .tabs{display:flex;gap:8px;margin:12px 0}
+    .tab{padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.02);cursor:pointer;font-weight:700}
+    .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
+    .row{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);height:56px}
+    .col-logo{width:40px;flex:0 0 40px}
+    .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover}
+    .col-name{flex:1 1 auto;min-width:120px}
+    .team-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+    .col-stat{width:54px;flex:0 0 54px;text-align:center;font-weight:700}
+    @media(max-width:640px){.team-name{max-width:140px;font-size:13px}.col-stat{width:44px;flex:0 0 44px}.row{height:64px}}
+  </style>
 </head>
 <body>
-  <!-- shared-ui.js is expected at js/shared-ui.js and will inject top/bottom bars -->
+  <!-- shared-ui.js is expected at /shared-ui.js and will inject top/bottom bars -->
   <script type="module" src="js/shared-ui.js"></script>
 
   <div class="container" id="app">
@@ -91,40 +35,18 @@ body{
       <div class="league-name" id="leagueName">League</div>
       <div class="controls">
         <input id="leagueSearch" class="search-input" placeholder="Search league by name" />
-        <button id="searchBtn" class="search-btn">Search</button>
-        <button id="myLeagueBtn" class="search-btn">My League</button>
+        <button id="searchBtn" class="tab">Search</button>
+        <button id="myLeagueBtn" class="tab">My League</button>
       </div>
     </div>
 
-    <div class="tabs" role="tablist" aria-label="League tabs">
-      <div id="tabPoints" class="tab active" role="tab" aria-selected="true">POINT TABLE</div>
-      <div id="tabStats" class="tab" role="tab">STATISTICS</div>
+    <div class="tabs">
+      <div id="tabPoints" class="tab active">POINT TABLE</div>
+      <div id="tabStats" class="tab">STATISTICS</div>
     </div>
 
-    <div id="pointsCard" class="card" aria-live="polite">
-      <!-- Table for standings (preferred) -->
-      <table id="pointsTable" aria-describedby="pointsEmpty">
-        <thead>
-          <tr>
-            <th scope="col">Pos</th>
-            <th scope="col">Logo</th>
-            <th scope="col">Team</th>
-            <th scope="col">M</th>
-            <th scope="col">W</th>
-            <th scope="col">T</th>
-            <th scope="col">L</th>
-            <th scope="col" class="stat-p">P</th>
-            <th scope="col" class="stat-nrr">NRR</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- rows injected by js/league.js -->
-        </tbody>
-      </table>
-
-      <!-- fallback list (kept for compatibility) -->
-      <div id="pointsList" style="display:none"></div>
-
+    <div id="pointsCard" class="card">
+      <div id="pointsList"></div>
       <div id="pointsEmpty" style="display:none;padding:12px;color:var(--muted)">No standings yet.</div>
     </div>
 
@@ -145,5 +67,4 @@ body{
   <script type="module" src="js/league.js"></script>
 </body>
 </html>
-
 
