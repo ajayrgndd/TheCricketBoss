@@ -90,12 +90,16 @@ body{
   width:100%;
   border-collapse:collapse;
   table-layout:auto;
+  margin-top:8px;
 }
 #pointsTable thead th, #pointsTable tbody td {
-  padding:8px 6px;
+  padding:10px 8px;
   font-size:13px;
   color:var(--text);
+  text-align:left;
 }
+#pointsTable thead th { color:var(--muted); font-weight:600; }
+#pointsTable tbody td { border-top:1px solid rgba(255,255,255,0.02); vertical-align:middle; }
 #pointsTable td img { width:22px; height:22px; border-radius:6px; object-fit:cover; display:block; margin:0 auto; }
 
 /* topbar (shared-ui) responsiveness - conservative */
@@ -139,10 +143,10 @@ body{
   /* keep Inbox icon and unread dot visible */
   .tcb-unread-dot { display:block; }
 }
-</style>
+  </style>
 </head>
 <body>
-  <!-- shared-ui.js is expected at /shared-ui.js and will inject top/bottom bars -->
+  <!-- shared-ui.js is expected at js/shared-ui.js and will inject top/bottom bars -->
   <script type="module" src="js/shared-ui.js"></script>
 
   <div class="container" id="app">
@@ -150,18 +154,40 @@ body{
       <div class="league-name" id="leagueName">League</div>
       <div class="controls">
         <input id="leagueSearch" class="search-input" placeholder="Search league by name" />
-        <button id="searchBtn" class="tab">Search</button>
-        <button id="myLeagueBtn" class="tab">My League</button>
+        <button id="searchBtn" class="search-btn">Search</button>
+        <button id="myLeagueBtn" class="search-btn">My League</button>
       </div>
     </div>
 
-    <div class="tabs">
-      <div id="tabPoints" class="tab active">POINT TABLE</div>
-      <div id="tabStats" class="tab">STATISTICS</div>
+    <div class="tabs" role="tablist" aria-label="League tabs">
+      <div id="tabPoints" class="tab active" role="tab" aria-selected="true">POINT TABLE</div>
+      <div id="tabStats" class="tab" role="tab">STATISTICS</div>
     </div>
 
-    <div id="pointsCard" class="card">
-      <div id="pointsList"></div>
+    <div id="pointsCard" class="card" aria-live="polite">
+      <!-- Table for standings (preferred) -->
+      <table id="pointsTable" aria-describedby="pointsEmpty">
+        <thead>
+          <tr>
+            <th scope="col">Pos</th>
+            <th scope="col">Logo</th>
+            <th scope="col">Team</th>
+            <th scope="col">M</th>
+            <th scope="col">W</th>
+            <th scope="col">T</th>
+            <th scope="col">L</th>
+            <th scope="col" class="stat-p">P</th>
+            <th scope="col" class="stat-nrr">NRR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- rows injected by js/league.js -->
+        </tbody>
+      </table>
+
+      <!-- fallback list (kept for compatibility) -->
+      <div id="pointsList" style="display:none"></div>
+
       <div id="pointsEmpty" style="display:none;padding:12px;color:var(--muted)">No standings yet.</div>
     </div>
 
@@ -182,6 +208,3 @@ body{
   <script type="module" src="js/league.js"></script>
 </body>
 </html>
-
-
-
