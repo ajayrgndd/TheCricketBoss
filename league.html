@@ -13,137 +13,86 @@
   --text:#e6eef8;
 }
 
-/* page base */
+/* Base */
 body{
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
   margin:0;
   background: linear-gradient(180deg,#071029,#071020);
   color: var(--text);
 }
-.container{
-  max-width:1100px;
-  margin:0 auto;
-  padding:12px;
-  box-sizing:border-box;
-}
+.container{ max-width:1100px; margin:0 auto; padding:12px; box-sizing:border-box; }
 
-/* league header / controls */
+/* Topbar (conservative, prevents overflow) */
+.tcb-topbar-container { display:flex; align-items:center; gap:10px; padding:6px 10px; flex-wrap:wrap; }
+.tcb-topbar-inner { display:flex; align-items:center; gap:10px; width:100%; box-sizing:border-box; }
+.tcb-logo { height:40px; width:auto; }
+.tcb-manager { min-width:0; overflow:hidden; }
+.tcb-manager .line1, .tcb-manager .line2 { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px; }
+
+/* keep stat icons visible but compact */
+.tcb-stats { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.tcb-stat img { width:18px; height:18px; }
+.tcb-stat .tcb-stat-text { font-size:11px; display:block; white-space:nowrap; }
+
+/* Header area */
 .league-header{ display:flex; align-items:center; gap:12px; margin:8px 0; flex-wrap:wrap; }
-.league-name{ font-size:18px; font-weight:700; line-height:1.05; }
+.league-name{ font-size:18px; font-weight:700; }
 .controls{ margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.search-input{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:var(--text); min-width:120px; max-width:60%; box-sizing:border-box; }
 
-.search-input{
-  padding:8px 10px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.06);
-  background:transparent;
-  color:var(--text);
-  min-width:120px;
-  max-width:48%;
-  box-sizing:border-box;
-}
-.search-btn, .btn {
-  padding:8px 10px;
-  border-radius:10px;
-  background:rgba(255,255,255,0.02);
-  color:var(--text);
-  border:1px solid rgba(255,255,255,0.04);
-  cursor:pointer;
-}
-
-/* tabs */
+/* Tabs */
 .tabs{ display:flex; gap:8px; margin:12px 0; flex-wrap:wrap; }
 .tab{ padding:8px 12px; border-radius:8px; background:rgba(255,255,255,0.02); cursor:pointer; font-weight:700; }
 .tab.active{ background:linear-gradient(90deg,#1b3358,#14243b); color:var(--accent); }
 
-/* card + rows */
+/* Card + rows mobile-first */
 .card{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:10px; padding:8px; }
 .row{ display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid rgba(255,255,255,0.03); height:56px; box-sizing:border-box; }
-.col-logo{ width:40px; flex:0 0 40px; display:flex; align-items:center; justify-content:center; }
-.team-logo{ width:34px; height:34px; border-radius:6px; object-fit:cover; display:block; }
+.col-pos{ width:36px; flex:0 0 36px; text-align:left; padding-left:8px; color:var(--muted); }
+.col-logo{ width:36px; flex:0 0 36px; display:flex; align-items:center; justify-content:center; }
+.team-logo{ width:30px; height:30px; border-radius:6px; object-fit:cover; display:block; }
 
-/* team name: moderate weight, ellipsis, flexible */
-.col-name{ flex:1 1 auto; min-width:140px; }
+/* Team name flexible */
+.col-name{ flex:1 1 auto; min-width:100px; margin-left:4px; }
 .team-name{
-  font-weight:400;              /* non-bold per request */
+  font-weight:400;
   font-size:14px;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  max-width:none;               /* allow it to grow naturally */
   display:inline-block;
   vertical-align:middle;
   color:var(--text);
 }
 
-/* stat columns: compact and left-shifted */
-.col-stat{
-  width:50px;
-  flex:0 0 50px;
-  text-align:center;
-  font-weight:600;
-  font-size:13px;
-}
+/* Stat columns compact */
+.col-stat { width:44px; flex:0 0 44px; text-align:center; font-weight:600; color:var(--text); }
 
-/* TABLE-based layout (if using table) - prefer auto layout so name column can expand */
-#pointsTable {
-  width:100%;
-  border-collapse:collapse;
-  table-layout:auto;
-  margin-top:8px;
-}
-#pointsTable thead th, #pointsTable tbody td {
-  padding:10px 8px;
-  font-size:13px;
-  color:var(--text);
-  text-align:left;
-}
-#pointsTable thead th { color:var(--muted); font-weight:600; }
-#pointsTable tbody td { border-top:1px solid rgba(255,255,255,0.02); vertical-align:middle; }
-#pointsTable td img { width:22px; height:22px; border-radius:6px; object-fit:cover; display:block; margin:0 auto; }
+/* TABLE fallback selectors (if you use table layout) */
+#pointsTable{ width:100%; border-collapse:collapse; table-layout:auto; }
+#pointsTable thead th, #pointsTable tbody td { padding:8px 6px; font-size:13px; color:var(--text); }
 
-/* topbar (shared-ui) responsiveness - conservative */
-.tcb-topbar-container { flex-wrap:wrap; padding:6px 10px; }
-.tcb-topbar-inner { display:flex; gap:8px; align-items:center; flex-wrap:wrap; width:100%; box-sizing:border-box; }
-.tcb-left { display:flex; align-items:center; gap:8px; min-width:0; }
-.tcb-logo { height:44px; width:auto; }
-.tcb-manager { display:flex; flex-direction:column; line-height:1; min-width:0; overflow:hidden; }
-.tcb-manager .line1, .tcb-manager .line2 { font-size:14px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.tcb-stats { display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap; }
+/* Keep NRR visible by default; use helper classes to hide lower priority on tiny screens */
+.stat-p, .stat-nrr { display:table-cell; }
 
-/* keep stat labels visible but small */
-.tcb-stat { display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:44px; padding:2px 4px; background:transparent; border:none; }
-.tcb-stat img { width:20px; height:20px; object-fit:contain; }
-.tcb-stat .tcb-stat-text, .tcb-stat .tcb-stat-sub { font-size:11px; font-weight:700; color:var(--accent); margin-top:4px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-/* unread dot always available when messages exist */
-.tcb-unread-dot { position:absolute; top:6px; right:8px; width:9px; height:9px; border-radius:50%; background:#e53935; display:none; }
-
-/* responsive adjustments */
-@media (max-width:640px){
-  .team-name{ max-width:160px; font-size:13px; }    /* comfortable truncation */
-  .col-stat{ width:44px; flex:0 0 44px; font-size:12px; }
-  .row{ height:60px; }
-  .search-input{ max-width:60%; min-width:110px; }
-  .league-name{ font-size:16px; }
-  .col-logo{ width:36px; flex:0 0 36px; }
-  .team-logo{ width:30px; height:30px; }
-  .tcb-stat img { width:18px; height:18px; }
-}
-
-/* very small screens: hide only the lowest-priority stat columns so names remain readable */
-@media (max-width:420px){
-  /* hide Points (P) and NRR columns by applying helper classes to those cells/headers: .stat-p .stat-nrr */
-  .stat-p, .stat-nrr { display:none !important; }
-  .team-name{ max-width: calc(100% - 120px); } /* let team name use most remaining space */
+/* Responsive adjustments */
+@media (max-width:520px){
+  .team-logo{ width:28px; height:28px; }
+  .col-pos{ width:34px; flex:0 0 34px; padding-left:6px; }
+  .col-logo{ width:34px; flex:0 0 34px; }
   .col-stat{ width:40px; flex:0 0 40px; font-size:12px; }
-  .search-input{ max-width:58%; }
-  .tcb-logo { height:40px; }
-  .tcb-manager .line1 { font-size:13px; }
-  /* keep Inbox icon and unread dot visible */
-  .tcb-unread-dot { display:block; }
+  .team-name{ font-size:13px; }
+  .search-input{ max-width:56%; }
+  .tcb-stat .tcb-stat-text { font-size:10px; }
 }
-  </style>
+
+/* Very small screens: hide only the lowest priority (NRR) if space is tight */
+@media (max-width:380px){
+  .stat-nrr { display:none !important; }   /* hide NRR to free space */
+  .team-name{ max-width: calc(100% - 140px); } /* allow team name to use remaining */
+  .col-stat{ width:38px; flex:0 0 38px; }
+}
+</style>
 </head>
 <body>
   <!-- shared-ui.js is expected at js/shared-ui.js and will inject top/bottom bars -->
@@ -208,3 +157,4 @@ body{
   <script type="module" src="js/league.js"></script>
 </body>
 </html>
+
