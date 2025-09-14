@@ -1,99 +1,54 @@
 // public/league.js
-// Compact league table with expandable details.
-// - Compact row: Pos | Logo | Team | M | P
-// - Click team name -> public-profile.html?team_id=...
-// - Click row elsewhere -> toggle detail row showing W/T/L/NRR etc.
-// - Safe call to shared-ui (if available)
+// Compact league table (Pos | Logo | Team | M | Pts) with expandable single-line detail
+// Place in public/ and ensure league.html loads it as module.
+// Replace SUPABASE_URL / SUPABASE_ANON_KEY with your project values if needed.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// --- CONFIG: replace with your supabase project + anon if different ---
-const SUPABASE_URL = "https://iukofcmatlfhfwcechdq.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
+// --- CONFIG: Use your project's values here (or keep as environment shim) ---
+const SUPABASE_URL = window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
+const SUPABASE_ANON_KEY = window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// guard-load shared UI if available (prevents hard error if shared-ui.js missing)
-async function tryLoadSharedUI(profileData, userId) {
-  try {
-    // dynamic import if file present, else skip
-    if (typeof loadSharedUI === "function") {
-      // global function already defined (shared-ui.js loaded)
-      loadSharedUI({
-        supabase,
-        manager_name: profileData.manager_name,
-        xp: profileData.xp,
-        coins: profileData.coins,
-        cash: profileData.cash,
-        user_id: userId
-      });
-      return;
-    }
-    // if not global, attempt to import module (non-fatal if 404)
-    try {
-      const mod = await import('./shared-ui.js');
-      if (mod && typeof mod.loadSharedUI === 'function') {
-        mod.loadSharedUI({
-          supabase,
-          manager_name: profileData.manager_name,
-          xp: profileData.xp,
-          coins: profileData.coins,
-          cash: profileData.cash,
-          user_id: userId
-        });
-      }
-    } catch (e) {
-      // shared-ui not available — ignore silently
-      console.info('shared-ui.js not available; skipping topbar injection.');
-    }
-  } catch (err) {
-    console.warn('Failed to initialize shared UI:', err);
-  }
-}
-
-// small helpers
+// helpers
 const $ = id => document.getElementById(id);
 const esc = s => (s == null ? '' : String(s).replace(/[&<>"'`]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c])));
 
-// STATE
 let myTeamId = null;
 let currentLeagueId = null;
-let expandedTeamId = null;
+let expandedTeam = null;
 
-// builds detail HTML (shown when row expanded)
-function detailHtml(stats) {
-  const items = [
-    `M: ${stats.matches_played ?? 0}`,
-    `W: ${stats.wins ?? 0}`,
-    `T: ${stats.ties ?? 0}`,
-    `L: ${stats.losses ?? 0}`,
-    `Pts: ${stats.points ?? 0}`,
-    `Runs Scored: ${stats.runs_scored ?? 0}`,
-    `Overs Faced: ${stats.overs_faced ?? 0}`,
-    `Runs Conceded: ${stats.runs_conceded ?? 0}`,
-    `Overs Bowled: ${stats.overs_bowled ?? 0}`,
-    `NRR: ${Number(stats.nrr ?? 0).toFixed(3)}`,
-    `Updated: ${stats.updated_at ? new Date(stats.updated_at).toLocaleString() : '-'}`,
-  ];
-  return `<div style="display:flex;flex-wrap:wrap;gap:18px;padding:8px 4px">${items.map(i=>`<div style="min-width:120px;color:#aebacb">${esc(i)}</div>`).join('')}</div>`;
+// Compact single-line detail row HTML (M W T L Pts NRR)
+function compactDetailRow(stats) {
+  const M = stats.matches_played ?? 0;
+  const W = stats.wins ?? 0;
+  const T = stats.ties ?? 0;
+  const L = stats.losses ?? 0;
+  const P = stats.points ?? (W*2 + T*1);
+  const N = Number(stats.nrr ?? 0).toFixed(3);
+  return `<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:18px;align-items:center">
+    <div style="min-width:70px"><strong>M:</strong> ${M}</div>
+    <div style="min-width:70px"><strong>W:</strong> ${W}</div>
+    <div style="min-width:70px"><strong>T:</strong> ${T}</div>
+    <div style="min-width:70px"><strong>L:</strong> ${L}</div>
+    <div style="min-width:80px"><strong>Pts:</strong> ${P}</div>
+    <div style="min-width:90px"><strong>NRR:</strong> ${N}</div>
+  </div>`;
 }
 
-// clear existing expanded detail
 function clearExpanded() {
-  if (!expandedTeamId) return;
-  const ex = document.querySelector(`tr.detail-row[data-team="${expandedTeamId}"]`);
+  if (!expandedTeam) return;
+  const ex = document.querySelector(`tr.detail-row[data-team="${expandedTeam}"]`);
   if (ex) ex.remove();
-  expandedTeamId = null;
+  expandedTeam = null;
 }
 
-// render rows (compact)
 function renderRows(rows) {
-  const tbody = $('pointsBody');
-  tbody.innerHTML = '';
+  const tb = $('pointsBody');
+  tb.innerHTML = '';
   if (!rows || rows.length === 0) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="6" style="padding:18px;text-align:center;color:#9aa5bf">No teams found</td>`;
-    tbody.appendChild(tr);
+    tb.innerHTML = `<tr><td colspan="5" style="padding:18px;text-align:center;color:#9aa5bf">No teams found</td></tr>`;
     return;
   }
 
@@ -105,78 +60,60 @@ function renderRows(rows) {
     const wins = r.wins ?? r.w ?? 0;
     const ties = r.ties ?? r.t ?? 0;
     const losses = r.losses ?? r.l ?? 0;
-    const runs_scored = r.runs_scored ?? 0;
-    const overs_faced = r.overs_faced ?? 0;
-    const runs_conceded = r.runs_conceded ?? 0;
-    const overs_bowled = r.overs_bowled ?? 0;
-    const nrr = Number(r.nrr ?? 0).toFixed(3);
-    // compute points if not provided (2 for win, 1 for tie)
-    const points = (r.points ?? r.p ?? (wins * 2 + ties * 1));
+    const points = r.points ?? r.p ?? (wins*2 + ties*1);
+    const nrr = r.nrr ?? 0;
 
     const tr = document.createElement('tr');
     tr.className = 'clickable-row';
     tr.dataset.teamId = teamId;
-
     tr.innerHTML = `
-      <td class="col-pos" style="padding:12px 8px;color:#9aa5bf">${idx + 1}</td>
-      <td class="col-logo" style="padding:8px 6px;vertical-align:middle"><img src="${esc(logo)}" alt="logo" style="width:28px;height:28px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/></td>
-      <td class="col-team" style="padding:12px 8px;max-width:260px">
-        <a class="team-link" href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="color:inherit;text-decoration:none;display:inline-block;width:100%;font-weight:600">${esc(teamName)}</a>
+      <td class="col-pos" style="padding:12px 8px;color:#9aa5bf">${idx+1}</td>
+      <td class="col-logo" style="padding:8px 6px"><img src="${esc(logo)}" alt="logo" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/></td>
+      <td class="col-team">
+        <div class="team-cell">
+          <div style="flex:1;min-width:0">
+            <a class="team-link" href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="display:inline-block;color:inherit;text-decoration:none;width:100%"><span class="team-name">${esc(teamName)}</span></a>
+          </div>
+        </div>
       </td>
-      <td class="col-stat" style="text-align:center;font-weight:700;padding:12px 8px">${matches}</td>
-      <td class="col-stat" style="text-align:center;font-weight:700;padding:12px 8px">${points}</td>
+      <td class="col-stat">${matches}</td>
+      <td class="col-stat">${points}</td>
     `;
 
-    // click handler for the row: toggle detail row unless the team link was clicked
+    // clicking the row (not the anchor) toggles detail
     tr.addEventListener('click', (ev) => {
-      // if clicked inside anchor (team-link), let browser navigate
+      // ignore clicks that originated on the team link
       let el = ev.target;
       while (el && el !== tr) {
         if (el.tagName === 'A' && el.classList.contains('team-link')) return;
         el = el.parentElement;
       }
       const tid = tr.dataset.teamId;
-      // toggle
-      if (expandedTeamId === tid) {
+      if (expandedTeam === tid) {
         clearExpanded();
         return;
       }
-      // collapse previous
       clearExpanded();
-      // insert detail row immediately after this row
       const detail = document.createElement('tr');
       detail.className = 'detail-row';
       detail.dataset.team = tid;
       const td = document.createElement('td');
-      td.colSpan = 6;
-      td.innerHTML = detailHtml({
+      td.colSpan = 5;
+      td.innerHTML = compactDetailRow({
         matches_played: matches,
-        wins,
-        ties,
-        losses,
-        points,
-        runs_scored,
-        overs_faced,
-        runs_conceded,
-        overs_bowled,
-        nrr,
-        updated_at: r.updated_at ?? r.updatedAt ?? null
+        wins, ties, losses,
+        points, nrr
       });
       detail.appendChild(td);
-      if (tr.nextSibling) tr.parentNode.insertBefore(detail, tr.nextSibling);
-      else tr.parentNode.appendChild(detail);
-      expandedTeamId = tid;
-      // scroll detail into view on small screens
-      if (window.innerWidth < 640) {
-        detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+      tr.parentNode.insertBefore(detail, tr.nextSibling);
+      expandedTeam = tid;
+      if (window.innerWidth < 640) detail.scrollIntoView({behavior:'smooth', block:'nearest'});
     });
 
-    $('pointsBody').appendChild(tr);
+    tb.appendChild(tr);
   });
 }
 
-// fetch standings RPC with graceful fallback
 async function fetchStandings(leagueId) {
   if (!leagueId) {
     renderRows([]);
@@ -185,27 +122,20 @@ async function fetchStandings(leagueId) {
   try {
     const { data, error } = await supabase.rpc('get_league_standings', { p_league_id: leagueId });
     if (error) {
-      console.warn('get_league_standings RPC error:', error);
-      // fallback to teams list with zeros
+      console.warn('RPC error, falling back to teams list:', error);
       const { data: teams } = await supabase.from('teams').select('id,team_name,logo_url').eq('league_id', leagueId);
-      const rows = (teams || []).map(t => ({
-        team_id: t.id, team_name: t.team_name, logo_url: t.logo_url,
-        matches_played: 0, wins:0, ties:0, losses:0, points:0, nrr:0
-      }));
+      const rows = (teams || []).map(t => ({ team_id: t.id, team_name: t.team_name, logo_url: t.logo_url, matches_played:0, wins:0, ties:0, losses:0, points:0, nrr:0 }));
       renderRows(rows);
       return;
     }
     if (!data || data.length === 0) {
-      // no standings, fallback to teams
+      // no standings data - show teams w/ zeros
       const { data: teams } = await supabase.from('teams').select('id,team_name,logo_url').eq('league_id', leagueId);
-      const rows = (teams || []).map(t => ({
-        team_id: t.id, team_name: t.team_name, logo_url: t.logo_url,
-        matches_played: 0, wins:0, ties:0, losses:0, points:0, nrr:0
-      }));
+      const rows = (teams || []).map(t => ({ team_id: t.id, team_name: t.team_name, logo_url: t.logo_url, matches_played:0, wins:0, ties:0, losses:0, points:0, nrr:0 }));
       renderRows(rows);
       return;
     }
-    // normalize and render
+    // normalize
     const normalized = (data || []).map(r => ({
       team_id: r.team_id ?? r.id,
       team_name: r.team_name ?? r.team ?? r.name,
@@ -215,12 +145,7 @@ async function fetchStandings(leagueId) {
       ties: r.t ?? r.ties ?? 0,
       losses: r.l ?? r.losses ?? 0,
       points: r.p ?? r.points ?? null,
-      runs_scored: r.runs_scored ?? 0,
-      overs_faced: r.overs_faced ?? 0,
-      runs_conceded: r.runs_conceded ?? 0,
-      overs_bowled: r.overs_bowled ?? 0,
-      nrr: r.nrr ?? 0,
-      updated_at: r.updated_at ?? r.updatedAt ?? null
+      nrr: r.nrr ?? 0
     }));
     renderRows(normalized);
   } catch (err) {
@@ -229,46 +154,31 @@ async function fetchStandings(leagueId) {
   }
 }
 
-// fetch statistics for RHS panels (optional)
 async function fetchStats(leagueId) {
-  const batEl = $('topBatters'), bowlEl = $('topBowlers');
-  if (batEl) batEl.innerHTML = 'Loading...';
-  if (bowlEl) bowlEl.innerHTML = 'Loading...';
+  const b = $('topBatters'), bw = $('topBowlers');
+  if (b) b.innerHTML = 'Loading...';
+  if (bw) bw.innerHTML = 'Loading...';
   try {
-    const { data, error } = await supabase.rpc('get_league_statistics', { p_league_id: leagueId });
-    if (error || !data) {
-      if (batEl) batEl.innerHTML = 'No data yet';
-      if (bowlEl) bowlEl.innerHTML = 'No data yet';
+    const { data } = await supabase.rpc('get_league_statistics', { p_league_id: leagueId });
+    if (!data) {
+      if (b) b.innerHTML = 'No data yet';
+      if (bw) bw.innerHTML = 'No data yet';
       return;
     }
-    // adapt shape
-    const batters = data.batters || data.top_batters || (Array.isArray(data) ? data.filter(x=>x.kind==='batter') : []);
-    const bowlers = data.bowlers || data.top_bowlers || (Array.isArray(data) ? data.filter(x=>x.kind==='bowler') : []);
-    if (batEl) batEl.innerHTML = (batters.length ? batters.slice(0,5).map(b => `<div style="display:flex;justify-content:space-between;padding:4px 0"><div>${esc(b.player_name||b.name||b.player)}</div><div style="font-weight:700">${b.runs||0}</div></div>`).join('') : '<div class="muted">No data yet</div>');
-    if (bowlEl) bowlEl.innerHTML = (bowlers.length ? bowlers.slice(0,5).map(b => `<div style="display:flex;justify-content:space-between;padding:4px 0"><div>${esc(b.player_name||b.name||b.player)}</div><div style="font-weight:700">${b.wickets||0}</div></div>`).join('') : '<div class="muted">No data yet</div>');
+    const batters = data.batters || data.top_batters || [];
+    const bowlers = data.bowlers || data.top_bowlers || [];
+    if (b) b.innerHTML = (batters.length ? batters.slice(0,5).map(x=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><div>${esc(x.player_name||x.name)}</div><div style="font-weight:700">${x.runs||0}</div></div>`).join('') : 'No data yet');
+    if (bw) bw.innerHTML = (bowlers.length ? bowlers.slice(0,5).map(x=>`<div style="display:flex;justify-content:space-between;padding:6px 0"><div>${esc(x.player_name||x.name)}</div><div style="font-weight:700">${x.wickets||0}</div></div>`).join('') : 'No data yet');
   } catch (err) {
-    console.warn('fetchStats error', err);
-    if (batEl) batEl.innerHTML = 'No data yet';
-    if (bowlEl) bowlEl.innerHTML = 'No data yet';
+    if (b) b.innerHTML = 'No data yet';
+    if (bw) bw.innerHTML = 'No data yet';
   }
 }
 
-// load league name (optional)
-async function loadLeagueName(leagueId){
-  try {
-    const { data } = await supabase.from('leagues').select('name').eq('id', leagueId).maybeSingle();
-    if (data && data.name) {
-      const el = $('leagueName');
-      if (el) el.innerText = data.name;
-    }
-  } catch (err) { /*ignore*/ }
-}
-
-// UI wiring
-function setupUI() {
+function wireUI() {
   const tabP = $('tabPoints'), tabS = $('tabStats');
-  if (tabP) tabP.addEventListener('click', ()=>{ $('pointsCard').style.display='block'; $('statsCard').style.display='none'; tabP.classList.add('active'); tabS.classList.remove('active'); });
-  if (tabS) tabS.addEventListener('click', ()=>{ $('pointsCard').style.display='none'; $('statsCard').style.display='block'; tabS.classList.add('active'); tabP.classList.remove('active'); });
+  if (tabP) tabP.addEventListener('click', () => { $('pointsCard').style.display='block'; $('statsCard').style.display='none'; tabP.classList.add('active'); tabS.classList.remove('active'); });
+  if (tabS) tabS.addEventListener('click', () => { $('pointsCard').style.display='none'; $('statsCard').style.display='block'; tabS.classList.add('active'); tabP.classList.remove('active'); });
 
   const searchBtn = $('searchBtn');
   if (searchBtn) searchBtn.addEventListener('click', async () => {
@@ -278,7 +188,7 @@ function setupUI() {
       const { data } = await supabase.from('leagues').select('id,name').ilike('name', `%${q}%`).limit(1);
       if (!data || data.length === 0) { alert('League not found'); return; }
       currentLeagueId = data[0].id;
-      await loadLeagueName(currentLeagueId);
+      $('leagueName').innerText = data[0].name || 'League';
       await Promise.all([fetchStandings(currentLeagueId), fetchStats(currentLeagueId)]);
     } catch (err) { console.error(err); alert('Search failed'); }
   });
@@ -290,21 +200,21 @@ function setupUI() {
       const { data } = await supabase.from('teams').select('league_id').eq('id', myTeamId).maybeSingle();
       if (data && data.league_id) {
         currentLeagueId = data.league_id;
-        await loadLeagueName(currentLeagueId);
         await Promise.all([fetchStandings(currentLeagueId), fetchStats(currentLeagueId)]);
+        const L = await supabase.from('leagues').select('name').eq('id', currentLeagueId).maybeSingle();
+        if (L.data && L.data.name) $('leagueName').innerText = L.data.name;
       } else alert('Your team is not assigned to a league yet.');
     } catch (err) { console.error(err); alert('Error fetching your league'); }
   });
 
   const searchInput = $('leagueSearch');
-  if (searchInput) searchInput.addEventListener('keypress', (e)=>{ if (e.key === 'Enter') { const btn = $('searchBtn'); if (btn) btn.click(); } });
+  if (searchInput) searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { const btn = $('searchBtn'); if (btn) btn.click(); } });
 }
 
-// entry point
 async function init() {
-  setupUI();
+  wireUI();
 
-  // attempt to get session/profile (non-fatal)
+  // try get session/profile
   try {
     const s = await supabase.auth.getSession();
     const uid = s?.data?.session?.user?.id;
@@ -312,35 +222,39 @@ async function init() {
       const { data: profile } = await supabase.from('profiles').select('manager_name,team_id,xp,coins,cash').eq('user_id', uid).maybeSingle();
       if (profile) {
         myTeamId = profile.team_id;
-        // try to load shared UI (if present)
-        tryLoadSharedUI(profile, uid);
+        // prefer user's team league
+        if (myTeamId) {
+          try {
+            const { data: team } = await supabase.from('teams').select('league_id').eq('id', myTeamId).maybeSingle();
+            if (team && team.league_id) currentLeagueId = team.league_id;
+          } catch (e) { /* ignore */ }
+        }
       }
-    } else {
-      // try to still call shared-ui if it's present (it won't have user-specific values)
-      tryLoadSharedUI({ manager_name: 'Manager', xp:0, coins:0, cash:0 }, null);
     }
   } catch (err) {
-    console.warn('session/profile fetch failed', err);
-    tryLoadSharedUI({ manager_name: 'Manager', xp:0, coins:0, cash:0 }, null);
+    console.warn('session fetch failed', err);
   }
 
-  // pick league_id from querystring or first league
+  // if still no league chosen: look for league_id in querystring, else first league fallback
   const qs = new URLSearchParams(window.location.search);
-  currentLeagueId = qs.get('league_id') || null;
+  if (!currentLeagueId) currentLeagueId = qs.get('league_id') || null;
   if (!currentLeagueId) {
     try {
       const { data } = await supabase.from('leagues').select('id,name').limit(1).maybeSingle();
       if (data) {
         currentLeagueId = data.id;
-        if (data.name) {
-          const el = $('leagueName'); if (el) el.innerText = data.name;
-        }
+        if (data.name) $('leagueName').innerText = data.name;
       }
-    } catch (err) { /*ignore*/ }
+    } catch (err) { /* ignore */ }
   } else {
-    await loadLeagueName(currentLeagueId);
+    // load name too
+    try {
+      const { data } = await supabase.from('leagues').select('name').eq('id', currentLeagueId).maybeSingle();
+      if (data && data.name) $('leagueName').innerText = data.name;
+    } catch (e) {}
   }
 
+  // fetch and render
   if (currentLeagueId) {
     await Promise.all([fetchStandings(currentLeagueId), fetchStats(currentLeagueId)]);
   } else {
