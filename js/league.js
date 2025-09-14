@@ -1,7 +1,4 @@
-// public/league.js (patched — responsive expanding detail row)
-// Compact league table (Pos | Logo | Team | M | Pts) with expandable responsive detail
-// Replace SUPABASE_URL / SUPABASE_ANON_KEY with your project values if needed.
-
+// public/league.js
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // --- CONFIG: use env overrides if available
@@ -18,11 +15,6 @@ let myTeamId = null;
 let currentLeagueId = null;
 let expandedTeam = null;
 
-/**
- * Responsive detail HTML:
- * - Uses flexbox with wrap so on narrow screens tiles will wrap onto new lines
- * - Each stat box uses flex:1 1 120px (so they try to share available width but can become full-width on tiny screens)
- */
 function responsiveDetailRowHtml(stats) {
   const M = stats.matches_played ?? 0;
   const W = stats.wins ?? 0;
@@ -32,20 +24,13 @@ function responsiveDetailRowHtml(stats) {
   const N = Number(stats.nrr ?? 0).toFixed(3);
 
   return `
-    <div style="
-      display:flex;
-      gap:14px;
-      flex-wrap:wrap;
-      align-items:center;
-      width:100%;
-      box-sizing:border-box;
-    ">
-      <div style="flex:1 1 120px; min-width:120px;"><strong>M:</strong> ${M}</div>
-      <div style="flex:1 1 120px; min-width:120px;"><strong>W:</strong> ${W}</div>
-      <div style="flex:1 1 120px; min-width:120px;"><strong>T:</strong> ${T}</div>
-      <div style="flex:1 1 120px; min-width:120px;"><strong>L:</strong> ${L}</div>
-      <div style="flex:1 1 140px; min-width:140px;"><strong>Pts:</strong> ${P}</div>
-      <div style="flex:1 1 140px; min-width:140px;"><strong>NRR:</strong> ${N}</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;width:100%;box-sizing:border-box;">
+      <div style="flex:1 1 120px;min-width:120px;"><strong>M:</strong> ${M}</div>
+      <div style="flex:1 1 120px;min-width:120px;"><strong>W:</strong> ${W}</div>
+      <div style="flex:1 1 120px;min-width:120px;"><strong>T:</strong> ${T}</div>
+      <div style="flex:1 1 120px;min-width:120px;"><strong>L:</strong> ${L}</div>
+      <div style="flex:1 1 140px;min-width:140px;"><strong>Pts:</strong> ${P}</div>
+      <div style="flex:1 1 140px;min-width:140px;"><strong>NRR:</strong> ${N}</div>
     </div>
   `;
 }
@@ -97,9 +82,7 @@ function renderRows(rows) {
       <td class="col-stat">${points}</td>
     `;
 
-    // clicking the row (not the anchor) toggles detail
     tr.addEventListener('click', (ev) => {
-      // ignore clicks that originate on the team link (anchor)
       let el = ev.target;
       while (el && el !== tr) {
         if (el.tagName === 'A' && el.classList.contains('team-link')) return;
@@ -113,7 +96,6 @@ function renderRows(rows) {
       }
       clearExpanded();
 
-      // create responsive detail row
       const detail = document.createElement('tr');
       detail.className = 'detail-row';
       detail.dataset.team = tid;
@@ -128,19 +110,13 @@ function renderRows(rows) {
       detail.appendChild(td);
       tr.parentNode.insertBefore(detail, tr.nextSibling);
       expandedTeam = tid;
-
-      // scroll into view on small screens so detail is visible
-      if (window.innerWidth < 640) {
-        // smooth and ensure the detail row is visible
-        detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+      if (window.innerWidth < 640) detail.scrollIntoView({behavior:'smooth', block:'nearest'});
     });
 
     tb.appendChild(tr);
   });
 }
 
-// fetch standings via RPC; fallback to teams list if RPC not available
 async function fetchStandings(leagueId) {
   if (!leagueId) {
     renderRows([]);
@@ -156,7 +132,6 @@ async function fetchStandings(leagueId) {
       return;
     }
     if (!data || data.length === 0) {
-      // show teams with zero stats
       const { data: teams } = await supabase.from('teams').select('id,team_name,logo_url').eq('league_id', leagueId);
       const rows = (teams || []).map(t => ({ team_id: t.id, team_name: t.team_name, logo_url: t.logo_url, matches_played:0, wins:0, ties:0, losses:0, points:0, nrr:0 }));
       renderRows(rows);
@@ -180,7 +155,6 @@ async function fetchStandings(leagueId) {
   }
 }
 
-// fetch stats (top batters / bowlers)
 async function fetchStats(leagueId) {
   const b = $('topBatters'), bw = $('topBowlers');
   if (b) b.innerHTML = 'Loading...';
@@ -238,26 +212,19 @@ function wireUI() {
   if (searchInput) searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { const btn = $('searchBtn'); if (btn) btn.click(); } });
 }
 
-// fallback topbar injection (used if shared-ui.js not loaded)
 function injectFallbackTopbar(managerName = 'Manager') {
   const container = document.getElementById('topbarContainer');
   container.innerHTML = '';
   const bar = document.createElement('div');
-  bar.className = 'fallback-topbar';
-  bar.innerHTML = `
-    <div class="left">
-      <img class="logo" src="/assets/logo.png" alt="logo" />
-      <div class="manager">${esc(managerName)}</div>
-    </div>
-    <div class="right">
-      <div class="stat">XP</div><div class="stat">CB</div><div class="stat">Cash</div><div class="stat">Inbox</div>
-    </div>
-  `;
+  bar.style.height = '64px';
+  bar.style.display = 'flex';
+  bar.style.alignItems = 'center';
+  bar.style.padding = '8px 12px';
+  bar.style.background = 'linear-gradient(90deg,#182b4d,#111d3a)';
+  bar.innerHTML = `<div style="display:flex;align-items:center;gap:10px;color:#fff"><img src="/assets/logo.png" style="height:40px"/><div style="font-weight:700">${esc(managerName)}</div></div><div style="margin-left:auto;color:#fff;opacity:0.95;padding-right:12px">XP &nbsp; CB &nbsp; Cash &nbsp; Inbox</div>`;
   container.appendChild(bar);
-  container.style.height = '64px';
 }
 
-// attempt to import shared-ui and call loadSharedUI; if fails inject fallback
 async function tryLoadSharedUI(profile) {
   const container = document.getElementById('topbarContainer');
   container.style.height = '64px';
