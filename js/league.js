@@ -1,22 +1,23 @@
 // public/league.js
-// Patched: statistics render moved to #statsCard and tab toggling fixed.
-// Robust env fallback and DOM creation if elements missing.
+// Full patched version — injects responsive CSS, uses .team-link, robust DOM fallback.
+// Assumes shared-ui.js exists and is importable.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadSharedUI } from "./shared-ui.js";
 
 /* ========== CONFIG ========== */
+// Runtime-injected env (Netlify or similar) preferred; fallback to placeholders for local dev.
 const SUPABASE_URL = (window._env_ && window._env_.SUPABASE_URL) || window.PROJECT_URL || "https://iukofcmatlfhfwcechdq.supabase.co";
 const SUPABASE_ANON_KEY =
   (window._env_ && window._env_.SUPABASE_ANON_KEY) || window.ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1a29mY21hdGxmaGZ3Y2VjaGRxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NTczODQsImV4cCI6MjA2OTAzMzM4NH0.XMiE0OuLOQTlYnQoPSxwxjT3qYKzINnG6xq8f8Tb_IE";
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error("Supabase URL or ANON KEY missing. Inject via window._env_ or set PROJECT_URL/ANON_KEY for local test.");
+  console.warn("Supabase URL / ANON KEY missing — set window._env_.SUPABASE_URL and SUPABASE_ANON_KEY or provide PROJECT_URL/ANON_KEY for local test.");
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ========== DOM HELPERS ========== */
+/* ========== UTILS ========== */
 const $ = (id) => document.getElementById(id);
 const ensureEl = (id, tag = "div", parentSelector = "#app", attrs = {}) => {
   let el = document.getElementById(id);
@@ -28,12 +29,12 @@ const ensureEl = (id, tag = "div", parentSelector = "#app", attrs = {}) => {
   parent.appendChild(el);
   return el;
 };
-const escapeHtml = (s) => {
+function escapeHtml(s) {
   if (s === null || s === undefined) return "";
   return String(s).replace(/[&<>"'`]/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;", "`": "&#96;" }[c] || c)
   );
-};
+}
 const safeNum = (v) => (v === null || v === undefined ? 0 : v);
 const formatNRR = (n) => {
   if (n === null || n === undefined) return "0.000";
@@ -41,31 +42,69 @@ const formatNRR = (n) => {
   return Number.isFinite(x) ? x.toFixed(3) : "0.000";
 };
 
-/* ========== ENSURE PAGE STRUCTURE ========== */
+/* ========== Inject CSS (automatic) ========== */
+function injectLeagueStyles() {
+  if (document.getElementById("league-inline-styles")) return;
+  const s = document.createElement("style");
+  s.id = "league-inline-styles";
+  s.textContent = `
+/* League point-table tuning (injected) */
+#pointsTable { width:100%; border-collapse:collapse; table-layout:fixed; }
+#pointsTable thead th { padding:8px 6px; font-size:13px; color:#9aa5bf; font-weight:600; }
+#pointsTable tbody td { padding:8px 6px; font-size:13px; vertical-align:middle; color:#e6eef8; }
+#pointsTable th:nth-child(1), #pointsTable td:nth-child(1) { width:42px; text-align:left; padding-left:10px; }
+#pointsTable th:nth-child(2), #pointsTable td:nth-child(2) { width:34px; text-align:center; }
+#pointsTable th:nth-child(4), #pointsTable td:nth-child(4),
+#pointsTable th:nth-child(5), #pointsTable td:nth-child(5),
+#pointsTable th:nth-child(6), #pointsTable td:nth-child(6),
+#pointsTable th:nth-child(7), #pointsTable td:nth-child(7),
+#pointsTable th:nth-child(8), #pointsTable td:nth-child(8),
+#pointsTable th:nth-child(9), #pointsTable td:nth-child(9) {
+  width:48px; text-align:center; padding:8px 6px;
+}
+#pointsTable th:nth-child(3), #pointsTable td:nth-child(3) {
+  text-align:left; max-width:220px; overflow:hidden; text-overflow:ellipsis;
+}
+#pointsTable td img { width:22px; height:22px; border-radius:6px; object-fit:cover; display:block; margin:0 auto; }
+.team-link { display:inline-block; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:400; font-size:13px; color:inherit; text-decoration:none; }
+@media (max-width:480px) {
+  #pointsTable th:nth-child(3), #pointsTable td:nth-child(3) { max-width:140px; }
+  #pointsTable th:nth-child(4), #pointsTable td:nth-child(4),
+  #pointsTable th:nth-child(5), #pointsTable td:nth-child(5),
+  #pointsTable th:nth-child(6), #pointsTable td:nth-child(6),
+  #pointsTable th:nth-child(7), #pointsTable td:nth-child(7),
+  #pointsTable th:nth-child(8), #pointsTable td:nth-child(8),
+  #pointsTable th:nth-child(9), #pointsTable td:nth-child(9) {
+    width:44px; font-size:12px; padding:6px 4px;
+  }
+  .team-link { font-size:12px; }
+}
+`;
+  document.head.appendChild(s);
+}
+injectLeagueStyles();
+
+/* ========== Ensure DOM structure (create safe fallbacks) ========== */
 function ensureStructure() {
-  // App root
   ensureEl("app", "div", "body");
 
-  // Top: league name and search controls (don't overwrite if present)
+  // top area
   ensureEl("leagueName", "div", "#app");
   ensureEl("leagueSearch", "input", "#app", { placeholder: "Search league by name" });
   ensureEl("searchBtn", "button", "#app");
   ensureEl("myLeagueBtn", "button", "#app");
 
-  // Tabs (two buttons)
+  // tabs
   ensureEl("tabPoints", "button", "#app");
   ensureEl("tabStats", "button", "#app");
 
-  // Panels: pointsCard and statsCard (dedicated panels)
+  // panels
   const pointsCard = ensureEl("pointsCard", "div", "#app");
-  pointsCard.style.width = "100%";
   const statsCard = ensureEl("statsCard", "div", "#app");
-  statsCard.style.width = "100%";
-  // Stats panel hidden by default
   statsCard.style.display = "none";
 
-  // Points table: prefer existing table if present; otherwise create one inside pointsCard
-  let table = document.querySelector("#pointsTable");
+  // points table
+  let table = $("pointsTable");
   if (!table) {
     table = document.createElement("table");
     table.id = "pointsTable";
@@ -75,17 +114,17 @@ function ensureStructure() {
   }
   if (!table.querySelector("tbody")) table.appendChild(document.createElement("tbody"));
 
-  // Also create a fallback div list for teams (not used if table exists)
+  // fallbacks
   ensureEl("pointsList", "div", "#pointsCard");
   ensureEl("pointsEmpty", "div", "#pointsCard");
 }
 ensureStructure();
 
-/* ========== STATE ========== */
+/* ========== State ========== */
 let currentLeagueId = null;
 let myTeamId = null;
 
-/* ========== HEADER (table) ========== */
+/* ========== Header / Table ========== */
 function ensurePointsHeader() {
   const table = $("pointsTable");
   if (!table) return;
@@ -95,21 +134,21 @@ function ensurePointsHeader() {
     table.insertBefore(thead, table.firstChild);
   }
   thead.innerHTML = `
-    <tr style="color:#9aa5bf;font-size:13px;">
-      <th style="width:40px;text-align:left;padding:8px 10px;">Pos</th>
-      <th style="width:36px;padding:8px 6px;">Logo</th>
-      <th style="text-align:left;padding:8px 10px;min-width:140px;">Team</th>
-      <th style="width:44px;text-align:center">M</th>
-      <th style="width:44px;text-align:center">W</th>
-      <th style="width:44px;text-align:center">T</th>
-      <th style="width:44px;text-align:center">L</th>
-      <th style="width:54px;text-align:center">P</th>
-      <th style="width:60px;text-align:center">NRR</th>
+    <tr>
+      <th style="padding:8px 6px;text-align:left;">Pos</th>
+      <th style="padding:8px 6px;text-align:center;">Logo</th>
+      <th style="padding:8px 6px;text-align:left;min-width:140px;">Team</th>
+      <th style="padding:8px 6px;text-align:center">M</th>
+      <th style="padding:8px 6px;text-align:center">W</th>
+      <th style="padding:8px 6px;text-align:center">T</th>
+      <th style="padding:8px 6px;text-align:center">L</th>
+      <th style="padding:8px 6px;text-align:center">P</th>
+      <th style="padding:8px 6px;text-align:center">NRR</th>
     </tr>
   `;
 }
 
-/* ========== RENDER POINTS ========== */
+/* ========== Render Points ========== */
 function renderPointsRows(rows) {
   ensurePointsHeader();
   const table = $("pointsTable");
@@ -138,11 +177,9 @@ function renderPointsRows(rows) {
     tr.style.borderBottom = "1px solid rgba(255,255,255,0.03)";
     tr.innerHTML = `
       <td style="padding:8px 10px;white-space:nowrap">${pos}</td>
-      <td style="padding:6px;text-align:center"><img src="${escapeHtml(logo)}" alt="logo" style="width:22px;height:22px;border-radius:6px;object-fit:cover"/></td>
+      <td style="padding:6px;text-align:center"><img src="${escapeHtml(logo)}" alt="logo" onerror="this.src='assets/logo.png'"></td>
       <td style="padding:8px 10px;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-        <a href="public-profile.html?team_id=${encodeURIComponent(teamId)}" style="font-weight:400;color:inherit;text-decoration:none;display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${escapeHtml(teamName)}
-        </a>
+        <a class="team-link" href="public-profile.html?team_id=${encodeURIComponent(teamId)}">${escapeHtml(teamName)}</a>
       </td>
       <td style="text-align:center">${m}</td>
       <td style="text-align:center">${w}</td>
@@ -155,7 +192,7 @@ function renderPointsRows(rows) {
   });
 }
 
-/* ========== FALLBACK TEAMS ========== */
+/* ========== Fallback teams ========== */
 async function fallbackRenderTeams(leagueId) {
   try {
     const { data: teams, error } = await supabase.from("teams").select("id,team_name,logo_url").eq("league_id", leagueId);
@@ -176,7 +213,7 @@ async function fallbackRenderTeams(leagueId) {
   }
 }
 
-/* ========== FETCH & RENDER STANDINGS ========== */
+/* ========== Fetch & Render Standings ========== */
 async function fetchAndRenderStandings(leagueId) {
   if (!leagueId) {
     renderPointsRows([]);
@@ -211,7 +248,7 @@ async function fetchAndRenderStandings(leagueId) {
   }
 }
 
-/* ========== STATISTICS (render into statsCard) ========== */
+/* ========== Statistics ========== */
 function normalizePlayerRow(r) {
   return {
     player_id: r.player_id || r.id || null,
@@ -274,10 +311,9 @@ function renderStatisticsIntoStatsCard(batters, bowlers) {
   statsCard.appendChild(wrap);
 }
 
-/* fetch & render statistics into statsCard */
 async function fetchAndRenderStatistics(leagueId) {
   const statsCard = $("statsCard") || ensureEl("statsCard", "div", "#app");
-  statsCard.innerHTML = ""; // clear first
+  statsCard.innerHTML = "";
   if (!leagueId) {
     renderStatisticsIntoStatsCard([], []);
     return;
@@ -307,7 +343,7 @@ async function fetchAndRenderStatistics(leagueId) {
   }
 }
 
-/* ========== UI: search & tabs ========== */
+/* ========== UI: Search & Tabs ========== */
 function setupLeagueSearch() {
   const searchInput = ensureEl("leagueSearch", "input", "#app", { placeholder: "Search league by name" });
   const searchBtn = ensureEl("searchBtn", "button", "#app");
@@ -357,7 +393,6 @@ function setupTabs() {
   const pointsPanel = $("pointsCard") || ensureEl("pointsCard", "div", "#app");
   const statsPanel = $("statsCard") || ensureEl("statsCard", "div", "#app");
 
-  // hide stats by default
   pointsPanel.style.display = "block";
   statsPanel.style.display = "none";
 
@@ -376,15 +411,13 @@ function setupTabs() {
   });
 }
 
-/* ========== LOAD / REFRESH ========== */
+/* ========== Load / Refresh ========== */
 async function refreshAll() {
   if (!currentLeagueId) {
     try {
       const { data: one } = await supabase.from("leagues").select("id,name").limit(1).maybeSingle();
       currentLeagueId = one?.id || null;
-      if (one?.name) {
-        ensureEl("leagueName", "div", "#app").innerText = one.name;
-      }
+      if (one?.name) ensureEl("leagueName", "div", "#app").innerText = one.name;
     } catch (err) {
       console.warn("couldn't fetch default league", err);
     }
@@ -396,7 +429,6 @@ async function refreshAll() {
     return;
   }
 
-  // set league name
   try {
     const { data: L } = await supabase.from("leagues").select("name").eq("id", currentLeagueId).maybeSingle();
     if (L && L.name) ensureEl("leagueName", "div", "#app").innerText = L.name;
@@ -404,13 +436,10 @@ async function refreshAll() {
     console.warn("load league name failed", err);
   }
 
-  await Promise.all([
-    fetchAndRenderStandings(currentLeagueId),
-    fetchAndRenderStatistics(currentLeagueId)
-  ]);
+  await Promise.all([fetchAndRenderStandings(currentLeagueId), fetchAndRenderStatistics(currentLeagueId)]);
 }
 
-/* ========== INIT (session/profile and start) ========== */
+/* ========== Init (session/profile and start) ========== */
 async function initLeaguePage() {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
@@ -449,5 +478,4 @@ async function initLeaguePage() {
   }
 }
 
-/* ========== START ========== */
 window.addEventListener("DOMContentLoaded", initLeaguePage);
