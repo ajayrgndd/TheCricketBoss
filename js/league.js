@@ -103,7 +103,7 @@ function ensurePointsHeader() {
     <tr style="color:#9aa5bf;font-size:13px;">
       <th style="width:40px;text-align:left;padding:8px 10px;">Pos</th>
       <th style="width:36px;padding:8px 6px;">Logo</th>
-      <th style="text-align:left;padding:8px 10px;min-width:140px;">Team</th>
+      <th style="text-align:left;padding:8px 10px;min-width:100px;">Team</th>
       <th style="width:44px;text-align:center">M</th>
       <th style="width:44px;text-align:center">W</th>
       <th style="width:44px;text-align:center">T</th>
