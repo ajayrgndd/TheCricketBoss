@@ -58,8 +58,8 @@
       .search-input{max-width:56%}
     }
     /* ensure expandable detail is compact single-line on small screens */
-    .detail-row .compact-detail { display:flex; gap:12px; flex-wrap:nowrap; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .detail-row .compact-detail > div { min-width:60px; }
+    .detail-row .compact-detail { display:flex; gap:12px; flex-wrap:wrap; white-space:normal; overflow:visible; }
+    .detail-row .compact-detail > div { min-width:60px; flex:0 0 auto; }
     /* fallback topbar styles (used if shared-ui fails) */
     .fallback-topbar {
       position:fixed;top:0;left:0;right:0;height:64px;
@@ -72,6 +72,9 @@
     .fallback-topbar .manager { font-weight:700; font-size:15px }
     .fallback-topbar .right { margin-left:auto; display:flex; gap:10px; align-items:center }
     .fallback-topbar .stat { font-size:13px; opacity:0.95 }
+    /* Keep stats panel small inside STATISTICS card */
+    .stats-grid { display:flex; gap:20px; flex-wrap:wrap; margin-top:8px }
+    .stats-panel { flex:1; min-width:220px; }
   </style>
 </head>
 <body>
@@ -108,21 +111,21 @@
           <tbody id="pointsBody"></tbody>
         </table>
       </div>
-
-      <div style="margin-top:14px; display:flex; gap:20px; flex-wrap:wrap;">
-        <div style="flex:1; min-width:220px">
-          <h4 style="margin:6px 0">Top 5 Batters</h4>
-          <div id="topBatters" class="muted">No data yet</div>
-        </div>
-        <div style="flex:1; min-width:220px">
-          <h4 style="margin:6px 0">Top 5 Bowlers</h4>
-          <div id="topBowlers" class="muted">No data yet</div>
-        </div>
-      </div>
     </div>
 
     <div id="statsCard" class="card" style="display:none; margin-top:12px" aria-labelledby="tabStats">
       <div id="statistics">Statistics will appear here</div>
+
+      <div class="stats-grid">
+        <div class="stats-panel">
+          <h4 style="margin:6px 0">Top 5 Batters</h4>
+          <div id="topBatters" class="muted">No data yet</div>
+        </div>
+        <div class="stats-panel">
+          <h4 style="margin:6px 0">Top 5 Bowlers</h4>
+          <div id="topBowlers" class="muted">No data yet</div>
+        </div>
+      </div>
     </div>
   </div>
 
