@@ -107,7 +107,13 @@ function renderRows(rows) {
       detail.appendChild(td);
       tr.parentNode.insertBefore(detail, tr.nextSibling);
       expandedTeam = tid;
-      if (window.innerWidth < 640) detail.scrollIntoView({behavior:'smooth', block:'nearest'});
+      if (window.innerWidth < 640) {
+      // center the expanded detail in the viewport so bottom nav won't overlap it
+      detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // bonus: small additional offset if you want to nudge it a bit up from center:
+      // window.scrollBy(0, -12);
+}
+
     });
 
     tb.appendChild(tr);
