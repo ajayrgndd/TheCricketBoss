@@ -1,85 +1,70 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>League — The Cricket Boss</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>League — The Cricket Boss</title>
+<style>
+  :root{
+    --bg:#071029; --panel:rgba(255,255,255,0.02); --muted:#9aa5bf; --accent:#ffd54f; --text:#e6eef8;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071020);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
 
-  <style>
-    :root{
-      --bg:#071029; --panel:rgba(255,255,255,0.02); --muted:#9aa5bf; --accent:#ffd54f; --text:#e6eef8;
-    }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071020);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
+  .topbar-placeholder{height:64px;display:block}
 
-    /* Topbar placeholder (shared-ui.js will inject full topbar if present) */
-    .topbar-placeholder{height:64px;display:block}
+  .league-header{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
+  .league-name{font-size:20px;font-weight:700}
+  .controls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .search-input{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);min-width:140px;max-width:60%;box-sizing:border-box}
+  .btn{padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid rgba(255,255,255,0.04);cursor:pointer;color:var(--text)}
 
-    /* Header area */
-    .league-header{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
-    .league-name{font-size:20px;font-weight:700}
-    .controls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .search-input{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);min-width:140px;max-width:60%;box-sizing:border-box}
-    .btn{padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid rgba(255,255,255,0.04);cursor:pointer;color:var(--text)}
+  .tabs{display:flex;gap:10px;margin:12px 0}
+  .tab{padding:8px 12px;border-radius:8px;background:var(--panel);cursor:pointer;font-weight:700}
+  .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
 
-    .tabs{display:flex;gap:10px;margin:12px 0}
-    .tab{padding:8px 12px;border-radius:8px;background:var(--panel);cursor:pointer;font-weight:700}
-    .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
 
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
+  .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
+  table.league-table{width:100%;border-collapse:collapse;min-width:720px}
+  table.league-table thead th{ text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
+  table.league-table tbody td{ padding:12px 8px;font-size:14px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
 
-    /* Table wrap - horizontal scroll allowed on very narrow screens but columns remain present */
-    .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
-    table.league-table{width:100%;border-collapse:collapse;min-width:720px}
-    table.league-table thead th{ text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
-    table.league-table tbody td{ padding:12px 8px;font-size:14px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
+  .col-pos{width:46px}
+  .col-logo{width:56px}
+  .col-team{min-width:200px}
+  .col-stat{width:52px;text-align:center;font-weight:700}
 
-    /* column sizing */
-    .col-pos{width:48px}
-    .col-logo{width:56px}
-    .col-team{min-width:220px}
-    .col-stat{width:56px;text-align:center;font-weight:700}
+  .team-cell{display:flex;align-items:center;gap:10px;min-width:0}
+  .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover;flex:0 0 36px}
+  .team-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 
-    .team-cell{display:flex;align-items:center;gap:10px;min-width:0}
-    .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover;flex:0 0 36px}
-    .team-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .detail-row td{ background: rgba(255,255,255,0.015); font-size:13px; color:var(--muted); padding:10px 12px }
+  .detail-content{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+  .detail-item{ min-width:120px }
 
-    .stats-row{display:flex;gap:20px;margin-top:12px;flex-wrap:wrap}
-    .stat-col{flex:1;min-width:220px}
+  @media (max-width:720px){
+    .col-pos{width:36px}
+    .col-logo{width:44px}
+    .col-stat{width:44px}
+    .col-team{min-width:140px}
+    table.league-table{min-width:600px}
+    .team-logo{width:30px;height:30px}
+    .team-name{font-size:13px}
+  }
 
-    /* Responsive tweaks */
-    @media (max-width:720px){
-      .col-pos{width:40px}
-      .col-logo{width:48px}
-      .col-stat{width:48px}
-      .col-team{min-width:160px}
-      table.league-table{min-width:640px}
-      .team-logo{width:30px;height:30px}
-      .team-name{font-size:13px}
-    }
-    @media (max-width:420px){
-      .col-pos{width:36px}
-      .col-logo{width:44px}
-      .col-stat{width:44px}
-      table.league-table{min-width:600px}
-      .team-name{font-size:13px}
-      .search-input{max-width:58%}
-    }
-
-    a.team-link{color:inherit;text-decoration:none;display:inline-block;width:100%}
-    .muted{color:var(--muted)}
-    .center{display:flex;align-items:center;justify-content:center}
-  </style>
+  a.team-link{color:inherit;text-decoration:none;display:inline-block;width:100%}
+  .muted{color:var(--muted)}
+  .center{display:flex;align-items:center;justify-content:center}
+  .clickable-row{cursor:pointer}
+</style>
 </head>
 <body>
-  <!-- If shared-ui.js is present it will replace the topbar; else this placeholder keeps layout stable -->
   <div class="topbar-placeholder"></div>
 
-  <div class="container" id="app">
+  <div class="container">
     <div class="league-header">
-      <div>
-        <div class="league-name" id="leagueName">League</div>
-      </div>
+      <div><div class="league-name" id="leagueName">League</div></div>
       <div class="controls">
         <input id="leagueSearch" class="search-input" placeholder="Search league by name" />
         <button id="searchBtn" class="btn">Search</button>
@@ -87,12 +72,12 @@
       </div>
     </div>
 
-    <div class="tabs" role="tablist">
-      <div id="tab-points" class="tab active" role="tab" aria-selected="true">POINT TABLE</div>
-      <div id="tab-stats" class="tab" role="tab" aria-selected="false">STATISTICS</div>
+    <div class="tabs">
+      <div id="tabPoints" class="tab active">POINT TABLE</div>
+      <div id="tabStats" class="tab">STATISTICS</div>
     </div>
 
-    <div id="points" class="card" aria-labelledby="tab-points">
+    <div id="pointsCard" class="card">
       <div class="table-wrap">
         <table class="league-table" id="pointsTable" aria-describedby="pointsCaption">
           <caption id="pointsCaption" class="muted" style="display:none">League point table</caption>
@@ -108,57 +93,28 @@
               <th class="col-stat">NRR</th>
             </tr>
           </thead>
-          <tbody id="pointsTableBody">
-            <!-- rows inserted by league.js -->
-          </tbody>
+          <tbody id="pointsBody"></tbody>
         </table>
       </div>
 
-      <div class="stats-row" style="margin-top:14px">
-        <div class="stat-col">
+      <div style="margin-top:14px; display:flex; gap:20px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:220px">
           <h4 style="margin:6px 0">Top 5 Batters</h4>
           <div id="topBatters" class="muted">No data yet</div>
         </div>
-        <div class="stat-col">
+        <div style="flex:1; min-width:220px">
           <h4 style="margin:6px 0">Top 5 Bowlers</h4>
           <div id="topBowlers" class="muted">No data yet</div>
         </div>
       </div>
     </div>
 
-    <div id="statistics" class="card" style="display:none; margin-top:12px" aria-labelledby="tab-stats">
-      <div id="statisticsContent">Statistics will appear here</div>
+    <div id="statsCard" class="card" style="display:none; margin-top:12px">
+      <div id="statistics">Statistics will appear here</div>
     </div>
   </div>
 
-  <!-- load shared UI (if you want the full topbar) and league script -->
-  <script type="module" src="./js/shared-ui.js"></script>
-  <script type="module" src="./js/league.js"></script>
-
-  <script>
-    /* tiny compatibility shim:
-       - the league.js you asked to use expects a tbody selector of "#pointsTable tbody"
-         but this document uses id="pointsTableBody" for clarity. Symlink both:
-    */
-    (function(){
-      const existing = document.querySelector('#pointsTable tbody');
-      if (!existing) {
-        const table = document.getElementById('pointsTable');
-        const body = document.getElementById('pointsTableBody');
-        if (table && body) {
-          // ensure there's a <tbody> element at table for scripts that query "#pointsTable tbody"
-          const tb = document.createElement('tbody');
-          tb.id = 'pointsTable__shim';
-          // move the inner nodes from pointsTableBody into tb (if any)
-          while (body.firstChild) tb.appendChild(body.firstChild);
-          table.appendChild(tb);
-          // keep pointsTableBody as reference for other scripts by setting pointsTableBody to tb
-          body.remove();
-          tb.id = 'pointsTableBody';
-        }
-      }
-    })();
-  </script>
+  <script type="module" src="./league.js"></script>
+  <script type="module" src="./shared-ui.js" defer></script>
 </body>
 </html>
-
