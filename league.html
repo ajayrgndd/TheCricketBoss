@@ -4,75 +4,52 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>League — The Cricket Boss</title>
-
   <style>
-    :root{
-      --bg:#071029; --panel:rgba(255,255,255,0.02); --muted:#9aa5bf; --accent:#ffd54f; --text:#e6eef8;
-    }
+    :root{--bg:#071029;--panel:rgba(255,255,255,0.02);--muted:#9aa5bf;--accent:#ffd54f;--text:#e6eef8}
     html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071020);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial}
     .container{max-width:1100px;margin:0 auto;padding:12px;box-sizing:border-box}
-
-    /* Topbar placeholder - shared-ui.js will inject actual topbar if available */
-    .topbar-placeholder{height:64px;display:block}
-
-    /* Header */
+    .topbar-placeholder{height:64px}
     .league-header{display:flex;align-items:center;gap:12px;margin:10px 0;flex-wrap:wrap}
     .league-name{font-size:20px;font-weight:700}
     .controls{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .search-input{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text);min-width:140px;max-width:60%;box-sizing:border-box}
     .btn{padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid rgba(255,255,255,0.04);cursor:pointer;color:var(--text)}
-
     .tabs{display:flex;gap:10px;margin:12px 0}
     .tab{padding:8px 12px;border-radius:8px;background:var(--panel);cursor:pointer;font-weight:700}
     .tab.active{background:linear-gradient(90deg,#1b3358,#14243b);color:var(--accent)}
-
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:10px;padding:8px}
-
-    /* Table */
     .table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
-    table.league-table{width:100%;border-collapse:collapse;min-width:650px}
+    table.league-table{width:100%;border-collapse:collapse;min-width:650px;table-layout:fixed}
     table.league-table thead th{ text-align:left;padding:10px 8px;font-weight:700;font-size:13px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.03)}
     table.league-table tbody td{ padding:12px 8px;font-size:14px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
-
-    .col-pos{width:46px}
-    .col-logo{width:56px}
-    .col-team{min-width:200px}
-    .col-stat{width:56px;text-align:center;font-weight:700}
-
+    .col-pos{width:8%}
+    .col-logo{width:10%}
+    .col-team{width:57%}
+    .col-stat{width:12%;text-align:center;font-weight:700}
     .team-cell{display:flex;align-items:center;gap:10px;min-width:0}
-    .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover;flex:0 0 36px}
-    .team-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
-
+    .team-logo{width:36px;height:36px;border-radius:6px;object-fit:cover}
+    .team-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;font-weight:600}
     .detail-row td{ background: rgba(255,255,255,0.015); font-size:13px; color:var(--muted); padding:10px 12px }
-    .detail-content{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
-    .detail-item{ min-width:120px }
-
+    .clickable-row{cursor:pointer}
     @media (max-width:720px){
-      .col-pos{width:36px}
-      .col-logo{width:44px}
-      .col-stat{width:44px}
-      .col-team{min-width:140px}
-      table.league-table{min-width:560px}
+      .col-pos{width:8%}
+      .col-logo{width:12%}
+      .col-team{width:60%}
+      .col-stat{width:10%}
       .team-logo{width:30px;height:30px}
-      .team-name{font-size:13px}
+      table.league-table{min-width:540px}
     }
-
     @media (max-width:420px){
       .search-input{max-width:58%}
       table.league-table{min-width:520px}
-      .col-stat{width:44px}
+      .col-stat{width:10%}
     }
-
-    a.team-link{color:inherit;text-decoration:none;display:inline-block;width:100%}
+    a.team-link{color:inherit;text-decoration:none}
     .muted{color:var(--muted)}
-    .center{display:flex;align-items:center;justify-content:center}
-    .clickable-row{cursor:pointer}
   </style>
 </head>
 <body>
-  <!-- shared-ui.js will inject topbar if available; placeholder maintains layout if missing -->
   <div class="topbar-placeholder"></div>
-
   <div class="container">
     <div class="league-header">
       <div><div class="league-name" id="leagueName">League</div></div>
@@ -122,9 +99,7 @@
     </div>
   </div>
 
-  <!-- Load shared UI (optional) and the league script.
-       Make sure league.js is the patched script you placed in public/league.js -->
-  <script type="module" src="./js/shared-ui.js" defer></script>
-  <script type="module" src="./js/league.js"></script>
+  <script type="module" src="./shared-ui.js" defer></script>
+  <script type="module" src="./league.js"></script>
 </body>
 </html>
