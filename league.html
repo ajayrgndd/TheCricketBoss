@@ -127,16 +127,17 @@ a.team-link{color:inherit;text-decoration:none;display:block;width:100%}
     // try to import shared-ui.js then load league.js so shared-ui has chance to attach
     (async function(){
       try {
-        await import('./shared-ui.js');
+        await import('./js/shared-ui.js');
       } catch (err) {
         console.warn('shared-ui.js not loaded — using fallback topbar', err);
       } finally {
         const s = document.createElement('script');
         s.type = 'module';
-        s.src = './league.js';
+        s.src = './js/league.js';
         document.body.appendChild(s);
       }
     })();
   </script>
 </body>
 </html>
+
