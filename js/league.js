@@ -1,7 +1,6 @@
-// public/league.js (patched)
+// public/league.js (patched final)
 // Compact league table (Pos | Logo | Team | M | Pts) with expandable single-line detail
-// Also includes MATCHES support (if your league.html has a Matches tab/container).
-// Place in public/ and ensure league.html loads it as module.
+// Includes MATCHES support. Place in public/ and ensure league.html loads it as module.
 // Replace SUPABASE_URL / SUPABASE_ANON_KEY with your project values if needed.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -28,7 +27,7 @@ function compactDetailRow(stats) {
   const L = stats.losses ?? 0;
   const P = stats.points ?? (W*2 + T*1);
   const N = Number(stats.nrr ?? 0).toFixed(3);
-  // Use flexible wrap on tiny screens; caller's CSS controls wrapping behavior
+  // flexible wrap on tiny screens; CSS controls exact wrapping
   return `<div class="compact-detail" style="align-items:center;display:flex;flex-wrap:wrap;gap:12px">
     <div><strong>M:</strong> ${M}</div>
     <div><strong>W:</strong> ${W}</div>
@@ -188,19 +187,16 @@ async function fetchStats(leagueId) {
      - tabMatches      (tab button to switch view)
      - matchesCard     (container/card for matches)
      - matchesBody     (tbody for matches rows)
-   If those elements aren't present, this section is a no-op.
 -----------------------------------------------------------------*/
 
 // Lightweight helper to format date/time nicely (local)
 function fmtDateTime(ts) {
   if (!ts) return '';
   const d = new Date(ts);
-  // example: 9/15/2025, 9:00:00 PM
   return d.toLocaleString();
 }
 
 function matchStatusToTarget(status, fixtureId) {
-  // map fixture.status to page
   if (!status) return `league-preview.html?fixture_id=${encodeURIComponent(fixtureId)}`;
   const s = status.toLowerCase();
   if (s === 'scheduled') return `league-preview.html?fixture_id=${encodeURIComponent(fixtureId)}`;
@@ -222,12 +218,12 @@ function renderMatches(fixtures, teamsById) {
   fixtures.forEach((f, idx) => {
     const home = teamsById[f.home_team_id] || {};
     const away = teamsById[f.away_team_id] || {};
-    const homeName = home.team_name || '';
-    const awayName = away.team_name || '';
+    const homeName = home.team_name || 'Team';
+    const awayName = away.team_name || 'Team';
     const homeLogo = home.logo_url || '/assets/logo.png';
     const awayLogo = away.logo_url || '/assets/logo.png';
     const status = f.status || 'scheduled';
-    const ovr = f.ovr ?? (f.sim_over ? 1 : 1); // placeholder - replace with actual OVR calc or field
+    const ovr = f.ovr ?? (f.sim_over ? 1 : 1); // placeholder
     const score = (f.result && (f.result.home_runs != null || f.result.away_runs != null))
       ? `${f.result.home_runs || 0}/${f.result.home_wickets || 0} - ${f.result.away_runs || 0}/${f.result.away_wickets || 0}`
       : (f.score_display || '');
@@ -236,17 +232,21 @@ function renderMatches(fixtures, teamsById) {
     tr.className = 'match-row clickable-row';
     tr.innerHTML = `
       <td style="padding:12px 8px;color:#9aa5bf">${idx+1}</td>
-      <td style="padding:8px 6px;width:120px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <img src="${esc(homeLogo)}" alt="home" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/>
-          <div style="font-size:13px">${esc(homeName)}</div>
-          <div style="margin:0 6px;color:#9aa5bf;font-weight:700">vs</div>
-          <img src="${esc(awayLogo)}" alt="away" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/>
-          <div style="font-size:13px">${esc(awayName)}</div>
+      <td style="padding:8px 6px; width:100%">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px;min-width:160px">
+            <img src="${esc(homeLogo)}" alt="home" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/>
+            <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(homeName)}</div>
+          </div>
+          <div style="color:#9aa5bf;font-weight:700;min-width:30px;text-align:center">vs</div>
+          <div style="display:flex;align-items:center;gap:8px;min-width:160px">
+            <img src="${esc(awayLogo)}" alt="away" style="width:30px;height:30px;border-radius:6px;object-fit:cover" onerror="this.src='/assets/logo.png'"/>
+            <div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(awayName)}</div>
+          </div>
         </div>
       </td>
-      <td style="text-align:center;font-weight:700">${esc(String(ovr))}</td>
-      <td style="text-align:right;font-weight:700">${esc(score || fmtDateTime(f.scheduled_at || f.kickoff_at || f.scheduled_at))}</td>
+      <td style="text-align:center;font-weight:700;white-space:nowrap">${esc(String(ovr))}</td>
+      <td style="text-align:right;font-weight:700;white-space:nowrap">${esc(score || fmtDateTime(f.scheduled_at || f.kickoff_at || f.scheduled_at))}</td>
     `;
 
     // click behavior -> route based on status
@@ -269,10 +269,10 @@ async function fetchMatches(leagueId) {
   }
 
   try {
-    // fetch fixtures for this league (order by scheduled_at/top)
+    // fetch fixtures for this league (order by scheduled_at)
     const { data: fixtures, error: fxErr } = await supabase
       .from('fixtures')
-      .select('id,league_id,home_team_id,away_team_id,status,scheduled_at,kickoff_at,result,started_at,finished_at')
+      .select('id,league_id,home_team_id,away_team_id,status,scheduled_at,kickoff_at,result,started_at,finished_at,score_display,sim_over')
       .eq('league_id', leagueId)
       .order('scheduled_at', { ascending: true });
 
@@ -296,25 +296,31 @@ async function fetchMatches(leagueId) {
     // dedupe
     const uniqIds = [...new Set(ids)];
 
-    // fetch teams info - NOTE: select only columns that exist (no `name` column)
-    const { data: teams, error: tErr } = await supabase
-      .from('teams')
-      .select('id,team_name,logo_url')
-      .in('id', uniqIds);
-
-    if (tErr) {
-      console.warn('teams fetch for fixtures failed', tErr);
-      // build some basic map by ids with empty names
-      const teamsByIdFallback = {};
-      uniqIds.forEach(id => teamsByIdFallback[id] = { team_name: 'Team', logo_url: '/assets/logo.png' });
-      renderMatches(fixtures, teamsByIdFallback);
+    // if no team ids found, render fixtures with empty team info
+    if (uniqIds.length === 0) {
+      renderMatches(fixtures, {});
       return;
     }
 
-    const teamsById = {};
-    (teams || []).forEach(t => {
-      teamsById[t.id] = t;
-    });
+    // fetch teams info
+    let teamsById = {};
+    try {
+      const { data: teams, error: tErr } = await supabase
+        .from('teams')
+        .select('id,team_name,logo_url')
+        .in('id', uniqIds);
+
+      if (tErr) {
+        console.warn('teams fetch for fixtures failed', tErr);
+        uniqIds.forEach(id => teamsById[id] = { team_name: 'Team', logo_url: '/assets/logo.png' });
+        renderMatches(fixtures, teamsById);
+        return;
+      }
+      (teams || []).forEach(t => { teamsById[t.id] = t; });
+    } catch (err) {
+      console.warn('teams fetch exception', err);
+      uniqIds.forEach(id => teamsById[id] = { team_name: 'Team', logo_url: '/assets/logo.png' });
+    }
 
     renderMatches(fixtures, teamsById);
   } catch (err) {
@@ -339,11 +345,13 @@ function wireUI() {
     if ($('matchesCard')) $('matchesCard').style.display='none';
     tabS.classList.add('active'); tabP && tabP.classList.remove('active'); tabM && tabM.classList.remove('active');
   });
-  if (tabM) tabM.addEventListener('click', () => {
+  if (tabM) tabM.addEventListener('click', async () => {
     if ($('pointsCard')) $('pointsCard').style.display='none';
     if ($('statsCard')) $('statsCard').style.display='none';
     if ($('matchesCard')) $('matchesCard').style.display='block';
     tabM.classList.add('active'); tabP && tabP.classList.remove('active'); tabS && tabS.classList.remove('active');
+    // ensure matches are loaded when opening tab
+    if (currentLeagueId) await fetchMatches(currentLeagueId);
   });
 
   const searchBtn = $('searchBtn');
@@ -358,7 +366,7 @@ function wireUI() {
       await Promise.all([
         fetchStandings(currentLeagueId),
         fetchStats(currentLeagueId),
-        fetchMatches(currentLeagueId)  // update matches too
+        fetchMatches(currentLeagueId)
       ]);
     } catch (err) { console.error(err); alert('Search failed'); }
   });
@@ -383,7 +391,7 @@ function wireUI() {
 
 /* ------------------- shared UI fallback loader ------------------- */
 
-// fallback topbar injection (used if shared-ui.js not loaded)
+// fallback topbar injection (used if shared-ui fails)
 function injectFallbackTopbar(managerName = 'Manager') {
   const container = document.getElementById('topbarContainer');
   if (!container) return;
